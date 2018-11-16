@@ -45,6 +45,8 @@ let out = ref None
 let tokenize = ref false
 let compat = ref false
 let log = ref false
+let newprec = ref false
+let norec = ref false
 let light = ref None
 let inputCodePage = ref None
 let mutable lexlib = "Microsoft.FSharp.Text.Lexing"
@@ -62,7 +64,9 @@ let usage =
     ArgInfo("--tokens", ArgType.Set tokenize, "Simply tokenize the specification file itself."); 
     ArgInfo("--lexlib", ArgType.String (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer (default: Microsoft.FSharp.Text.Lexing)");
     ArgInfo("--parslib", ArgType.String (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)");
-    ArgInfo("--codepage", ArgType.Int (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage.");  ]
+    ArgInfo("--codepage", ArgType.Int (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage."); 
+    ArgInfo("--newprec", ArgType.Unit (fun () -> newprec := true), "Use the new precedence resolving behaviour. See: https://github.com/fsprojects/FsLexYacc/pull/51"); 
+    ArgInfo("--no-recovery", ArgType.Unit (fun () -> norec := true), "Don't try recovering from invalid input") ]
 
 let _ = ArgParser.Parse(usage,(fun x -> match !input with Some _ -> failwith "more than one input given" | None -> input := Some x),"fsyacc <filename>")
 
@@ -89,6 +93,9 @@ let actionCoding action  =
 
 let main() = 
   let filename = (match !input with Some x -> x | None -> failwith "no input given") in 
+  if not <| !newprec then
+      printfn "FSYACC is running in a compatibility mode - consider adding then --newprec argument"
+
   let spec = 
       let stream,reader,lexbuf = UnicodeFileAsLexbuf(filename, !inputCodePage) 
       use stream = stream
@@ -147,7 +154,7 @@ let main() =
   printfn "building tables"; 
   let spec1 = ProcessParserSpecAst spec 
   let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
-      CompilerLalrParserSpec logf spec1 
+      CompilerLalrParserSpec logf !newprec !norec spec1 
 
   let (code,pos) = spec.Header 
   printfn "%d states" states.Length; 
