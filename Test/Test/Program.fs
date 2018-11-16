@@ -34,6 +34,9 @@ let main argv =
     
     case "1 + 2 * 3 + 4 * 5" (Add (Add (Number 1,Mult (Number 2,Number 3)),Mult (Number 4,Number 5)))
     case "a * b + c * d + e" (Add (Add (Mult (Ident "a",Ident "b"),Mult (Ident "c",Ident "d")),Ident "e"))
+
+    case "l :: m" (Cons (Ident "l",Ident "m"))
+    case "l :: m :: n" (Cons (Ident "l",Cons (Ident "m",Ident "n")))
     
     case "x .. y" (Range (Ident "x",Ident "y"))
     error "x .. y .. z"
@@ -51,12 +54,12 @@ let main argv =
     error "1 + + 2"
 
     case
-        "if x then if 1 + 2 then a * b + c * d else e .. f + g * h"
+        "if x then if 1 + 2 then a * b + c * d :: l else e .. f + g * h"
         (If
           (Ident "x",
            If
              (Add (Number 1,Number 2),
-              Add (Mult (Ident "a",Ident "b"),Mult (Ident "c",Ident "d")),
+              Cons (Add (Mult (Ident "a",Ident "b"),Mult (Ident "c",Ident "d")),Ident "l"),
               Some (Range (Ident "e",Add (Ident "f",Mult (Ident "g",Ident "h"))))),None))
     
     printfn "done"

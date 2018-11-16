@@ -17,6 +17,7 @@ rule token =
   | '+'                    { PLUS }
   | '-'                    { MINUS }
   | '*'                    { STAR }
+  | "::"                   { COLONCOLON }
   | ".."                   { DOTDOT }
   | eof                    { EOF }
   | _                      { failwith "lexical error" }

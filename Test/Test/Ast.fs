@@ -7,5 +7,6 @@ type Expr =
     | Sub of Expr * Expr
     | Mult of Expr * Expr
     | Neg of Expr
+    | Cons of Expr * Expr
     | Range of Expr * Expr
     | If of Expr * Expr * Expr option

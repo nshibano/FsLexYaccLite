@@ -6,6 +6,7 @@ type token =
   | THEN
   | IF
   | DOTDOT
+  | COLONCOLON
   | STAR
   | MINUS
   | PLUS
@@ -17,6 +18,7 @@ type tokenId =
     | TOKEN_THEN
     | TOKEN_IF
     | TOKEN_DOTDOT
+    | TOKEN_COLONCOLON
     | TOKEN_STAR
     | TOKEN_MINUS
     | TOKEN_PLUS
