@@ -7,20 +7,28 @@ let parse (s : string) =
     let lexbuf = LexBuffer<char>.FromString(s)
     Parser.Expr Lexer.token lexbuf
 
+// Use this function to print parse result and then
+// turn it into test case by copying the result displayed in the console to this script.
 let show (src : string) =
     let e = parse src
     printfn "%A" e
+
+let mutable ok = true
 
 let case (src : string) (e1 : Expr) =
     try
         let e2 = parse src
         if e1 <> e2 then
+            ok <- false
             printfn "error (parse success but wrong result): \"%s\"" src
-    with _ -> printfn "error (expected success but parse error): \"%s\"" src
+    with _ ->
+        ok <- false
+        printfn "error (expected success but parse error): \"%s\"" src
 
 let error (src : string) =
     try
         let e = parse src
+        ok <- false
         printfn "error (expected parse error but success): \"%s\" => %A" src e
     with _ -> ()
 
@@ -63,5 +71,5 @@ let main argv =
               Some (Range (Ident "e",Add (Ident "f",Mult (Ident "g",Ident "h"))))),None))
     
     printfn "done"
-    Console.ReadKey() |> ignore
-    0
+
+    if ok then 0 else -1
