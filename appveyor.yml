@@ -1,9 +1,14 @@
-init:
-  - git config --global core.autocrlf input
-build_script:
-  - cmd: build.cmd
-test: off
-version: 0.0.1.{build}
+version: 1.0.{build}
+image: Visual Studio 2017
+configuration: Release
+shallow_clone: true
+build:
+  project: FsLexYacc.sln
+  verbosity: minimal
 artifacts:
-  - path: bin
-    name: bin
+  - path: FsLexLite\bin\Release
+    name: FsLexLite
+    type: zip
+  - path: FsYaccLite\bin\Release
+    name: FsLexYacc
+    type: zip
