@@ -62,12 +62,14 @@ let main argv =
     error "1 + + 2"
 
     case
-        "if x then if 1 + 2 then a * b + c * d :: l else e .. f + g * h"
+        "if x then if 1 + 2 then a * b + - c * d :: l else e .. f + g * h"
         (If
           (Ident "x",
            If
              (Add (Number 1,Number 2),
-              Cons (Add (Mult (Ident "a",Ident "b"),Mult (Ident "c",Ident "d")),Ident "l"),
+              Cons
+                (Add (Mult (Ident "a",Ident "b"),Mult (Neg (Ident "c"),Ident "d")),
+                 Ident "l"),
               Some (Range (Ident "e",Add (Ident "f",Mult (Ident "g",Ident "h"))))),None))
     
     printfn "done"
