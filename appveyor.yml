@@ -4,11 +4,11 @@ configuration: Release
 shallow_clone: true
 build_script:
   - cmd: dotnet publish -c Release FsLexLite\FsLexLite.fsproj
-  - cmd: dotnet publish -c Release FsLexLite\FsYaccLite.fsproj
+  - cmd: dotnet publish -c Release FsYaccLite\FsYaccLite.fsproj
 artifacts:
   - path: FsLexLite\bin\Release
     name: FsLexLite
     type: zip
   - path: FsYaccLite\bin\Release
-    name: FsLexYacc
+    name: FsYaccLite
     type: zip
