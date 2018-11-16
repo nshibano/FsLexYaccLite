@@ -1,0 +1,1 @@
+fslexlite --unicode Lexer.fsl --lexlib Microsoft.FSharp.Text.Lexing

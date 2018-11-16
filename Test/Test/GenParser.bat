@@ -1,0 +1,1 @@
+fsyacclite --module Test.Parser --lexlib Microsoft.FSharp.Text.Lexing --parslib Microsoft.FSharp.Text.Parsing -v --newprec Parser.fsy

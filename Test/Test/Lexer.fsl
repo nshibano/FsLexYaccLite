@@ -1,0 +1,22 @@
+﻿{
+module Test.Lexer
+open Test.Parser
+open System
+}
+
+rule token =
+  parse
+  | '\n'                   { lexbuf.EndPos <- lexbuf.EndPos.NextLine
+                             token lexbuf }
+  | [' ' '\r' '\t']+       { token lexbuf }
+  | "if"                   { IF }
+  | "then"                 { THEN }
+  | "else"                 { ELSE }
+  | ['a' - 'z' 'A' - 'Z']+ { IDENT (String lexbuf.Lexeme) }
+  | ['0' - '9']+           { NUMBER (int (String lexbuf.Lexeme)) }
+  | '+'                    { PLUS }
+  | '-'                    { MINUS }
+  | '*'                    { STAR }
+  | ".."                   { DOTDOT }
+  | eof                    { EOF }
+  | _                      { failwith "lexical error" }
