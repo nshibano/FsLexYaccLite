@@ -1,0 +1,1 @@
+fslex.exe --unicode fsyacclex.fsl --lexlib Microsoft.FSharp.Text.Lexing

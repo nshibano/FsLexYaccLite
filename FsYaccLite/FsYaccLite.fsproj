@@ -6,7 +6,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Program.fs" />
+    <Compile Include="Arg.fsi" />
+    <Compile Include="Arg.fs" />
+    <Compile Include="Lexing.fsi" />
+    <Compile Include="Lexing.fs" />
+    <Compile Include="Parsing.fsi" />
+    <Compile Include="Parsing.fs" />
+    <Compile Include="fsyaccast.fs" />
+    <Compile Include="fsyaccpars.fsi" />
+    <Compile Include="fsyaccpars.fs" />
+    <Compile Include="fsyacclex.fs" />
+    <Compile Include="fsyacc.fs" />
+    <None Include="fsyacclex.fsl" />
+    <None Include="fsyaccpars.fsy" />
   </ItemGroup>
+
+  <ItemGroup />
 
 </Project>
