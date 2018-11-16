@@ -188,3 +188,5 @@ src/FsLex/fslexpars.fsi
 src/FsYacc/fsyacclex.fs
 src/FsYacc/fsyaccpars.fs
 src/FsYacc/fsyaccpars.fsi
+
+.vs
