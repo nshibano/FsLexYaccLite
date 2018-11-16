@@ -3,12 +3,9 @@ image: Visual Studio 2017
 configuration: Release
 shallow_clone: true
 build_script:
-  - cmd: dotnet publish -c Release FsLexLite\FsLexLite.fsproj
-  - cmd: dotnet publish -c Release FsYaccLite\FsYaccLite.fsproj
+  - cmd: dotnet publish -c Release FsLexLite\FsLexLite.fsproj -o ..\Publish\FsLexLite
+  - cmd: dotnet publish -c Release FsYaccLite\FsYaccLite.fsproj -o ..\Publish\FsYaccLite
 artifacts:
-  - path: FsLexLite\bin\Release
-    name: FsLexLite
-    type: zip
-  - path: FsYaccLite\bin\Release
-    name: FsYaccLite
+  - path: Publish
+    name: FsLexYaccLite
     type: zip
