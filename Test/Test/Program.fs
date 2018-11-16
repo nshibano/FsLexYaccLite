@@ -11,21 +11,29 @@ let show (src : string) =
     let e = parse src
     printfn "%A" e
 
-let case (src : string) (e : Expr) =
-    if not (parse src = e) then
-        printfn "error (expected success but parse error): \"%s\"" src
+let case (src : string) (e1 : Expr) =
+    try
+        let e2 = parse src
+        if e1 <> e2 then
+            printfn "error (parse success but wrong result): \"%s\"" src
+    with _ -> printfn "error (expected success but parse error): \"%s\"" src
 
 let error (src : string) =
     try
         let e = parse src
-        printfn "error (expected error but success): \"%s\" => %A" src e
+        printfn "error (expected parse error but success): \"%s\" => %A" src e
     with _ -> ()
 
 [<EntryPoint>]
 let main argv =
-    case "x + 1" (Add (Ident "x", Number 1))
-    case "1 + 2 * 3" (Add (Number 1, Mult (Number 2, Number 3)))
-    case "x * y + z" (Add (Mult (Ident "x",Ident "y"),Ident "z"))
+    case "x + y" (Add (Ident "x", Ident "y"))
+    case "1 + 2 + 3" (Add (Add (Number 1,Number 2),Number 3))
+
+    case "1 * 2" (Mult (Number 1,Number 2))
+    case "a * b * c" (Mult (Mult (Ident "a",Ident "b"),Ident "c"))
+    
+    case "1 + 2 * 3 + 4 * 5" (Add (Add (Number 1,Mult (Number 2,Number 3)),Mult (Number 4,Number 5)))
+    case "a * b + c * d + e" (Add (Add (Mult (Ident "a",Ident "b"),Mult (Ident "c",Ident "d")),Ident "e"))
     
     case "x .. y" (Range (Ident "x",Ident "y"))
     error "x .. y .. z"
