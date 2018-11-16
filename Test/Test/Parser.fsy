@@ -22,10 +22,12 @@ open Test.Ast
 %left STAR
 %nonassoc Uminus
 
-%start Expr
-%type <Test.Ast.Expr> Expr
+%start Start
+%type <Test.Ast.Expr> Start
 
 %%
+
+Start : Expr EOF { $1 }
 
 Expr :
     | IDENT                       { Ident $1 }

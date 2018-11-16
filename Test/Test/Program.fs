@@ -5,7 +5,7 @@ open System
 
 let parse (s : string) =
     let lexbuf = LexBuffer<char>.FromString(s)
-    Parser.Expr Lexer.token lexbuf
+    Parser.Start Lexer.token lexbuf
 
 // Use this function to print parse result and then
 // turn it into test case by copying the result displayed in the console to this script.
@@ -72,6 +72,6 @@ let main argv =
                  Ident "l"),
               Some (Range (Ident "e",Add (Ident "f",Mult (Ident "g",Ident "h"))))),None))
     
-    printfn "done"
+    printfn "done (%s)" (if ok then "success" else "failure")
 
     if ok then 0 else -1
