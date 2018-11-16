@@ -449,7 +449,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         let prodIdx = prodIdx_of_item0 item0
         let dotIdx = dotIdx_of_item0 item0
         let syms = prodTab.Symbols prodIdx
-        syms.[..dotIdx-1]
+        if dotIdx <= 0 then [||] else syms.[..dotIdx-1]
 
     let rsyms_of_item0 item0 = 
         let prodIdx = prodIdx_of_item0 item0
