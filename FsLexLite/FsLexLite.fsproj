@@ -19,8 +19,9 @@
     <Compile Include="fslex.fs" />
     <None Include="fslexlex.fsl" />
     <None Include="fslexpars.fsy" />
+    <Content Include="FsLexLite.cmd">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
-
-  <ItemGroup />
 
 </Project>

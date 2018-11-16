@@ -19,8 +19,9 @@
     <Compile Include="fsyacc.fs" />
     <None Include="fsyacclex.fsl" />
     <None Include="fsyaccpars.fsy" />
+    <Content Include="FsYaccLite.cmd">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
-
-  <ItemGroup />
 
 </Project>
