@@ -2,9 +2,9 @@ version: 1.0.{build}
 image: Visual Studio 2017
 configuration: Release
 shallow_clone: true
-build:
-  project: FsLexYacc.sln
-  verbosity: minimal
+build_script:
+  - cmd: dotnet publish -c Release FsLexLite\FsLexLite.fsproj
+  - cmd: dotnet publish -c Release FsLexLite\FsYaccLite.fsproj
 artifacts:
   - path: FsLexLite\bin\Release
     name: FsLexLite
