@@ -1,4 +1,4 @@
-version: 1.0.{build}
+version: 0.0.{build}
 image: Visual Studio 2017
 configuration: Release
 shallow_clone: true
@@ -10,5 +10,5 @@ after_build:
   - xcopy Common\Parsing.fs* Publish\Runtime\
 artifacts:
   - path: Publish
-    name: FsLexYaccLite
+    name: FsLexYaccLite-0.0.{build}
     type: zip
