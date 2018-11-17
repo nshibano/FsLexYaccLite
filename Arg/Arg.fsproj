@@ -5,10 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Lexing.fsi" />
-    <Compile Include="Lexing.fs" />
-    <Compile Include="Parsing.fsi" />
-    <Compile Include="Parsing.fs" />
+    <Compile Include="Arg.fs" />
   </ItemGroup>
 
 </Project>

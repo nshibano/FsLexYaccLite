@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Arg.fs" />
     <Compile Include="Lexing.fsi" />
     <Compile Include="Lexing.fs" />
     <Compile Include="Parsing.fsi" />
@@ -21,6 +20,10 @@
     <Content Include="FsYaccLite.cmd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Arg\Arg.fsproj" />
   </ItemGroup>
 
 </Project>

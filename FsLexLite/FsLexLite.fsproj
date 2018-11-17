@@ -10,7 +10,6 @@
     <Compile Include="Lexing.fs" />
     <Compile Include="Parsing.fsi" />
     <Compile Include="Parsing.fs" />
-    <Compile Include="Arg.fs" />
     <Compile Include="fslexast.fs" />
     <Compile Include="fslexpars.fsi" />
     <Compile Include="fslexpars.fs" />
@@ -21,6 +20,10 @@
     <Content Include="FsLexLite.cmd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Arg\Arg.fsproj" />
   </ItemGroup>
 
 </Project>
