@@ -13,14 +13,6 @@ type ArgType =
   | SetArg of bool ref
   | StringArg of (string -> unit)
   | UnitArg of (unit -> unit)
-  static member Clear  r = ClearArg r
-  static member Float  r = FloatArg r
-  static member Int    r = IntArg r
-  static member Rest   r = RestArg r
-  static member Set    r = SetArg r
-  static member String r = StringArg r
-  static member Unit   r = UnitArg r
-
 
 type ArgInfo (name,action,help) = 
   /// Return the name of the argument
