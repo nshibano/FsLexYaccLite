@@ -1,12 +1,10 @@
 // (c) Microsoft Corporation 2005-2009. 
+/// A simple command-line argument processor.
 
-#if INTERNALIZED_FSLEXYACC_RUNTIME
-namespace Internal.Utilities
-#else
 namespace Microsoft.FSharp.Text
-#endif
 
-
+/// The spec value describes the action of the argument,
+/// and whether it expects a following parameter.
 type ArgType = 
   | ClearArg of bool ref
   | FloatArg of (float -> unit)
@@ -25,8 +23,11 @@ type ArgType =
 
 
 type ArgInfo (name,action,help) = 
+  /// Return the name of the argument
   member x.Name = name
+  /// Return the argument type and action of the argument
   member x.ArgType = action
+  /// Return the usage help associated with the argument
   member x.HelpText = help
   
 exception Bad of string
@@ -51,7 +52,8 @@ type ArgParser() =
       pstring "\t"; pstring "-help"; pstring ": "; pendline "display this list of options";
       sbuf.ToString()
 
-
+    /// Parse some of the arguments given by 'argv', starting at the given position
+    [<System.Obsolete("This method should not be used directly as it will be removed in a future revision of this library")>]
     static member ParsePartial(cursor,argv,argSpecs:seq<ArgInfo>,?other,?usageText) =
         let other = defaultArg other (fun _ -> ())
         let usageText = defaultArg usageText ""
@@ -111,13 +113,15 @@ type ArgParser() =
                    other arg;
                    incr cursor
           findMatchingArg specs 
-
+    /// Prints the help for each argument.
     static member Usage (specs,?usage) = 
         let usage = defaultArg usage ""
         System.Console.Error.WriteLine (getUsage (Seq.toList specs) usage)
 
-    #if FX_NO_COMMAND_LINE_ARGS
-    #else
+    /// Parse the arguments given by System.Environment.GetEnvironmentVariables()
+    /// according to the argument processing specifications "specs".
+    /// Args begin with "-". Non-arguments are passed to "f" in
+    /// order.  "use" is printed as part of the usage line if an error occurs.
     static member Parse (specs,?other,?usageText) = 
         let current = ref 0
         let argv = System.Environment.GetCommandLineArgs() 
@@ -130,4 +134,3 @@ type ArgParser() =
               System.Environment.Exit(1); 
           | e -> 
               reraise()
-    #endif

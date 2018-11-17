@@ -10,7 +10,6 @@
     <Compile Include="Lexing.fs" />
     <Compile Include="Parsing.fsi" />
     <Compile Include="Parsing.fs" />
-    <Compile Include="Arg.fsi" />
     <Compile Include="Arg.fs" />
     <Compile Include="fslexast.fs" />
     <Compile Include="fslexpars.fsi" />

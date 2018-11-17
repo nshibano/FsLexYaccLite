@@ -2,7 +2,6 @@ open System.IO
 
 let files =
     [
-        "Arg.fsi"
         "Arg.fs"
         "Lexing.fsi"
         "Lexing.fs"

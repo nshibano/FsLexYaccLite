@@ -5,7 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Arg.fsi" />
     <Compile Include="Arg.fs" />
     <Compile Include="Lexing.fsi" />
     <Compile Include="Lexing.fs" />
