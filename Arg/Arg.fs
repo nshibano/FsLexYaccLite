@@ -2,6 +2,7 @@
 /// A simple command-line argument processor.
 module FsLexYaccLite.Arg
 open System
+open System.IO
 
 type ArgType = 
     | ClearArg of bool ref
@@ -19,21 +20,17 @@ type ArgInfo =
   
 exception InvalidCommandArgument of string option
 
-let getUsage specs u =
-    let sbuf = new System.Text.StringBuilder 100  
-    let pstring (s:string) = sbuf.Append s |> ignore 
-    let pendline s = pstring s; pstring "\n" 
-    pendline u;
-    List.iter (fun (arg:ArgInfo) -> 
-    match arg.Name, arg.ArgType, arg.HelpText with
-    | (s, (UnitArg _ | SetArg _ | ClearArg _), helpText) -> pstring "\t"; pstring s; pstring ": "; pendline helpText
-    | (s, StringArg _, helpText) -> pstring "\t"; pstring s; pstring " <string>: "; pendline helpText
-    | (s, IntArg _, helpText) -> pstring "\t"; pstring s; pstring " <int>: "; pendline helpText
-    | (s, FloatArg _, helpText) ->  pstring "\t"; pstring s; pstring " <float>: "; pendline helpText
-    | (s, RestArg _, helpText) -> pstring "\t"; pstring s; pstring " ...: "; pendline helpText) specs;
-    pstring "\t"; pstring "--help"; pstring ": "; pendline "display this list of options";
-    pstring "\t"; pstring "-help"; pstring ": "; pendline "display this list of options";
-    sbuf.ToString()
+let outputHelpText (f : TextWriter) (usageText : string) (specs : ArgInfo list) =
+    fprintfn f "%s" usageText
+    for info in specs do
+        match info.ArgType with
+        | UnitArg _ | SetArg _ | ClearArg _ -> fprintfn f "\t%s: %s" info.Name info.HelpText
+        | StringArg _ -> fprintfn f "\t%s <string>: %s" info.Name info.HelpText
+        | IntArg _ -> fprintfn f "\t%s <int>: %s" info.Name info.HelpText
+        | FloatArg _ -> fprintfn f "\t%s <float>: %s" info.Name info.HelpText
+        | RestArg _ -> fprintfn f "\t%s ...: %s" info.Name info.HelpText
+    fprintfn f "\t--help: display this list of options"
+    fprintfn f "\t-help: display this list of options"
 
 let parseCommandLineArgs (specs : ArgInfo list) (other : string -> unit) (usageText : string) = 
         let current = ref 0
@@ -95,10 +92,18 @@ let parseCommandLineArgs (specs : ArgInfo list) (other : string -> unit) (usageT
                        other arg;
                        incr current
               findMatchingArg specs 
-        with InvalidCommandArgument msg -> 
-              Console.Error.WriteLine(msg)
-              match msg with
-              | Some msg -> Console.Error.WriteLine(getUsage specs usageText)
-              | None -> ()
-              Console.Error.Flush()
-              Environment.Exit(1)
+        with InvalidCommandArgument msg ->
+            let f = Console.Error
+            Option.iter (fun (msg : string) -> f.WriteLine(msg)) msg
+            f.WriteLine(usageText)
+            for info in specs do
+                match info.ArgType with
+                | UnitArg _ | SetArg _ | ClearArg _ -> fprintfn f "\t%s: %s" info.Name info.HelpText
+                | StringArg _ -> fprintfn f "\t%s <string>: %s" info.Name info.HelpText
+                | IntArg _ -> fprintfn f "\t%s <int>: %s" info.Name info.HelpText
+                | FloatArg _ -> fprintfn f "\t%s <float>: %s" info.Name info.HelpText
+                | RestArg _ -> fprintfn f "\t%s ...: %s" info.Name info.HelpText
+            fprintfn f "\t--help: display this list of options"
+            fprintfn f "\t-help: display this list of options"
+            f.Flush()
+            Environment.Exit(1)
