@@ -72,8 +72,8 @@ let parseCommandLineArgs (specs : ArgInfo list) (other : string -> unit) (usageT
                         raise (InvalidCommandArgument None)
                     // Note: for '/abc/def' does not count as an argument
                     // Note: '/abc' does
-                    elif arg.Length > 0 && (arg.[0] = '-' || (arg.[0] = '/' && not (arg.Length > 1 && arg.[1..].Contains ("/")))) then
-                        raise (InvalidCommandArgument (Some ("unrecognized argument: "+ arg)))
+                    elif arg.Length > 0 && (arg.[0] = '-' || (arg.[0] = '/' && not (arg.Length > 1 && arg.Substring(1).Contains("/")))) then
+                        raise (InvalidCommandArgument (Some ("unrecognized argument: " + arg)))
                     else 
                        other arg
                        pos <- pos + 1

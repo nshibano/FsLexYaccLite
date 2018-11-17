@@ -73,7 +73,7 @@ let usage =
     argInfo("--newprec", ArgType.UnitArg (fun () -> newprec := true), "Use the new precedence resolving behaviour. See: https://github.com/fsprojects/FsLexYacc/pull/51"); 
     argInfo("--no-recovery", ArgType.UnitArg (fun () -> norec := true), "Don't try recovering from invalid input") ]
 
-let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> failwith "more than one input given" | None -> input := Some x) "fsyacc <filename>"
+let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> raise (InvalidCommandArgument (Some "more than one input given")) | None -> input := Some x) "fsyacc <filename>"
 
 let output_int (os: #TextWriter) (n:int) = os.Write(string n)
 
