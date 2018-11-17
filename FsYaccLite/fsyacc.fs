@@ -56,22 +56,22 @@ let mutable lexlib = "Microsoft.FSharp.Text.Lexing"
 let mutable parslib = "Microsoft.FSharp.Text.Parsing"
 
 let usage =
-  [ ("-o", ArgType.StringArg (fun s -> out := Some s), "Name the output file.");
-    ("-v", ArgType.UnitArg (fun () -> log := true), "Produce a listing file."); 
-    ("--module", ArgType.StringArg (fun s -> modname := Some s), "Define the F# module name to host the generated parser."); 
-    ("--internal", ArgType.UnitArg (fun () -> internal_module := true), "Generate an internal module");
-    ("--open", ArgType.StringArg (fun s -> opens := !opens @ [s]), "Add the given module to the list of those to open in both the generated signature and implementation."); 
-    ("--light", ArgType.UnitArg (fun () ->  light := Some true), "(ignored)");
-    ("--light-off", ArgType.UnitArg (fun () ->  light := Some false), "Add #light \"off\" to the top of the generated file");
-    ("--ml-compatibility", ArgType.SetArg compat, "Support the use of the global state from the 'Parsing' module in FSharp.PowerPack.dll."); 
-    ("--tokens", ArgType.SetArg tokenize, "Simply tokenize the specification file itself."); 
-    ("--lexlib", ArgType.StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer (default: Microsoft.FSharp.Text.Lexing)");
-    ("--parslib", ArgType.StringArg (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)");
-    ("--codepage", ArgType.IntArg (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage."); 
-    ("--newprec", ArgType.UnitArg (fun () -> newprec := true), "Use the new precedence resolving behaviour. See: https://github.com/fsprojects/FsLexYacc/pull/51"); 
-    ("--no-recovery", ArgType.UnitArg (fun () -> norec := true), "Don't try recovering from invalid input") ]
+  [ ("-o", StringArg (fun s -> out := Some s), "Name the output file.");
+    ("-v", UnitArg (fun () -> log := true), "Produce a listing file."); 
+    ("--module", StringArg (fun s -> modname := Some s), "Define the F# module name to host the generated parser."); 
+    ("--internal", UnitArg (fun () -> internal_module := true), "Generate an internal module");
+    ("--open", StringArg (fun s -> opens := !opens @ [s]), "Add the given module to the list of those to open in both the generated signature and implementation."); 
+    ("--light", UnitArg (fun () ->  light := Some true), "(ignored)");
+    ("--light-off", UnitArg (fun () ->  light := Some false), "Add #light \"off\" to the top of the generated file");
+    ("--ml-compatibility", UnitArg (fun () -> compat := true), "Support the use of the global state from the 'Parsing' module in FSharp.PowerPack.dll."); 
+    ("--tokens", UnitArg (fun () -> tokenize := true), "Simply tokenize the specification file itself."); 
+    ("--lexlib", StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer (default: Microsoft.FSharp.Text.Lexing)");
+    ("--parslib", StringArg (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)");
+    ("--codepage", IntArg (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage."); 
+    ("--newprec", UnitArg (fun () -> newprec := true), "Use the new precedence resolving behaviour. See: https://github.com/fsprojects/FsLexYacc/pull/51"); 
+    ("--no-recovery", UnitArg (fun () -> norec := true), "Don't try recovering from invalid input") ]
 
-let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> raise (InvalidCommandArgument (Some "more than one input given")) | None -> input := Some x) "fsyacc <filename>"
+let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> raise (InvalidCommandLineArg (Some "more than one input given")) | None -> input := Some x) "fsyacc <filename>"
 
 let output_int (os: #TextWriter) (n:int) = os.Write(string n)
 

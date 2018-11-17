@@ -49,15 +49,15 @@ let light = ref None
 let mutable lexlib = "Microsoft.FSharp.Text.Lexing"
 
 let usage =
-  [ ("-o", ArgType.StringArg (fun s -> out := Some s), "Name the output file."); 
-    ("--codepage", ArgType.IntArg (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage."); 
-    ("--light", ArgType.UnitArg (fun () ->  light := Some true), "(ignored)");
-    ("--light-off", ArgType.UnitArg (fun () ->  light := Some false), "Add #light \"off\" to the top of the generated file");
-    ("--lexlib", ArgType.StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer table interpreter (default Microsoft.FSharp.Text.Lexing)");
-    ("--unicode", ArgType.SetArg unicode, "Produce a lexer for use with 16-bit unicode characters.");  
+  [ ("-o", StringArg (fun s -> out := Some s), "Name the output file."); 
+    ("--codepage", IntArg (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage."); 
+    ("--light", UnitArg (fun () ->  light := Some true), "(ignored)");
+    ("--light-off", UnitArg (fun () ->  light := Some false), "Add #light \"off\" to the top of the generated file");
+    ("--lexlib", StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer table interpreter (default Microsoft.FSharp.Text.Lexing)");
+    ("--unicode", UnitArg (fun () -> unicode := true), "Produce a lexer for use with 16-bit unicode characters.");  
   ]
 
-let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> raise (InvalidCommandArgument (Some "more than one input given")) | None -> input := Some x) "fslex <filename>"
+let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> raise (InvalidCommandLineArg (Some "more than one input given")) | None -> input := Some x) "fslex <filename>"
 
 let outputInt (os: TextWriter) (n:int) = os.Write(string n)
 
