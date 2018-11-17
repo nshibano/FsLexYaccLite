@@ -14,13 +14,15 @@ type ArgType =
   | StringArg of (string -> unit)
   | UnitArg of (unit -> unit)
 
-type ArgInfo (name,action,help) = 
-  /// Return the name of the argument
-  member x.Name = name
-  /// Return the argument type and action of the argument
-  member x.ArgType = action
-  /// Return the usage help associated with the argument
-  member x.HelpText = help
+type ArgInfo =
+    { 
+        /// Name of the argument
+        Name : string
+        /// Argument type and action of the argument
+        ArgType : ArgType
+        /// Usage help associated with the argument
+        HelpText : string
+    }
   
 exception Bad of string
 exception HelpText of string

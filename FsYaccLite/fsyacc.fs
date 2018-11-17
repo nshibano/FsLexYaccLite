@@ -54,21 +54,23 @@ let inputCodePage = ref None
 let mutable lexlib = "Microsoft.FSharp.Text.Lexing"
 let mutable parslib = "Microsoft.FSharp.Text.Parsing"
 
+let argInfo (name, argType, helpText) = { Name = name; ArgType = argType; HelpText = helpText }
+
 let usage =
-  [ ArgInfo("-o", ArgType.StringArg (fun s -> out := Some s), "Name the output file.");
-    ArgInfo("-v", ArgType.UnitArg (fun () -> log := true), "Produce a listing file."); 
-    ArgInfo("--module", ArgType.StringArg (fun s -> modname := Some s), "Define the F# module name to host the generated parser."); 
-    ArgInfo("--internal", ArgType.UnitArg (fun () -> internal_module := true), "Generate an internal module");
-    ArgInfo("--open", ArgType.StringArg (fun s -> opens := !opens @ [s]), "Add the given module to the list of those to open in both the generated signature and implementation."); 
-    ArgInfo("--light", ArgType.UnitArg (fun () ->  light := Some true), "(ignored)");
-    ArgInfo("--light-off", ArgType.UnitArg (fun () ->  light := Some false), "Add #light \"off\" to the top of the generated file");
-    ArgInfo("--ml-compatibility", ArgType.SetArg compat, "Support the use of the global state from the 'Parsing' module in FSharp.PowerPack.dll."); 
-    ArgInfo("--tokens", ArgType.SetArg tokenize, "Simply tokenize the specification file itself."); 
-    ArgInfo("--lexlib", ArgType.StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer (default: Microsoft.FSharp.Text.Lexing)");
-    ArgInfo("--parslib", ArgType.StringArg (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)");
-    ArgInfo("--codepage", ArgType.IntArg (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage."); 
-    ArgInfo("--newprec", ArgType.UnitArg (fun () -> newprec := true), "Use the new precedence resolving behaviour. See: https://github.com/fsprojects/FsLexYacc/pull/51"); 
-    ArgInfo("--no-recovery", ArgType.UnitArg (fun () -> norec := true), "Don't try recovering from invalid input") ]
+  [ argInfo("-o", ArgType.StringArg (fun s -> out := Some s), "Name the output file.");
+    argInfo("-v", ArgType.UnitArg (fun () -> log := true), "Produce a listing file."); 
+    argInfo("--module", ArgType.StringArg (fun s -> modname := Some s), "Define the F# module name to host the generated parser."); 
+    argInfo("--internal", ArgType.UnitArg (fun () -> internal_module := true), "Generate an internal module");
+    argInfo("--open", ArgType.StringArg (fun s -> opens := !opens @ [s]), "Add the given module to the list of those to open in both the generated signature and implementation."); 
+    argInfo("--light", ArgType.UnitArg (fun () ->  light := Some true), "(ignored)");
+    argInfo("--light-off", ArgType.UnitArg (fun () ->  light := Some false), "Add #light \"off\" to the top of the generated file");
+    argInfo("--ml-compatibility", ArgType.SetArg compat, "Support the use of the global state from the 'Parsing' module in FSharp.PowerPack.dll."); 
+    argInfo("--tokens", ArgType.SetArg tokenize, "Simply tokenize the specification file itself."); 
+    argInfo("--lexlib", ArgType.StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer (default: Microsoft.FSharp.Text.Lexing)");
+    argInfo("--parslib", ArgType.StringArg (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)");
+    argInfo("--codepage", ArgType.IntArg (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage."); 
+    argInfo("--newprec", ArgType.UnitArg (fun () -> newprec := true), "Use the new precedence resolving behaviour. See: https://github.com/fsprojects/FsLexYacc/pull/51"); 
+    argInfo("--no-recovery", ArgType.UnitArg (fun () -> norec := true), "Don't try recovering from invalid input") ]
 
 let _ = ArgParser.Parse(usage,(fun x -> match !input with Some _ -> failwith "more than one input given" | None -> input := Some x),"fsyacc <filename>")
 
