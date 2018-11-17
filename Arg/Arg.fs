@@ -5,10 +5,7 @@ module FsLexYaccLite.Arg
 open System
 
 type ArgType = 
-    | ClearArg of bool ref
-    | FloatArg of (float -> unit)
     | IntArg of (int -> unit)
-    | RestArg of (string -> unit)
     | SetArg of bool ref
     | StringArg of (string -> unit)
     | UnitArg of (unit -> unit)
@@ -38,9 +35,6 @@ let parseCommandLineArgs (specs : (string * ArgType * string) list) (other : str
                         | SetArg f ->
                             f := true
                             pos <- pos + 1
-                        | ClearArg f -> 
-                            f := false
-                            pos <- pos + 1
                         | StringArg f -> 
                             let arg2 = getSecondArg() 
                             f arg2
@@ -50,16 +44,6 @@ let parseCommandLineArgs (specs : (string * ArgType * string) list) (other : str
                             let arg2 = try int32 arg2 with _ -> raise(InvalidCommandArgument None) 
                             f arg2
                             pos <- pos + 2
-                        | FloatArg f -> 
-                            let arg2 = getSecondArg() 
-                            let arg2 = try float arg2 with _ -> raise(InvalidCommandArgument None)
-                            f arg2
-                            pos <- pos + 2
-                        | RestArg f -> 
-                            pos <- pos + 1
-                            while pos < argv.Length do
-                                f argv.[pos]
-                                pos <- pos + 1
                     else
                         findMatchingArg tl
                 | [] -> 
@@ -79,11 +63,9 @@ let parseCommandLineArgs (specs : (string * ArgType * string) list) (other : str
         f.WriteLine(usageText)
         for name, argType, helpText in specs do
             match argType with
-            | UnitArg _ | SetArg _ | ClearArg _ -> fprintfn f "\t%s: %s" name helpText
+            | UnitArg _ | SetArg _ -> fprintfn f "\t%s: %s" name helpText
             | StringArg _ -> fprintfn f "\t%s <string>: %s" name helpText
             | IntArg _ -> fprintfn f "\t%s <int>: %s" name helpText
-            | FloatArg _ -> fprintfn f "\t%s <float>: %s" name helpText
-            | RestArg _ -> fprintfn f "\t%s ...: %s" name helpText
         fprintfn f "\t--help: display this list of options"
         fprintfn f "\t-help: display this list of options"
         f.Flush()
