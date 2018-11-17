@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Arg.fsi" />
+    <Compile Include="Arg.fs" />
+    <Compile Include="Lexing.fsi" />
+    <Compile Include="Lexing.fs" />
+    <Compile Include="Parsing.fsi" />
+    <Compile Include="Parsing.fs" />
+  </ItemGroup>
+
+</Project>
