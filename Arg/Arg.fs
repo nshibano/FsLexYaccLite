@@ -22,7 +22,7 @@ let parseCommandLineArgs (specs : (string * ArgType * string) list) (other : str
 
                         let getSecondArg() = 
                             if pos + 1 >= argv.Length then 
-                                failwithf "option %s needs an argument." name
+                                failwithf "option %s needs an argument" name
                             argv.[pos + 1] 
                  
                         match argType with 
@@ -35,7 +35,7 @@ let parseCommandLineArgs (specs : (string * ArgType * string) list) (other : str
                             pos <- pos + 2
                         | IntArg f -> 
                             let arg2 = getSecondArg () 
-                            let arg2 = try int32 arg2 with _ -> failwith ""
+                            let arg2 = try int arg2 with _ -> failwithf "option %s needs int argument" name
                             f arg2
                             pos <- pos + 2
                     else
