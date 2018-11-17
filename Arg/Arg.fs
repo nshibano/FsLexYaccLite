@@ -1,50 +1,43 @@
 // (c) Microsoft Corporation 2005-2009. 
 /// A simple command-line argument processor.
+module FsLexYaccLite.Arg
 
-namespace Microsoft.FSharp.Text
-
-/// The spec value describes the action of the argument,
-/// and whether it expects a following parameter.
 type ArgType = 
-  | ClearArg of bool ref
-  | FloatArg of (float -> unit)
-  | IntArg of (int -> unit)
-  | RestArg of (string -> unit)
-  | SetArg of bool ref
-  | StringArg of (string -> unit)
-  | UnitArg of (unit -> unit)
+    | ClearArg of bool ref
+    | FloatArg of (float -> unit)
+    | IntArg of (int -> unit)
+    | RestArg of (string -> unit)
+    | SetArg of bool ref
+    | StringArg of (string -> unit)
+    | UnitArg of (unit -> unit)
 
 type ArgInfo =
     { 
-        /// Name of the argument
         Name : string
-        /// Argument type and action of the argument
         ArgType : ArgType
-        /// Usage help associated with the argument
         HelpText : string
     }
   
 exception Bad of string
 exception HelpText of string
 
-[<Sealed>]
+let getUsage specs u =
+    let sbuf = new System.Text.StringBuilder 100  
+    let pstring (s:string) = sbuf.Append s |> ignore 
+    let pendline s = pstring s; pstring "\n" 
+    pendline u;
+    List.iter (fun (arg:ArgInfo) -> 
+    match arg.Name, arg.ArgType, arg.HelpText with
+    | (s, (UnitArg _ | SetArg _ | ClearArg _), helpText) -> pstring "\t"; pstring s; pstring ": "; pendline helpText
+    | (s, StringArg _, helpText) -> pstring "\t"; pstring s; pstring " <string>: "; pendline helpText
+    | (s, IntArg _, helpText) -> pstring "\t"; pstring s; pstring " <int>: "; pendline helpText
+    | (s, FloatArg _, helpText) ->  pstring "\t"; pstring s; pstring " <float>: "; pendline helpText
+    | (s, RestArg _, helpText) -> pstring "\t"; pstring s; pstring " ...: "; pendline helpText) specs;
+    pstring "\t"; pstring "--help"; pstring ": "; pendline "display this list of options";
+    pstring "\t"; pstring "-help"; pstring ": "; pendline "display this list of options";
+    sbuf.ToString()
+
 type ArgParser() = 
-    static let getUsage specs u =  
-      let sbuf = new System.Text.StringBuilder 100  
-      let pstring (s:string) = sbuf.Append s |> ignore 
-      let pendline s = pstring s; pstring "\n" 
-      pendline u;
-      List.iter (fun (arg:ArgInfo) -> 
-        match arg.Name, arg.ArgType, arg.HelpText with
-        | (s, (UnitArg _ | SetArg _ | ClearArg _), helpText) -> pstring "\t"; pstring s; pstring ": "; pendline helpText
-        | (s, StringArg _, helpText) -> pstring "\t"; pstring s; pstring " <string>: "; pendline helpText
-        | (s, IntArg _, helpText) -> pstring "\t"; pstring s; pstring " <int>: "; pendline helpText
-        | (s, FloatArg _, helpText) ->  pstring "\t"; pstring s; pstring " <float>: "; pendline helpText
-        | (s, RestArg _, helpText) -> pstring "\t"; pstring s; pstring " ...: "; pendline helpText)
-        specs;
-      pstring "\t"; pstring "--help"; pstring ": "; pendline "display this list of options";
-      pstring "\t"; pstring "-help"; pstring ": "; pendline "display this list of options";
-      sbuf.ToString()
 
     /// Parse some of the arguments given by 'argv', starting at the given position
     [<System.Obsolete("This method should not be used directly as it will be removed in a future revision of this library")>]
@@ -107,10 +100,6 @@ type ArgParser() =
                    other arg;
                    incr cursor
           findMatchingArg specs 
-    /// Prints the help for each argument.
-    static member Usage (specs,?usage) = 
-        let usage = defaultArg usage ""
-        System.Console.Error.WriteLine (getUsage (Seq.toList specs) usage)
 
     /// Parse the arguments given by System.Environment.GetEnvironmentVariables()
     /// according to the argument processing specifications "specs".

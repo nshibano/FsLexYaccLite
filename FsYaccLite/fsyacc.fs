@@ -12,6 +12,7 @@ open Microsoft.FSharp.Text.Lexing
 
 open FsLexYacc.FsYacc
 open FsLexYacc.FsYacc.AST
+open FsLexYaccLite.Arg
 
 //------------------------------------------------------------------
 // This code is duplicated from Microsoft.FSharp.Compiler.UnicodeLexing

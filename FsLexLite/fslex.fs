@@ -5,6 +5,7 @@ module internal FsLexYacc.FsLex.Driver
 open FsLexYacc.FsLex
 open FsLexYacc.FsLex.AST
 open FsLexYacc.FsLex.Parser
+open FsLexYaccLite.Arg
 open Printf
 //open Internal.Utilities
 //open Internal.Utilities.Text.Lexing
@@ -12,7 +13,7 @@ open Microsoft.FSharp.Text
 open Microsoft.FSharp.Text.Lexing
 open System
 open System.Collections.Generic
-open System.IO 
+open System.IO
 
 //------------------------------------------------------------------
 // This code is duplicated from Microsoft.FSharp.Compiler.UnicodeLexing
