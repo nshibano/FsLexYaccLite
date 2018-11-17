@@ -8,8 +8,6 @@ type ArgType =
     | IntArg of (int -> unit)
     | StringArg of (string -> unit)
     | UnitArg of (unit -> unit)
-  
-exception InvalidCommandLineArg of string option
 
 let parseCommandLineArgs (specs : (string * ArgType * string) list) (other : string -> unit) (usageText : string) = 
     let argv = System.Environment.GetCommandLineArgs() 
@@ -19,12 +17,12 @@ let parseCommandLineArgs (specs : (string * ArgType * string) list) (other : str
             let arg = argv.[pos] 
             let rec findMatchingArg (specs : (string * ArgType * string) list) = 
                 match specs with
-                | (name, argType, helpText) :: tl ->
+                | (name, argType, _) :: tl ->
                     if name = arg then
 
                         let getSecondArg() = 
                             if pos + 1 >= argv.Length then 
-                                raise(InvalidCommandLineArg(Some (sprintf "option %s needs an argument." name)))
+                                failwithf "option %s needs an argument." name
                             argv.[pos + 1] 
                  
                         match argType with 
@@ -37,25 +35,25 @@ let parseCommandLineArgs (specs : (string * ArgType * string) list) (other : str
                             pos <- pos + 2
                         | IntArg f -> 
                             let arg2 = getSecondArg () 
-                            let arg2 = try int32 arg2 with _ -> raise(InvalidCommandLineArg None) 
+                            let arg2 = try int32 arg2 with _ -> failwith ""
                             f arg2
                             pos <- pos + 2
                     else
                         findMatchingArg tl
                 | [] -> 
                     if arg = "-help" || arg = "--help" || arg = "/help" || arg = "/help" || arg = "/?" then
-                        raise (InvalidCommandLineArg None)
+                        failwith ""
                     // Note: for '/abc/def' does not count as an argument
                     // Note: '/abc' does
                     elif arg.Length > 0 && (arg.[0] = '-' || (arg.[0] = '/' && not (arg.Length > 1 && arg.Substring(1).Contains("/")))) then
-                        raise (InvalidCommandLineArg (Some ("unrecognized argument: " + arg)))
+                        failwithf "unrecognized argument: %s" arg
                     else 
                        other arg
                        pos <- pos + 1
             findMatchingArg specs 
-    with InvalidCommandLineArg msg ->
+    with Failure msg ->
         let f = Console.Error
-        Option.iter (fun (msg : string) -> f.WriteLine(msg)) msg
+        if msg <> "" then f.WriteLine(msg)
         f.WriteLine(usageText)
         for name, argType, helpText in specs do
             match argType with

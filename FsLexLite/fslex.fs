@@ -57,7 +57,7 @@ let usage =
     ("--unicode", UnitArg (fun () -> unicode := true), "Produce a lexer for use with 16-bit unicode characters.");  
   ]
 
-let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> raise (InvalidCommandLineArg (Some "more than one input given")) | None -> input := Some x) "fslex <filename>"
+let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> failwith "more than one input given" | None -> input := Some x) "fslex <filename>"
 
 let outputInt (os: TextWriter) (n:int) = os.Write(string n)
 
