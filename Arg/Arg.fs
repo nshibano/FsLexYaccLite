@@ -20,18 +20,6 @@ type ArgInfo =
   
 exception InvalidCommandArgument of string option
 
-let outputHelpText (f : TextWriter) (usageText : string) (specs : ArgInfo list) =
-    fprintfn f "%s" usageText
-    for info in specs do
-        match info.ArgType with
-        | UnitArg _ | SetArg _ | ClearArg _ -> fprintfn f "\t%s: %s" info.Name info.HelpText
-        | StringArg _ -> fprintfn f "\t%s <string>: %s" info.Name info.HelpText
-        | IntArg _ -> fprintfn f "\t%s <int>: %s" info.Name info.HelpText
-        | FloatArg _ -> fprintfn f "\t%s <float>: %s" info.Name info.HelpText
-        | RestArg _ -> fprintfn f "\t%s ...: %s" info.Name info.HelpText
-    fprintfn f "\t--help: display this list of options"
-    fprintfn f "\t-help: display this list of options"
-
 let parseCommandLineArgs (specs : ArgInfo list) (other : string -> unit) (usageText : string) = 
         let current = ref 0
         let argv = System.Environment.GetCommandLineArgs() 
