@@ -17,8 +17,7 @@
     <Compile Include="Program.fs" />
     <None Include="Parser.fsy" />
     <None Include="Lexer.fsl" />
+    <None Include="Run.fsx" />
   </ItemGroup>
-
-  <ItemGroup />
 
 </Project>
