@@ -190,4 +190,4 @@ src/FsYacc/fsyaccpars.fs
 src/FsYacc/fsyaccpars.fsi
 
 .vs
-Test/Test/Parser.fsyacc.output
+Tests/Expr/Parser.fsyacc.output
