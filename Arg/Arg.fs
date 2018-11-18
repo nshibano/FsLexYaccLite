@@ -34,7 +34,7 @@ let parseCommandLineArgs (specs : (string * ArgType * string) list) (other : str
                             f arg2
                             pos <- pos + 2
                         | IntArg f -> 
-                            let arg2 = getSecondArg () 
+                            let arg2 = getSecondArg() 
                             let arg2 = try int arg2 with _ -> failwithf "option %s needs int argument" name
                             f arg2
                             pos <- pos + 2
