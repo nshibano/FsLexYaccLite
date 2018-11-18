@@ -466,21 +466,21 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     // Print items and other stuff 
     let OutputItem0 os item0 =
-        fprintf os "    %s -> %a . %a" (ntTab.OfIndex (ntIdx_of_item0 item0)) (* outputPrecInfo precInfo *) OutputSyms (lsyms_of_item0 item0) OutputSyms (rsyms_of_item0 item0) 
+        fprintf os "    %s -&gt; %a . %a" (ntTab.OfIndex (ntIdx_of_item0 item0)) (* outputPrecInfo precInfo *) OutputSyms (lsyms_of_item0 item0) OutputSyms (rsyms_of_item0 item0) 
         
     let OutputItem0Set os s = 
         Set.iter (fun item -> fprintf os "%a\n" OutputItem0 item) s
 
     let OutputFirstSet os m = 
-        Set.iter (function None ->  fprintf os "<empty>" | Some x -> fprintf os "  term %s\n" x) m
+        Set.iter (function None ->  fprintf os "&lt;empty&gt;" | Some x -> fprintf os "  term %s\n" x) m
 
     let OutputFirstMap os m = 
         Map.iter (fun x y -> fprintf os "first '%a' = \n%a\n" OutputSym x OutputFirstSet y) m
 
     let OutputAction os m = 
         match m with 
-        | Shift n -> fprintf os "  shift %d" n 
-        | Reduce prodIdx ->  fprintf os "  reduce %s --> %a" (ntTab.OfIndex (prodTab.NonTerminal prodIdx)) OutputSyms (prodTab.Symbols prodIdx)
+        | Shift n -> fprintf os "  shift <a href=\"#s%d\">%d</a>" n n 
+        | Reduce prodIdx ->  fprintf os "  reduce %s --&gt; %a" (ntTab.OfIndex (prodTab.NonTerminal prodIdx)) OutputSyms (prodTab.Symbols prodIdx)
         | Error ->  fprintf os "  error"
         | Accept -> fprintf os "  accept" 
     
@@ -492,19 +492,21 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     let OutputImmediateActions os m = 
         match m with 
-        | None -> fprintf os "  <none>"
+        | None -> fprintf os "  &lt;none&gt;"
         | Some a -> OutputAction os a
     
     let OutputGotos os m = 
-        Array.iteri (fun ntIdx s -> let nonterm = ntTab.OfIndex ntIdx in match s with Some st -> fprintf os "    goto %s: %d\n" nonterm st | None -> ()) m
+        Array.iteri (fun ntIdx s -> let nonterm = ntTab.OfIndex ntIdx in match s with Some st -> fprintf os "    goto %s: <a href=\"#s%d\">%d</a>\n" nonterm st st | None -> ()) m
     
     let OutputCombined os m = 
-        Array.iteri (fun i (a,b,c,d) -> fprintf os "state %d:\n  items:\n%a\n  actions:\n%a\n  immediate action: %a\n  gotos:\n%a\n" i OutputItem0Set a OutputActions b OutputImmediateActions c OutputGotos d) m
+        Array.iteri (fun i (a,b,c,d) ->
+            fprintf os "<div id=\"s%d\">state %d:</div>\n  items:\n%a\n  actions:\n%a\n  immediate action: %a\n  gotos:\n%a\n" i i OutputItem0Set a OutputActions b OutputImmediateActions c OutputGotos d) m
     
     let OutputLalrTables os (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx) = 
         let combined = Array.ofList (List.map2 (fun x (y,(z,w)) -> x,y,z,w) (Array.toList states) (List.zip (Array.toList actionTable) (List.zip (Array.toList immediateActionTable) (Array.toList gotoTable))))
         fprintfn os "------------------------";
         fprintfn os "states = ";
+        fprintfn os "";
         fprintfn os "%a" OutputCombined combined;
         fprintfn os "startStates = %s" (String.Join(";",Array.ofList (List.map string startStates)));
         fprintfn os "------------------------"

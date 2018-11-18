@@ -132,7 +132,7 @@ let main() =
   let output = match !out with Some x -> x | _ -> chop_extension filename + (if checkSuffix filename ".mly" then ".ml" else ".fs") in
   let outputi = match !out with Some x -> chop_extension x + (if checkSuffix x ".ml" then ".mli" else ".fsi") | _ -> chop_extension filename + (if checkSuffix filename ".mly" then ".mli" else ".fsi") in
   let outputo = 
-      if !log then Some (match !out with Some x -> chop_extension x + ".fsyacc.output" | _ -> chop_extension filename + ".fsyacc.output") 
+      if !log then Some (match !out with Some x -> chop_extension x + ".fsyacc.html" | _ -> chop_extension filename + ".fsyacc.html") 
       else None 
 
   use os = (File.CreateText output :> TextWriter)
@@ -152,12 +152,13 @@ let main() =
           let oso = (File.CreateText filename :> TextWriter) 
           (fun f -> f oso) 
 
-  logf (fun oso -> fprintfn oso "Output file describing compiled parser placed in %s and %s" output outputi);
+  logf (fun oso -> fprintfn oso "<pre>\nOutput file describing compiled parser placed in %s and %s" output outputi);
 
   printfn "building tables"; 
   let spec1 = ProcessParserSpecAst spec 
   let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
       CompilerLalrParserSpec logf !newprec !norec spec1 
+  logf (fun oso -> fprintfn oso "</pre>");
 
   let (code,pos) = spec.Header 
   printfn "%d states" states.Length; 
