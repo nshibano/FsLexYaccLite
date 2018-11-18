@@ -1,22 +1,11 @@
 // (c) Microsoft Corporation 2005-2007.
-
 module FsLexYacc.FsYacc.AST
-
-#nowarn "62" // This construct is for ML compatibility.
-
 
 open System
 open System.Collections.Generic
 open Printf
 open Microsoft.FSharp.Collections
-//open Internal.Utilities
-//open Internal.Utilities.Text.Lexing
-open Microsoft.FSharp.Text
 open Microsoft.FSharp.Text.Lexing
-
-/// An active pattern that should be in the F# standard library
-let (|KeyValue|) (kvp:KeyValuePair<_,_>) = kvp.Key,kvp.Value
-
 
 type Identifier = string
 type Code = string * Position
@@ -35,13 +24,12 @@ and Associativity = LeftAssoc | RightAssoc | NonAssoc
 type Terminal = string
 type NonTerminal = string
 type Symbol = Terminal of Terminal | NonTerminal of NonTerminal
-type Symbols = Symbol list
 
 
 //---------------------------------------------------------------------
 // Output Raw Parser Spec AST
 
-let StringOfSym sym = match sym with Terminal s -> "'" ^ s ^ "'" | NonTerminal s -> s
+let StringOfSym sym = match sym with Terminal s -> "'" + s + "'" | NonTerminal s -> s
 
 let OutputSym os sym = fprintf os "%s" (StringOfSym sym)
 
@@ -65,7 +53,7 @@ type PrecedenceInfo =
     | ExplicitPrec of Associativity * int 
     | NoPrecedence
       
-type Production = Production of NonTerminal * PrecedenceInfo * Symbols * Code option
+type Production = Production of NonTerminal * PrecedenceInfo * Symbol list * Code option
 
 type ProcessedParserSpec = 
     { Terminals: (Terminal * PrecedenceInfo) list;
@@ -179,8 +167,6 @@ type SymbolIndex = int
 let PTerminal(i:TerminalIndex) : SymbolIndex = -i-1
 let PNonTerminal(i:NonTerminalIndex) : SymbolIndex = i
 let (|PTerminal|PNonTerminal|) x = if x < 0 then PTerminal (-(x+1)) else PNonTerminal x
-
-type SymbolIndexes = SymbolIndex list
 
 /// Indexes in the LookaheadTable, SpontaneousTable, PropagateTable
 /// Embed in a single integer, since these are faster
@@ -355,7 +341,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     stopWatch.Start()
 
     // Augment the grammar 
-    let fakeStartNonTerminals = spec.StartSymbols |> List.map(fun nt -> "_start"^nt) 
+    let fakeStartNonTerminals = spec.StartSymbols |> List.map(fun nt -> "_start" + nt) 
     let nonTerminals = fakeStartNonTerminals@spec.NonTerminals
     let endOfInputTerminal = "$$"
     let dummyLookahead = "#"
@@ -471,7 +457,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let IsStartItem item0 = fakeStartNonTerminalsSet.Contains(ntIdx_of_item0 item0)
     let IsKernelItem item0 = (IsStartItem item0 || dotIdx_of_item0 item0 <> 0)
 
-    let StringOfSym sym = match sym with PTerminal s -> "'" ^ termTab.OfIndex s ^ "'" | PNonTerminal s -> ntTab.OfIndex s
+    let StringOfSym sym = match sym with PTerminal s -> "'" + termTab.OfIndex s + "'" | PNonTerminal s -> ntTab.OfIndex s
 
     let OutputSym os sym = fprintf os "%s" (StringOfSym sym)
 
