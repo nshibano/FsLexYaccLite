@@ -17,25 +17,21 @@ let cmd name arg =
     if proc.ExitCode <> 0 then failwithf "command %s %s failed with exit code %d." name arg proc.ExitCode
 
 let cp pathFrom dirTo =
+    Directory.CreateDirectory(dirTo) |> ignore
     File.Copy(pathFrom, Path.Combine(dirTo, Path.GetFileName(pathFrom)), true)
 
 let main() =
     try
-        cmd "dotnet" @"build ..\..\Arg"
-        cmd "dotnet" @"build ..\..\FsLexLite"
-        cmd "dotnet" @"build ..\..\FsYaccLite"
-        
-        cp @"..\..\Runtime\Lexing.fsi" @"."
-        cp @"..\..\Runtime\Lexing.fs" @"."
-        cp @"..\..\Runtime\Parsing.fsi" @"."
-        cp @"..\..\Runtime\Parsing.fs" @"."
+        if Directory.Exists("Publish") then
+            Directory.Delete("Publish", true)
 
-        cmd "dotnet" @"..\..\FsLexLite\bin\Debug\netcoreapp2.1\FsLexLite.dll --unicode Lexer.fsl --lexlib Microsoft.FSharp.Text.Lexing"
-        cmd "dotnet" @"..\..\FsYaccLite\bin\Debug\netcoreapp2.1\FsYaccLite.dll --module Test.Parser --lexlib Microsoft.FSharp.Text.Lexing --parslib Microsoft.FSharp.Text.Parsing -v --newprec Parser.fsy"
+        cmd "dotnet" @"publish -c Release FsLexLite\FsLexLite.fsproj -o ..\Publish\FsLexLite"
+        cmd "dotnet" @"publish -c Release FsYaccLite\FsYaccLite.fsproj -o ..\Publish\FsYaccLite"
 
-        cmd "dotnet" @"build ."
-
-        cmd "dotnet" @"bin\Debug\netcoreapp2.1\Expr.dll"
+        cp @"Runtime\Lexing.fsi"  @"Publish\Runtime"
+        cp @"Runtime\Lexing.fs"   @"Publish\Runtime"
+        cp @"Runtime\Parsing.fsi" @"Publish\Runtime"
+        cp @"Runtime\Parsing.fs"  @"Publish\Runtime"
     with
         Failure msg -> Console.Error.WriteLine(msg)
 

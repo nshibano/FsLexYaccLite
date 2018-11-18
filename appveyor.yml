@@ -3,11 +3,7 @@ image: Visual Studio 2017
 configuration: Release
 shallow_clone: true
 build_script:
-  - dotnet publish -c Release FsLexLite\FsLexLite.fsproj -o ..\Publish\FsLexLite
-  - dotnet publish -c Release FsYaccLite\FsYaccLite.fsproj -o ..\Publish\FsYaccLite
-after_build:
-  - xcopy Common\Lexing.fs*  Publish\Runtime\
-  - xcopy Common\Parsing.fs* Publish\Runtime\
+  - fsi Publish.fsx
 artifacts:
   - path: Publish
     name: FsLexYaccLite
