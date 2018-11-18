@@ -1,6 +1,10 @@
-﻿open System
+﻿#r @"System.IO.Compression.dll"
+#r @"System.IO.Compression.FileSystem.dll"
+
+open System
 open System.Diagnostics
 open System.IO
+open System.IO.Compression
 
 let cmd name arg =
     let info = ProcessStartInfo(name, arg)
@@ -20,6 +24,12 @@ let cp pathFrom dirTo =
     Directory.CreateDirectory(dirTo) |> ignore
     File.Copy(pathFrom, Path.Combine(dirTo, Path.GetFileName(pathFrom)), true)
 
+let buildVersion =
+    let s = Environment.GetEnvironmentVariable("APPVEYOR_BUILD_VERSION")
+    if isNull s then "0.0.0" else s
+
+let zipFileName = sprintf "FsLexYaccLite-%s.zip" buildVersion
+
 let main() =
     try
         if Directory.Exists("Publish") then
@@ -32,6 +42,10 @@ let main() =
         cp @"Runtime\Lexing.fs"   @"Publish\Runtime"
         cp @"Runtime\Parsing.fsi" @"Publish\Runtime"
         cp @"Runtime\Parsing.fs"  @"Publish\Runtime"
+
+        ZipFile.CreateFromDirectory("Publish", zipFileName)
+
+        try cmd "appveyor" ("PushArtifact " + zipFileName) with _ -> ()
     with
         Failure msg -> Console.Error.WriteLine(msg)
 

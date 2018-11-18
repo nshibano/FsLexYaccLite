@@ -4,7 +4,3 @@ configuration: Release
 shallow_clone: true
 build_script:
   - '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\CommonExtensions\Microsoft\FSharp\fsi.exe" Publish.fsx'
-artifacts:
-  - path: Publish
-    name: FsLexYaccLite
-    type: zip
