@@ -9,7 +9,13 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FsLexLite", "FsLexLite\FsLe
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Arg", "Arg\Arg.fsproj", "{A61AFEE0-BFE9-411E-868B-EACF83CD7349}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Runtime", "Runtime\Runtime.fsproj", "{86170DE1-9D5D-4B75-B25B-4842F0B8D429}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Runtime", "Runtime\Runtime.fsproj", "{86170DE1-9D5D-4B75-B25B-4842F0B8D429}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F79D39F2-1C45-4354-A0CA-5AD2E1BA55EB}"
+	ProjectSection(SolutionItems) = preProject
+		appveyor.yml = appveyor.yml
+		Publish.fsx = Publish.fsx
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

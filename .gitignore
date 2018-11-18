@@ -199,3 +199,5 @@ Tests/Expr/Parser.fsi
 Tests/Expr/Parsing.fs
 Tests/Expr/Parsing.fsi
 Tests/Expr/Parser.fsyacc.output
+
+FsLexYaccLite-*.zip
