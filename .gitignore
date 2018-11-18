@@ -179,6 +179,8 @@ TestResults.xml
 # Nuget outputs
 nuget/*.nupkg
 
+.vs
+
 # ===================================================
 # Exclude generated lexer/parser source files
 # ===================================================
@@ -189,5 +191,11 @@ src/FsYacc/fsyacclex.fs
 src/FsYacc/fsyaccpars.fs
 src/FsYacc/fsyaccpars.fsi
 
-.vs
+Tests/Expr/Lexer.fs
+Tests/Expr/Lexing.fs
+Tests/Expr/Lexing.fsi
+Tests/Expr/Parser.fs
+Tests/Expr/Parser.fsi
+Tests/Expr/Parsing.fs
+Tests/Expr/Parsing.fsi
 Tests/Expr/Parser.fsyacc.output
