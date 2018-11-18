@@ -1,1 +1,0 @@
-GenParser && GenLexer && dotnet run
