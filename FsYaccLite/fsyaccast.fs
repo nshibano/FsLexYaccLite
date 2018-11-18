@@ -492,14 +492,14 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     let OutputImmediateActions os m = 
         match m with 
-        | None -> fprintf os "<none>"
+        | None -> fprintf os "  <none>"
         | Some a -> OutputAction os a
     
     let OutputGotos os m = 
         Array.iteri (fun ntIdx s -> let nonterm = ntTab.OfIndex ntIdx in match s with Some st -> fprintf os "    goto %s: %d\n" nonterm st | None -> ()) m
     
     let OutputCombined os m = 
-        Array.iteri (fun i (a,b,c,d) -> fprintf os "state %d:\n  items:\n%a\n  actions:\n%a\n  immediate action: %a\n gotos:\n%a\n" i OutputItem0Set a OutputActions b OutputImmediateActions c OutputGotos d) m
+        Array.iteri (fun i (a,b,c,d) -> fprintf os "state %d:\n  items:\n%a\n  actions:\n%a\n  immediate action: %a\n  gotos:\n%a\n" i OutputItem0Set a OutputActions b OutputImmediateActions c OutputGotos d) m
     
     let OutputLalrTables os (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx) = 
         let combined = Array.ofList (List.map2 (fun x (y,(z,w)) -> x,y,z,w) (Array.toList states) (List.zip (Array.toList actionTable) (List.zip (Array.toList immediateActionTable) (Array.toList gotoTable))))
