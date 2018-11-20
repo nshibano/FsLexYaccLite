@@ -201,11 +201,11 @@ let main() =
   if !compat then 
       cprintfn cos "open Microsoft.FSharp.Compatibility.OCaml.Parsing";
 
-  cprintfn cos "# %d \"%s\"" pos.pos_lnum pos.pos_fname;
+  //cprintfn cos "# %d \"%s\"" pos.pos_lnum pos.pos_fname;
   cprintfn cos "%s" code;
   lineCountOutput := !lineCountOutput + code.Replace("\r","").Split([| '\n' |]).Length;
 
-  cprintfn cos "# %d \"%s\"" !lineCountOutput output;
+  //cprintfn cos "# %d \"%s\"" !lineCountOutput output;
   // Print the datatype for the tokens
   cprintfn cos "// This type is the type of tokens accepted by the parser";
   for out in [cos;cosi] do
@@ -451,7 +451,7 @@ let main() =
       cprintf cos "let _fsyacc_reductions ()  =" ;
       cprintfn cos "    [| " ;
       for nt,ntIdx,syms,code in prods do 
-          cprintfn cos "# %d \"%s\"" !lineCountOutput output;
+          //cprintfn cos "# %d \"%s\"" !lineCountOutput output;
           cprintfn cos "        (fun (parseState : %s.IParseState) ->"  parslib
           if !compat then 
               cprintfn cos "            Parsing.set_parse_state parseState;"
@@ -469,9 +469,9 @@ let main() =
           cprintfn cos "            Microsoft.FSharp.Core.Operators.box" 
           cprintfn cos "                (";
           cprintfn cos "                   (";
-          match code with 
-          | Some (_,pos) -> cprintfn cos "# %d \"%s\"" pos.pos_lnum pos.pos_fname
-          | None -> ()
+          //match code with 
+          //| Some (_,pos) -> cprintfn cos "# %d \"%s\"" pos.pos_lnum pos.pos_fname
+          //| None -> ()
           match code with 
           | Some (code,_) -> 
               let dollar = ref false in 
@@ -488,14 +488,14 @@ let main() =
               cprintfn cos "                      raise (%s.Accept(Microsoft.FSharp.Core.Operators.box _1))" parslib
           cprintfn cos "                   )";
           // Place the line count back for the type constraint
-          match code with 
-          | Some (_,pos) -> cprintfn cos "# %d \"%s\"" pos.pos_lnum pos.pos_fname
-          | None -> ()
+          //match code with 
+          //| Some (_,pos) -> cprintfn cos "# %d \"%s\"" pos.pos_lnum pos.pos_fname
+          //| None -> ()
           cprintfn cos "                 : %s));" (if types.ContainsKey nt then  types.[nt] else "'"+nt);
       done;
       cprintfn cos "|]" ;
   end;
-  cprintfn cos "# %d \"%s\"" !lineCountOutput output;
+  //cprintfn cos "# %d \"%s\"" !lineCountOutput output;
   cprintfn cos "let tables () : %s.Tables<_> = " parslib
   cprintfn cos "  { reductions= _fsyacc_reductions ();"
   cprintfn cos "    endOfInputTag = _fsyacc_endOfInputTag;"
