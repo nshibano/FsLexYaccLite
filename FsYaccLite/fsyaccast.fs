@@ -484,8 +484,11 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         | Error ->  fprintf os "  error"
         | Accept -> fprintf os "  accept" 
     
-    let OutputActions os m = 
-        Array.iteri (fun i (prec,action) -> let term = termTab.OfIndex i in fprintf os "    action '%s' (%a): %a\n" term outputPrecInfo prec OutputAction action) m
+    let OutputActions os (m : (PrecedenceInfo * Action) array) =
+        for i = m.Length - 1 downto 0 do
+            let prec, action = m.[i]
+            let term = termTab.OfIndex i
+            fprintf os "    action '%s' (%a): %a\n" term outputPrecInfo prec OutputAction action
 
     let OutputActionTable os m = 
         Array.iteri (fun i n -> fprintf os "state %d:\n%a\n" i OutputActions n) m
