@@ -1,0 +1,18 @@
+﻿%{
+open Test.Ast
+%}
+%token A
+%token B
+%token C
+
+%start Start
+
+%type <unit> Start
+
+%%
+
+Start :
+    ABC { () }
+
+ABC :
+    A B C { () }

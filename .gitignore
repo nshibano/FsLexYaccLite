@@ -201,3 +201,7 @@ Tests/Expr/Parsing.fsi
 Tests/Expr/Parser.fsyacc.html
 
 FsLexYaccLite-*.zip
+
+Tests/ABC/Parser.fs
+Tests/ABC/Parser.fsi
+Tests/ABC/Parser.fsyacc.html
