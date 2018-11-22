@@ -7,55 +7,48 @@ namespace Microsoft.FSharp.Text.Lexing
     /// Position information stored for lexing tokens
     type Position = 
         { 
-          /// The file name for the position
-          pos_fname : string
-          /// The line number for the position
-          pos_lnum : int;
+          /// The file name associated with the input stream.
+          FileName : string
+          /// The line number in the input stream, assuming fresh positions have been updated 
+          /// using AsNewLinePos() and by modifying the EndPos property of the LexBuffer.
+          Line : int;
           /// The line number for the position in the original source file
-          pos_orig_lnum : int;
+          OriginalLine : int;
           /// The absolute offset of the beginning of the line
-          pos_bol : int
+          StartOfLine : int
           /// The absolute offset of the column for the position
-          pos_cnum : int; }
-        /// The file name associated with the input stream.
-        member x.FileName = x.pos_fname
-        /// The line number in the input stream, assuming fresh positions have been updated 
-        /// using AsNewLinePos() and by modifying the EndPos property of the LexBuffer.
-        member x.Line = x.pos_lnum
-        member x.OriginalLine = x.pos_orig_lnum
-        member x.Char = x.pos_cnum
-        /// The character number in the input stream
-        member x.AbsoluteOffset = x.pos_cnum
-        member x.StartOfLine = x.pos_bol
+          /// The character number in the input stream
+          AbsoluteOffset : int; }
+        member x.Char = x.AbsoluteOffset
         /// Return absolute offset of the start of the line marked by the position
-        member x.StartOfLineAbsoluteOffset = x.pos_bol
+        member x.StartOfLineAbsoluteOffset = x.StartOfLine
         /// Return the column number marked by the position, i.e. the difference between the AbsoluteOffset and the StartOfLineAbsoluteOffset
-        member x.Column = x.pos_cnum - x.pos_bol
+        member x.Column = x.AbsoluteOffset - x.StartOfLine
         /// Given a position just beyond the end of a line, return a position at the start of the next line
         member pos.NextLine = 
             { pos with 
-                    pos_orig_lnum = pos.OriginalLine + 1;
-                    pos_lnum = pos.Line+1; 
-                    pos_bol = pos.AbsoluteOffset }
+                    OriginalLine = pos.OriginalLine + 1;
+                    Line = pos.Line+1; 
+                    StartOfLine = pos.AbsoluteOffset }
         /// Given a position at the start of a token of length n, return a position just beyond the end of the token
-        member pos.EndOfToken(n) = {pos with pos_cnum=pos.pos_cnum + n }
+        member pos.EndOfToken(n) = {pos with AbsoluteOffset=pos.AbsoluteOffset + n }
         member pos.AsNewLinePos() = pos.NextLine
         /// Gives a position shifted by specified number of characters
-        member pos.ShiftColumnBy(by) = {pos with pos_cnum = pos.pos_cnum + by}
+        member pos.ShiftColumnBy(by) = {pos with AbsoluteOffset = pos.AbsoluteOffset + by}
         /// Get an arbitrary position, with the empty string as filename, and  
         static member Empty = 
-            { pos_fname=""; 
-              pos_lnum= 0; 
-              pos_orig_lnum = 0;
-              pos_bol= 0; 
-              pos_cnum=0 }
+            { FileName=""; 
+              Line= 0; 
+              OriginalLine = 0;
+              StartOfLine= 0; 
+              AbsoluteOffset=0 }
         /// Get a position corresponding to the first line (line number 1) in a given file
         static member FirstLine(filename) = 
-            { pos_fname=filename; 
-              pos_orig_lnum = 1;
-              pos_lnum= 1; 
-              pos_bol= 0; 
-              pos_cnum=0 }
+            { FileName=filename; 
+              OriginalLine = 1;
+              Line= 1; 
+              StartOfLine= 0; 
+              AbsoluteOffset=0 }
     
     type LexBuffer =
         { String : string
