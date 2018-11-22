@@ -12,8 +12,8 @@ rule token =
   | "if"                   { IF }
   | "then"                 { THEN }
   | "else"                 { ELSE }
-  | ['a' - 'z' 'A' - 'Z']+ { IDENT (String lexbuf.Lexeme) }
-  | ['0' - '9']+           { NUMBER (int (String lexbuf.Lexeme)) }
+  | ['a' - 'z' 'A' - 'Z']+ { IDENT lexbuf.Lexeme }
+  | ['0' - '9']+           { NUMBER (int lexbuf.Lexeme) }
   | '+'                    { PLUS }
   | '-'                    { MINUS }
   | '*'                    { STAR }

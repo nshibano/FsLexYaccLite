@@ -4,7 +4,7 @@ open Ast
 open System
 
 let parse (s : string) =
-    let lexbuf = LexBuffer<char>.FromString(s)
+    let lexbuf = LexBuffer.FromString(s)
     Parser.Start Lexer.token lexbuf
 
 // Use this function to print parse result and then
@@ -34,6 +34,11 @@ let error (src : string) =
 
 [<EntryPoint>]
 let main argv =
+
+    //let lexbuf = LexBuffer.FromString("x + y")
+    //for i = 1 to 3 do
+    //    printfn "%A" (Lexer.token lexbuf)
+
     case "x + y" (Add (Ident "x", Ident "y"))
     case "1 + 2 + 3" (Add (Add (Number 1,Number 2),Number 3))
 

@@ -530,7 +530,7 @@ let main() =
       if not (types.ContainsKey id) then 
         failwith ("a %type declaration is required for start token "+id);
       let ty = types.[id] in 
-      cprintfn cosi "val %s : (%s.LexBuffer<%s> -> token) -> %s.LexBuffer<%s> -> (%s) " id lexlib tychar lexlib tychar ty;
+      cprintfn cosi "val %s : (%s.LexBuffer -> token) -> %s.LexBuffer -> (%s) " id lexlib lexlib ty;
 
   logf (fun oso -> oso.Close())
 

@@ -169,7 +169,7 @@ let main() =
     // improving stack usage on platforms that do not take tailcalls.
     for ((startNode, actions),(ident,args,_)) in List.zip perRuleData spec.Rules do
         cfprintfn os "(* Rule %s *)" ident;
-        cfprintfn os "and %s %s (lexbuf : %s.LexBuffer<_>) = _fslex_%s %s %d lexbuf" ident (String.Join(" ",Array.ofList args)) lexlib ident (String.Join(" ",Array.ofList args)) startNode.Id;
+        cfprintfn os "and %s %s (lexbuf : %s.LexBuffer) = _fslex_%s %s %d lexbuf" ident (String.Join(" ",Array.ofList args)) lexlib ident (String.Join(" ",Array.ofList args)) startNode.Id;
     for ((startNode, actions),(ident,args,_)) in List.zip perRuleData spec.Rules do
         cfprintfn os "(* Rule %s *)" ident;
         cfprintfn os "and _fslex_%s %s _fslex_state lexbuf =" ident (String.Join(" ",Array.ofList args));
