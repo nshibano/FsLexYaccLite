@@ -4,6 +4,7 @@ module internal FsLexYacc.Lex.Driver
 
 open FsLexYaccLite.Common.Arg
 open FsLexYaccLite.Lex
+open FsLexYaccLite.Lex.Syntax
 open FsLexYaccLite.Lex.AST
 open Printf
 //open Internal.Utilities

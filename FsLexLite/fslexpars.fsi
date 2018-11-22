@@ -21,7 +21,7 @@ type token =
   | RPAREN
   | UNICODE_CATEGORY of (string)
   | CHAR of (char)
-  | CODE of (AST.Code)
+  | CODE of (FsLexYaccLite.Lex.Syntax.Code)
   | STRING of (string)
   | IDENT of (string)
 type tokenId = 
@@ -75,4 +75,4 @@ val prodIdxToNonTerminal: int -> nonTerminalId
 
 /// This function gets the name of a token as a string
 val token_to_string: token -> string
-val spec : (Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> token) -> Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> (AST.Spec) 
+val spec : (Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> token) -> Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> (FsLexYaccLite.Lex.Syntax.Spec) 

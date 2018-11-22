@@ -6,12 +6,11 @@ open Microsoft.FSharp.Text.Parsing.ParseHelpers
 # 1 "fslexpars.fsy"
 
 (* (c) Microsoft Corporation 2005-2008.  *)
-
 open FsLexYaccLite.Lex
+open FsLexYaccLite.Lex.Syntax
 open FsLexYaccLite.Lex.AST
 
-
-# 14 "fslexpars.fs"
+# 13 "fslexpars.fs"
 // This type is the type of tokens accepted by the parser
 type token = 
   | EOF
@@ -34,7 +33,7 @@ type token =
   | RPAREN
   | UNICODE_CATEGORY of (string)
   | CHAR of (char)
-  | CODE of (AST.Code)
+  | CODE of (FsLexYaccLite.Lex.Syntax.Code)
   | STRING of (string)
   | IDENT of (string)
 // This type is used to give symbolic names to token indexes, useful for error messages
@@ -243,16 +242,16 @@ let _fsyacc_reductionSymbolCounts = [|1us; 5us; 1us; 0us; 0us; 2us; 4us; 3us; 1u
 let _fsyacc_productionToNonTerminalTable = [|0us; 1us; 2us; 2us; 3us; 3us; 4us; 5us; 5us; 6us; 7us; 7us; 8us; 8us; 9us; 9us; 10us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 12us; 12us; 12us; |]
 let _fsyacc_immediateActions = [|65535us; 49152us; 65535us; 65535us; 65535us; 65535us; 16385us; 16386us; 65535us; 16389us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 16391us; 65535us; 65535us; 65535us; 65535us; 65535us; 16393us; 65535us; 16395us; 16397us; 65535us; 65535us; 16398us; 65535us; 16400us; 16401us; 16402us; 16403us; 16404us; 16405us; 16406us; 65535us; 65535us; 65535us; 16408us; 16409us; 16410us; 65535us; 65535us; 16412us; 65535us; 65535us; 16413us; 65535us; 65535us; 16414us; 65535us; 65535us; 16416us; 65535us; |]
 let _fsyacc_reductions ()  =    [| 
-# 246 "fslexpars.fs"
+# 245 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : AST.Spec)) in
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : FsLexYaccLite.Lex.Syntax.Spec)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
                       raise (Microsoft.FSharp.Text.Parsing.Accept(Microsoft.FSharp.Core.Operators.box _1))
                    )
                  : '_startspec));
-# 255 "fslexpars.fs"
+# 254 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'codeopt)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'Macros)) in
@@ -261,90 +260,90 @@ let _fsyacc_reductions ()  =    [|
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 24 "fslexpars.fsy"
+# 23 "fslexpars.fsy"
                                                                { TopCode=_1;Macros=_2;Rules=_4;BottomCode=_5 } 
                    )
-# 24 "fslexpars.fsy"
-                 : AST.Spec));
-# 269 "fslexpars.fs"
+# 23 "fslexpars.fsy"
+                 : FsLexYaccLite.Lex.Syntax.Spec));
+# 268 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : AST.Code)) in
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : FsLexYaccLite.Lex.Syntax.Code)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 25 "fslexpars.fsy"
+# 24 "fslexpars.fsy"
                                      _1 
                    )
-# 25 "fslexpars.fsy"
+# 24 "fslexpars.fsy"
                  : 'codeopt));
-# 280 "fslexpars.fs"
+# 279 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 25 "fslexpars.fsy"
+# 24 "fslexpars.fsy"
                                               "", (parseState.ResultRange |> fst) 
                    )
-# 25 "fslexpars.fsy"
+# 24 "fslexpars.fsy"
                  : 'codeopt));
-# 290 "fslexpars.fs"
+# 289 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 26 "fslexpars.fsy"
+# 25 "fslexpars.fsy"
                                 [] 
                    )
-# 26 "fslexpars.fsy"
+# 25 "fslexpars.fsy"
                  : 'Macros));
-# 300 "fslexpars.fs"
+# 299 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'macro)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'Macros)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 26 "fslexpars.fsy"
+# 25 "fslexpars.fsy"
                                                       _1 :: _2 
                    )
-# 26 "fslexpars.fsy"
+# 25 "fslexpars.fsy"
                  : 'Macros));
-# 312 "fslexpars.fs"
+# 311 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             let _4 = (let data = parseState.GetInput(4) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 27 "fslexpars.fsy"
+# 26 "fslexpars.fsy"
                                                       (_2, _4) 
                    )
-# 27 "fslexpars.fsy"
+# 26 "fslexpars.fsy"
                  : 'macro));
-# 324 "fslexpars.fs"
+# 323 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'rule)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'Rules)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 28 "fslexpars.fsy"
+# 27 "fslexpars.fsy"
                                              _1 :: _3 
                    )
-# 28 "fslexpars.fsy"
+# 27 "fslexpars.fsy"
                  : 'Rules));
-# 336 "fslexpars.fs"
+# 335 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'rule)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 28 "fslexpars.fsy"
+# 27 "fslexpars.fsy"
                                                                  [_1] 
                    )
-# 28 "fslexpars.fsy"
+# 27 "fslexpars.fsy"
                  : 'Rules));
-# 347 "fslexpars.fs"
+# 346 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'args)) in
@@ -353,279 +352,279 @@ let _fsyacc_reductions ()  =    [|
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 29 "fslexpars.fsy"
+# 28 "fslexpars.fsy"
                                                                     (_1,_2,_6) 
                    )
-# 29 "fslexpars.fsy"
+# 28 "fslexpars.fsy"
                  : 'rule));
-# 361 "fslexpars.fs"
+# 360 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 30 "fslexpars.fsy"
+# 29 "fslexpars.fsy"
                              [] 
                    )
-# 30 "fslexpars.fsy"
+# 29 "fslexpars.fsy"
                  : 'args));
-# 371 "fslexpars.fs"
+# 370 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'args)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 30 "fslexpars.fsy"
+# 29 "fslexpars.fsy"
                                                  _1 :: _2 
                    )
-# 30 "fslexpars.fsy"
+# 29 "fslexpars.fsy"
                  : 'args));
-# 383 "fslexpars.fs"
+# 382 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 31 "fslexpars.fsy"
+# 30 "fslexpars.fsy"
                                
                    )
-# 31 "fslexpars.fsy"
+# 30 "fslexpars.fsy"
                  : 'optbar));
-# 393 "fslexpars.fs"
+# 392 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 31 "fslexpars.fsy"
+# 30 "fslexpars.fsy"
                                          
                    )
-# 31 "fslexpars.fsy"
+# 30 "fslexpars.fsy"
                  : 'optbar));
-# 403 "fslexpars.fs"
+# 402 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'clause)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'clauses)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 32 "fslexpars.fsy"
+# 31 "fslexpars.fsy"
                                                   _1 :: _3 
                    )
-# 32 "fslexpars.fsy"
+# 31 "fslexpars.fsy"
                  : 'clauses));
-# 415 "fslexpars.fs"
+# 414 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'clause)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 32 "fslexpars.fsy"
+# 31 "fslexpars.fsy"
                                                                         [_1] 
                    )
-# 32 "fslexpars.fsy"
+# 31 "fslexpars.fsy"
                  : 'clauses));
-# 426 "fslexpars.fs"
+# 425 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : AST.Code)) in
+            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : FsLexYaccLite.Lex.Syntax.Code)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 33 "fslexpars.fsy"
+# 32 "fslexpars.fsy"
                                            _1, _2 
                    )
-# 33 "fslexpars.fsy"
+# 32 "fslexpars.fsy"
                  : 'clause));
-# 438 "fslexpars.fs"
+# 437 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : char)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 35 "fslexpars.fsy"
+# 34 "fslexpars.fsy"
                               Inp(Alphabet(EncodeChar _1)) 
                    )
-# 35 "fslexpars.fsy"
+# 34 "fslexpars.fsy"
                  : 'regexp));
-# 449 "fslexpars.fs"
+# 448 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 36 "fslexpars.fsy"
+# 35 "fslexpars.fsy"
                                           Inp(UnicodeCategory _1) 
                    )
-# 36 "fslexpars.fsy"
+# 35 "fslexpars.fsy"
                  : 'regexp));
-# 460 "fslexpars.fs"
+# 459 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 37 "fslexpars.fsy"
+# 36 "fslexpars.fsy"
                              Inp(Alphabet(Eof)) 
                    )
-# 37 "fslexpars.fsy"
+# 36 "fslexpars.fsy"
                  : 'regexp));
-# 470 "fslexpars.fs"
+# 469 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 38 "fslexpars.fsy"
+# 37 "fslexpars.fsy"
                                     Inp Any 
                    )
-# 38 "fslexpars.fsy"
+# 37 "fslexpars.fsy"
                  : 'regexp));
-# 480 "fslexpars.fs"
+# 479 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 39 "fslexpars.fsy"
+# 38 "fslexpars.fsy"
                                 Seq([ for n in 0 .. _1.Length - 1 -> Inp(Alphabet(EncodeChar _1.[n]))]) 
                    )
-# 39 "fslexpars.fsy"
+# 38 "fslexpars.fsy"
                  : 'regexp));
-# 491 "fslexpars.fs"
+# 490 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 40 "fslexpars.fsy"
+# 39 "fslexpars.fsy"
                                Macro(_1) 
                    )
-# 40 "fslexpars.fsy"
+# 39 "fslexpars.fsy"
                  : 'regexp));
-# 502 "fslexpars.fs"
+# 501 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 41 "fslexpars.fsy"
+# 40 "fslexpars.fsy"
                                                          Seq[_1;_2] 
                    )
-# 41 "fslexpars.fsy"
+# 40 "fslexpars.fsy"
                  : 'regexp));
-# 514 "fslexpars.fs"
+# 513 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 42 "fslexpars.fsy"
+# 41 "fslexpars.fsy"
                                                         Seq[_1;Star _1] 
                    )
-# 42 "fslexpars.fsy"
+# 41 "fslexpars.fsy"
                  : 'regexp));
-# 525 "fslexpars.fs"
+# 524 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 43 "fslexpars.fsy"
+# 42 "fslexpars.fsy"
                                                         Star _1 
                    )
-# 43 "fslexpars.fsy"
+# 42 "fslexpars.fsy"
                  : 'regexp));
-# 536 "fslexpars.fs"
+# 535 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 44 "fslexpars.fsy"
+# 43 "fslexpars.fsy"
                                                         Alt[Seq[];_1] 
                    )
-# 44 "fslexpars.fsy"
+# 43 "fslexpars.fsy"
                  : 'regexp));
-# 547 "fslexpars.fs"
+# 546 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 45 "fslexpars.fsy"
+# 44 "fslexpars.fsy"
                                                              Alt[_1;_3] 
                    )
-# 45 "fslexpars.fsy"
+# 44 "fslexpars.fsy"
                  : 'regexp));
-# 559 "fslexpars.fs"
+# 558 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 46 "fslexpars.fsy"
+# 45 "fslexpars.fsy"
                                                _2 
                    )
-# 46 "fslexpars.fsy"
+# 45 "fslexpars.fsy"
                  : 'regexp));
-# 570 "fslexpars.fs"
+# 569 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'charset)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 47 "fslexpars.fsy"
+# 46 "fslexpars.fsy"
                                                  Alt [ for c in _2 -> Inp(Alphabet(c)) ] 
                    )
-# 47 "fslexpars.fsy"
+# 46 "fslexpars.fsy"
                  : 'regexp));
-# 581 "fslexpars.fs"
+# 580 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'charset)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 48 "fslexpars.fsy"
+# 47 "fslexpars.fsy"
                                                      Inp(NotCharSet(_3)) 
                    )
-# 48 "fslexpars.fsy"
+# 47 "fslexpars.fsy"
                  : 'regexp));
-# 592 "fslexpars.fs"
+# 591 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : char)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 51 "fslexpars.fsy"
+# 50 "fslexpars.fsy"
                                Set.singleton(EncodeChar _1) 
                    )
-# 51 "fslexpars.fsy"
+# 50 "fslexpars.fsy"
                  : 'charset));
-# 603 "fslexpars.fs"
+# 602 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : char)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : char)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 52 "fslexpars.fsy"
+# 51 "fslexpars.fsy"
                                          Set.ofSeq [ for c in _1 .. _3 -> EncodeChar c ] 
                    )
-# 52 "fslexpars.fsy"
+# 51 "fslexpars.fsy"
                  : 'charset));
-# 615 "fslexpars.fs"
+# 614 "fslexpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'charset)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'charset)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 53 "fslexpars.fsy"
+# 52 "fslexpars.fsy"
                                           Set.union _1 _2  
                    )
-# 53 "fslexpars.fsy"
+# 52 "fslexpars.fsy"
                  : 'charset));
 |]
-# 628 "fslexpars.fs"
+# 627 "fslexpars.fs"
 let tables () : Microsoft.FSharp.Text.Parsing.Tables<_> = 
   { reductions= _fsyacc_reductions ();
     endOfInputTag = _fsyacc_endOfInputTag;
@@ -647,5 +646,5 @@ let tables () : Microsoft.FSharp.Text.Parsing.Tables<_> =
     numTerminals = 26;
     productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }
 let engine lexer lexbuf startState = (tables ()).Interpret(lexer, lexbuf, startState)
-let spec lexer lexbuf : AST.Spec =
+let spec lexer lexbuf : FsLexYaccLite.Lex.Syntax.Spec =
     Microsoft.FSharp.Core.Operators.unbox ((tables ()).Interpret(lexer, lexbuf, 0))

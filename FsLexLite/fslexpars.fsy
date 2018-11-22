@@ -1,14 +1,13 @@
 %{
 (* (c) Microsoft Corporation 2005-2008.  *)
-
 open FsLexYaccLite.Lex
+open FsLexYaccLite.Lex.Syntax
 open FsLexYaccLite.Lex.AST
-
 %} 
 
-%type <AST.Spec> spec
+%type <FsLexYaccLite.Lex.Syntax.Spec> spec
 %token <string> STRING IDENT
-%token <AST.Code> CODE 
+%token <FsLexYaccLite.Lex.Syntax.Code> CODE 
 %token <char> CHAR
 %token <string> UNICODE_CATEGORY
 %token RULE PARSE LET  AND LPAREN RPAREN
