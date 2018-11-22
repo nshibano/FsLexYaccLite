@@ -6,48 +6,49 @@ open System.Collections.Generic
 /// Position information stored for lexing tokens
 type Position = 
     { 
-        /// The file name associated with the input stream.
-        FileName : string
+        /// The absolute offset of the column for the position
+        AbsoluteOffset : int
+
         /// The line number in the input stream, assuming fresh positions have been updated 
         /// using AsNewLinePos() and by modifying the EndPos property of the LexBuffer.
-        Line : int;
+        Line : int
+
         /// The line number for the position in the original source file
-        OriginalLine : int;
+        OriginalLine : int
+
         /// The absolute offset of the beginning of the line
         StartOfLine : int
-        /// The absolute offset of the column for the position
-        /// The character number in the input stream
-        AbsoluteOffset : int }
-    member x.Char = x.AbsoluteOffset
-    /// Return absolute offset of the start of the line marked by the position
-    member x.StartOfLineAbsoluteOffset = x.StartOfLine
+
+        /// The file name associated with the input stream.
+        FileName : string
+    }
+
     /// Return the column number marked by the position, i.e. the difference between the AbsoluteOffset and the StartOfLineAbsoluteOffset
     member x.Column = x.AbsoluteOffset - x.StartOfLine
     /// Given a position just beyond the end of a line, return a position at the start of the next line
     member pos.NextLine = 
         { pos with 
-                OriginalLine = pos.OriginalLine + 1;
-                Line = pos.Line+1; 
+                OriginalLine = pos.OriginalLine + 1
+                Line = pos.Line + 1 
                 StartOfLine = pos.AbsoluteOffset }
     /// Given a position at the start of a token of length n, return a position just beyond the end of the token
-    member pos.EndOfToken(n) = {pos with AbsoluteOffset=pos.AbsoluteOffset + n }
-    member pos.AsNewLinePos() = pos.NextLine
+    member pos.EndOfToken(n) = { pos with AbsoluteOffset = pos.AbsoluteOffset + n }
     /// Gives a position shifted by specified number of characters
-    member pos.ShiftColumnBy(by) = {pos with AbsoluteOffset = pos.AbsoluteOffset + by}
+    member pos.ShiftColumnBy(by) = {pos with AbsoluteOffset = pos.AbsoluteOffset + by }
     /// Get an arbitrary position, with the empty string as filename, and  
     static member Empty = 
-        { FileName=""; 
-            Line= 0; 
-            OriginalLine = 0;
-            StartOfLine= 0; 
-            AbsoluteOffset=0 }
+        { FileName = ""
+          Line = 0
+          OriginalLine = 0
+          StartOfLine = 0
+          AbsoluteOffset = 0 }
     /// Get a position corresponding to the first line (line number 1) in a given file
     static member FirstLine(filename) = 
-        { FileName=filename; 
-            OriginalLine = 1;
-            Line= 1; 
-            StartOfLine= 0; 
-            AbsoluteOffset=0 }
+        { FileName = filename
+          OriginalLine = 1
+          Line = 1
+          StartOfLine = 0
+          AbsoluteOffset = 0 }
     
 type LexBuffer =
     { String : string
