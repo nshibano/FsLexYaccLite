@@ -38,11 +38,12 @@ let main() =
         cmd "dotnet" @"publish -c Release FsLexLite\FsLexLite.fsproj -o ..\Publish\FsLexLite"
         cmd "dotnet" @"publish -c Release FsYaccLite\FsYaccLite.fsproj -o ..\Publish\FsYaccLite"
 
-        cp @"Runtime\Lexing.fsi"  @"Publish\Runtime"
         cp @"Runtime\Lexing.fs"   @"Publish\Runtime"
         cp @"Runtime\Parsing.fsi" @"Publish\Runtime"
         cp @"Runtime\Parsing.fs"  @"Publish\Runtime"
 
+        if File.Exists(zipFileName) then
+            File.Delete(zipFileName)
         ZipFile.CreateFromDirectory("Publish", zipFileName)
 
         try cmd "appveyor" ("PushArtifact " + zipFileName) with _ -> ()

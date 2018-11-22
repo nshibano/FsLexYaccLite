@@ -21,7 +21,6 @@ let cp pathFrom dirTo =
 
 let main() =
     try
-        cmd "dotnet" @"build ..\..\Arg"
         cmd "dotnet" @"build ..\..\FsLexLite"
         cmd "dotnet" @"build ..\..\FsYaccLite"
         
