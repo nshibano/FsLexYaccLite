@@ -5,14 +5,11 @@ module internal FsLexYacc.FsYacc.Driver
 open System.IO 
 open System.Collections.Generic
 open Printf
-//open Internal.Utilities
-//open Internal.Utilities.Text.Lexing
-open Microsoft.FSharp.Text
 open Microsoft.FSharp.Text.Lexing
 
 open FsLexYacc.FsYacc
 open FsLexYacc.FsYacc.AST
-open FsLexYaccLite.Arg
+open FsLexYaccLite.Common.Arg
 
 //------------------------------------------------------------------
 // This code is duplicated from Microsoft.FSharp.Compiler.UnicodeLexing

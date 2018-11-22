@@ -1,12 +1,10 @@
 {
 (* (c) Microsoft Corporation 2005-2008.  *)
   
-module internal FsLexYacc.FsLex.Lexer
+module internal FsLexYaccLite.Lex.Lexer
   
-open FsLexYacc.FsLex.AST
-open FsLexYacc.FsLex.Parser
-//open Internal.Utilities
-//open Internal.Utilities.Text.Lexing
+open FsLexYaccLite.Lex.AST
+open FsLexYaccLite.Lex.Parser
 open Microsoft.FSharp.Text
 open Microsoft.FSharp.Text.Lexing
 

@@ -1,6 +1,6 @@
 // (c) Microsoft Corporation 2005-2009. 
 /// A simple command-line argument processor.
-module FsLexYaccLite.Arg
+module FsLexYaccLite.Common.Arg
 
 open System
 

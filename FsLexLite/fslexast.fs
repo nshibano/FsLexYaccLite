@@ -1,6 +1,6 @@
 (* (c) Microsoft Corporation 2005-2008.  *)
 
-module FsLexYacc.FsLex.AST
+module FsLexYaccLite.Lex.AST
 
 open System.Collections.Generic
 open Microsoft.FSharp.Text

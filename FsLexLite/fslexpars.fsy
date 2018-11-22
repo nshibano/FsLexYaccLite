@@ -1,8 +1,8 @@
 %{
 (* (c) Microsoft Corporation 2005-2008.  *)
 
-open FsLexYacc.FsLex
-open FsLexYacc.FsLex.AST
+open FsLexYaccLite.Lex
+open FsLexYaccLite.Lex.AST
 
 %} 
 
