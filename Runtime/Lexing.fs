@@ -18,7 +18,7 @@ namespace Microsoft.FSharp.Text.Lexing
           StartOfLine : int
           /// The absolute offset of the column for the position
           /// The character number in the input stream
-          AbsoluteOffset : int; }
+          AbsoluteOffset : int }
         member x.Char = x.AbsoluteOffset
         /// Return absolute offset of the start of the line marked by the position
         member x.StartOfLineAbsoluteOffset = x.StartOfLine
@@ -62,15 +62,6 @@ namespace Microsoft.FSharp.Text.Lexing
           LocalStore : Dictionary<string, obj> }
         member x.BufferMaxScanLength = x.String.Length - x.ScanStart
         member x.BufferScanPos = x.ScanStart + x.ScanLength
-        member x.EndOfScan() : int =
-            if x.AcceptAction < 0 then 
-                failwith "unrecognized input"
-
-            //  Printf.printf "endOfScan %d state %d on unconsumed input '%c' (%d)\n" a s (Char.chr inp) inp;
-            //   Printf.eprintf "accept, lexeme = %s\n" (lexeme lexBuffer); 
-            x.StartPos <- x.EndPos;
-            x.EndPos <- x.EndPos.EndOfToken(x.LexemeLength);
-            x.AcceptAction
         member x.Lexeme = x.String.Substring(x.ScanStart, x.LexemeLength)
         static member FromString (s:string) =
             { LexBuffer.String = s
@@ -118,6 +109,13 @@ namespace Microsoft.FSharp.Text.Lexing
                 loop 0
         let eofPos    = numLowUnicodeChars + 2*numSpecificUnicodeChars + numUnicodeCategories 
         
+        let endOfScan lexBuffer =
+            if lexBuffer.AcceptAction < 0 then 
+                failwith "unrecognized input"
+            lexBuffer.StartPos <- lexBuffer.EndPos;
+            lexBuffer.EndPos <- lexBuffer.EndPos.EndOfToken(lexBuffer.LexemeLength);
+            lexBuffer.AcceptAction
+        
         let rec scanUntilSentinel(lexBuffer,state) =
             // Return an endOfScan after consuming the input 
             let a = int accept.[state] 
@@ -128,7 +126,7 @@ namespace Microsoft.FSharp.Text.Lexing
             if lexBuffer.ScanLength = lexBuffer.BufferMaxScanLength then 
                 let snew = int trans.[state].[eofPos] // == EOF 
                 if snew = sentinel then 
-                    lexBuffer.EndOfScan()
+                    endOfScan lexBuffer
                 else 
                     if lexBuffer.IsPastEndOfStream then failwith "End of file on lexing stream";
                     lexBuffer.IsPastEndOfStream <- true;
@@ -143,7 +141,7 @@ namespace Microsoft.FSharp.Text.Lexing
                 let snew = lookupUnicodeCharacters (state,inp)
 
                 if snew = sentinel then 
-                    lexBuffer.EndOfScan()
+                    endOfScan lexBuffer
                 else 
                     lexBuffer.ScanLength <- lexBuffer.ScanLength + 1;
                     // Printf.printf "state %d --> %d on '%c' (%d)\n" s snew (char inp) inp;
@@ -155,7 +153,7 @@ namespace Microsoft.FSharp.Text.Lexing
         //      A variable number of 2*UInt16 entries for SpecificUnicodeChars 
         //      30 entries, one for each UnicodeCategory
         //      1 entry for EOF
-        member tables.Interpret(initialState,lexBuffer : LexBuffer) = 
+        member tables.Interpret(initialState, lexBuffer : LexBuffer) = 
             lexBuffer.ScanStart <- lexBuffer.ScanStart + lexBuffer.LexemeLength
             lexBuffer.ScanLength <- 0;
             lexBuffer.LexemeLength <- 0;
