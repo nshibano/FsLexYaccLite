@@ -217,7 +217,7 @@ module Implementation =
         val endPos: Position
         new(value,startPos,endPos) = { value=value; startPos=startPos;endPos=endPos }
 
-    let interpret (tables: Tables<'tok>) lexer (lexbuf : LexBuffer<_>) initialState =                                                                      
+    let interpret (tables: Tables<'tok>) lexer (lexbuf : LexBuffer) initialState =                                                                      
         let localStore = new Dictionary<string,obj>() in
         localStore.["LexBuffer"] <- lexbuf;
 #if __DEBUG
