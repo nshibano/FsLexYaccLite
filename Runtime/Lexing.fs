@@ -59,61 +59,38 @@ namespace Microsoft.FSharp.Text.Lexing
     
     type LexBuffer =
         { String : string
-          mutable BufferScanStart : int
-          mutable BufferScanLength : int
+          mutable ScanStart : int
+          mutable ScanLength : int
           mutable LexemeLength : int
-          mutable BufferAcceptAction : int
+          mutable AcceptAction : int
           mutable IsPastEndOfStream : bool
           mutable StartPos : Position
           mutable EndPos : Position
-          BufferLocalStore : Dictionary<string, obj> }
-        member x.BufferMaxScanLength = x.String.Length - x.BufferScanStart
-        member x.BufferScanPos = x.BufferScanStart + x.BufferScanLength
+          LocalStore : Dictionary<string, obj> }
+        member x.BufferMaxScanLength = x.String.Length - x.ScanStart
+        member x.BufferScanPos = x.ScanStart + x.ScanLength
         member x.EndOfScan() : int =
-            if x.BufferAcceptAction < 0 then 
+            if x.AcceptAction < 0 then 
                 failwith "unrecognized input"
 
             //  Printf.printf "endOfScan %d state %d on unconsumed input '%c' (%d)\n" a s (Char.chr inp) inp;
             //   Printf.eprintf "accept, lexeme = %s\n" (lexeme lexBuffer); 
             x.StartPos <- x.EndPos;
             x.EndPos <- x.EndPos.EndOfToken(x.LexemeLength);
-            x.BufferAcceptAction
-        member x.Lexeme = x.String.Substring(x.BufferScanStart, x.LexemeLength)
+            x.AcceptAction
+        member x.Lexeme = x.String.Substring(x.ScanStart, x.LexemeLength)
         static member FromString (s:string) =
             { LexBuffer.String = s
-              BufferScanStart = 0
-              BufferScanLength = 0
+              ScanStart = 0
+              ScanLength = 0
               LexemeLength = 0   
-              BufferAcceptAction = -1
+              AcceptAction = -1
               IsPastEndOfStream = false
               StartPos = Position.Empty
               EndPos = Position.Empty
-              BufferLocalStore = Dictionary() }
+              LocalStore = Dictionary() }
 
     type UnicodeTables(trans: uint16[] array, accept: uint16[]) = 
-        let startInterpret(lexBuffer : LexBuffer) = 
-            lexBuffer.BufferScanStart <- lexBuffer.BufferScanStart + lexBuffer.LexemeLength
-            lexBuffer.BufferScanLength <- 0;
-            lexBuffer.LexemeLength <- 0;
-            lexBuffer.BufferAcceptAction <- -1;
-
-        let afterRefill (trans: uint16[] array,sentinel,lexBuffer:LexBuffer,scanUntilSentinel,endOfScan,state,eofPos) = 
-            // end of file occurs if we couldn't extend the buffer 
-            if lexBuffer.BufferScanLength = lexBuffer.BufferMaxScanLength then  
-                let snew = int trans.[state].[eofPos] // == EOF 
-                if snew = sentinel then 
-                    endOfScan()
-                else 
-                    if lexBuffer.IsPastEndOfStream then failwith "End of file on lexing stream";
-                    lexBuffer.IsPastEndOfStream <- true;
-                    // Printf.printf "state %d --> %d on eof\n" state snew;
-                    scanUntilSentinel(lexBuffer,snew)
-            else 
-                scanUntilSentinel(lexBuffer, state)
-
-        let onAccept (lexBuffer:LexBuffer,a) = 
-            lexBuffer.LexemeLength <- lexBuffer.BufferScanLength;
-            lexBuffer.BufferAcceptAction <- a
         
         let sentinel = 255 * 256 + 255 
         let numUnicodeCategories = 30 
@@ -152,12 +129,19 @@ namespace Microsoft.FSharp.Text.Lexing
             // Return an endOfScan after consuming the input 
             let a = int accept.[state] 
             if a <> sentinel then 
-                onAccept(lexBuffer,a)
+                lexBuffer.LexemeLength <- lexBuffer.ScanLength;
+                lexBuffer.AcceptAction <- a
             
-            if lexBuffer.BufferScanLength = lexBuffer.BufferMaxScanLength then 
-                //lexBuffer.DiscardInput();
-              // end of file occurs if we couldn't extend the buffer 
-                afterRefill (trans,sentinel,lexBuffer,scanUntilSentinel,lexBuffer.EndOfScan,state,eofPos)
+            if lexBuffer.ScanLength = lexBuffer.BufferMaxScanLength then 
+                let snew = int trans.[state].[eofPos] // == EOF 
+                if snew = sentinel then 
+                    lexBuffer.EndOfScan()
+                else 
+                    if lexBuffer.IsPastEndOfStream then failwith "End of file on lexing stream";
+                    lexBuffer.IsPastEndOfStream <- true;
+                    // Printf.printf "state %d --> %d on eof\n" state snew;
+                    scanUntilSentinel(lexBuffer,snew)
+
             else
                 // read a character - end the scan if there are no further transitions 
                 let inp = lexBuffer.String.[lexBuffer.BufferScanPos]
@@ -168,7 +152,7 @@ namespace Microsoft.FSharp.Text.Lexing
                 if snew = sentinel then 
                     lexBuffer.EndOfScan()
                 else 
-                    lexBuffer.BufferScanLength <- lexBuffer.BufferScanLength + 1;
+                    lexBuffer.ScanLength <- lexBuffer.ScanLength + 1;
                     // Printf.printf "state %d --> %d on '%c' (%d)\n" s snew (char inp) inp;
                     scanUntilSentinel(lexBuffer,snew)
 
@@ -179,7 +163,10 @@ namespace Microsoft.FSharp.Text.Lexing
         //      30 entries, one for each UnicodeCategory
         //      1 entry for EOF
         member tables.Interpret(initialState,lexBuffer : LexBuffer) = 
-            startInterpret(lexBuffer)
+            lexBuffer.ScanStart <- lexBuffer.ScanStart + lexBuffer.LexemeLength
+            lexBuffer.ScanLength <- 0;
+            lexBuffer.LexemeLength <- 0;
+            lexBuffer.AcceptAction <- -1;
             scanUntilSentinel(lexBuffer, initialState)
 
         static member Create(trans,accept) = new UnicodeTables(trans,accept)
