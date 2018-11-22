@@ -25,7 +25,6 @@ let main() =
         cmd "dotnet" @"build ..\..\FsLexLite"
         cmd "dotnet" @"build ..\..\FsYaccLite"
         
-        cp @"..\..\Runtime\Lexing.fsi" @"."
         cp @"..\..\Runtime\Lexing.fs" @"."
         cp @"..\..\Runtime\Parsing.fsi" @"."
         cp @"..\..\Runtime\Parsing.fs" @"."
