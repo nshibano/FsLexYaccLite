@@ -54,7 +54,7 @@ let usage =
     ("--light", UnitArg (fun () ->  light := Some true), "(ignored)");
     ("--light-off", UnitArg (fun () ->  light := Some false), "Add #light \"off\" to the top of the generated file");
     ("--lexlib", StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer table interpreter (default Microsoft.FSharp.Text.Lexing)");
-    ("--unicode", UnitArg (fun () -> unicode := true), "Produce a lexer for use with 16-bit unicode characters.");  
+    ("--unicode", UnitArg (fun () -> ()), "Ignored.");  
   ]
 
 let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> failwith "more than one input given" | None -> input := Some x) "fslex <filename>"
@@ -73,7 +73,7 @@ let cfprintfn (os: #TextWriter) fmt = Printf.kfprintf (fun () -> incr lineCount;
 let main() = 
   try 
     let filename = (match !input with Some x -> x | None -> failwith "no input given") 
-    let domain = if !unicode then "Unicode" else "Ascii" 
+    let domain = "Unicode" 
     let spec = 
       let stream,reader,lexbuf = UnicodeFileAsLexbuf(filename, !inputCodePage) 
       use stream = stream
@@ -114,70 +114,42 @@ let main() =
     
     cfprintfn os "let trans : uint16[] array = ";
     cfprintfn os "    [| ";
-    if !unicode then 
-        let specificUnicodeChars = GetSpecificUnicodeChars()
-        // This emits a (numLowUnicodeChars+NumUnicodeCategories+(2*#specificUnicodeChars)+1) * #states array of encoded UInt16 values
+    let specificUnicodeChars = GetSpecificUnicodeChars()
+    // This emits a (numLowUnicodeChars+NumUnicodeCategories+(2*#specificUnicodeChars)+1) * #states array of encoded UInt16 values
         
-        // Each row for the Unicode table has format 
-        //      128 entries for ASCII characters
-        //      A variable number of 2*UInt16 entries for SpecificUnicodeChars 
-        //      30 entries, one for each UnicodeCategory
-        //      1 entry for EOF
-        //
-        // Each entry is an encoded UInt16 value indicating the next state to transition to for this input.
-        //
-        // For the SpecificUnicodeChars the entries are char/next-state pairs.
-        for state in dfaNodes do
-            cfprintfn os "    (* State %d *)" state.Id;
-            fprintf os "     [| ";
-            let trans = 
-                let dict = new Dictionary<_,_>()
-                state.Transitions |> List.iter dict.Add
-                dict
-            let emit n = 
-                if trans.ContainsKey(n) then 
-                  outputCodedUInt16 os trans.[n].Id 
-                else
-                  outputCodedUInt16 os sentinel
-            for i = 0 to numLowUnicodeChars-1 do 
-                let c = char i
-                emit (EncodeChar c);
-            for c in specificUnicodeChars do 
-                outputCodedUInt16 os (int c); 
-                emit (EncodeChar c);
-            for i = 0 to NumUnicodeCategories-1 do 
-                emit (EncodeUnicodeCategoryIndex i);
-            emit Eof;
-            cfprintfn os "|];"
-        done;
-    
-    else
-        // Each row for the ASCII table has format 
-        //      256 entries for ASCII characters
-        //      1 entry for EOF
-        //
-        // Each entry is an encoded UInt16 value indicating the next state to transition to for this input.
-
-        // This emits a (256+1) * #states array of encoded UInt16 values
-        for state in dfaNodes do
-            cfprintfn os "   (* State %d *)" state.Id;
-            fprintf os " [|";
-            let trans = 
-                let dict = new Dictionary<_,_>()
-                state.Transitions |> List.iter dict.Add
-                dict
-            let emit n = 
-                if trans.ContainsKey(n) then 
-                  outputCodedUInt16 os trans.[n].Id 
-                else
-                  outputCodedUInt16 os sentinel
-            for i = 0 to 255 do 
-                let c = char i
-                emit (EncodeChar c);
-            emit Eof;
-            cfprintfn os "|];"
-        done;
-    
+    // Each row for the Unicode table has format 
+    //      128 entries for ASCII characters
+    //      A variable number of 2*UInt16 entries for SpecificUnicodeChars 
+    //      30 entries, one for each UnicodeCategory
+    //      1 entry for EOF
+    //
+    // Each entry is an encoded UInt16 value indicating the next state to transition to for this input.
+    //
+    // For the SpecificUnicodeChars the entries are char/next-state pairs.
+    for state in dfaNodes do
+        cfprintfn os "    (* State %d *)" state.Id;
+        fprintf os "     [| ";
+        let trans = 
+            let dict = new Dictionary<_,_>()
+            state.Transitions |> List.iter dict.Add
+            dict
+        let emit n = 
+            if trans.ContainsKey(n) then 
+                outputCodedUInt16 os trans.[n].Id 
+            else
+                outputCodedUInt16 os sentinel
+        for i = 0 to numLowUnicodeChars-1 do 
+            let c = char i
+            emit (EncodeChar c);
+        for c in specificUnicodeChars do 
+            outputCodedUInt16 os (int c); 
+            emit (EncodeChar c);
+        for i = 0 to NumUnicodeCategories-1 do 
+            emit (EncodeUnicodeCategoryIndex i);
+        emit Eof;
+        cfprintfn os "|];"
+    done;
+        
     cfprintfn os "    |] ";
     
     fprintf os "let actions : uint16[] = [|";

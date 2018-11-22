@@ -18,9 +18,6 @@ type Alphabet = uint32
 let Eof : Alphabet = 0xFFFFFFFEu
 let Epsilon : Alphabet = 0xFFFFFFFFu
 
-
-let unicode = ref false
-
 let unicodeCategories = 
  dict 
   [| "Pe", System.Globalization.UnicodeCategory.ClosePunctuation; // (Pe)
@@ -60,8 +57,6 @@ let _ = assert (NumUnicodeCategories = 30) // see table interpreter
 let encodedUnicodeCategoryBase = 0xFFFFFF00u
 let EncodeUnicodeCategoryIndex(idx:int) = encodedUnicodeCategoryBase + uint32 idx
 let EncodeUnicodeCategory(s:string) = 
-    if not (!unicode) then 
-         failwith "unicode category classes may only be used if --unicode is specified";
     if unicodeCategories.ContainsKey(s) then 
         EncodeUnicodeCategoryIndex (int32 unicodeCategories.[s])
     else
@@ -75,27 +70,18 @@ let _ = assert (numLowUnicodeChars = 128) // see table interpreter
 let specificUnicodeChars = new Dictionary<_,_>()
 let specificUnicodeCharsDecode = new Dictionary<_,_>()
 let EncodeChar(c:char) = 
-     let x = System.Convert.ToUInt32 c
-     if !unicode then 
-         if x < uint32 numLowUnicodeChars then x 
-         else 
-             if not(specificUnicodeChars.ContainsKey(c)) then
-                 let idx = uint32 numLowUnicodeChars + uint32 specificUnicodeChars.Count  
-                 specificUnicodeChars.[c] <- idx
-                 specificUnicodeCharsDecode.[idx] <- c
-             specificUnicodeChars.[c]
-     else         
-         if x >= 256u then failwithf "the Unicode character '%c' may not be used unless --unicode is specified" c;
-         x
+    let x = System.Convert.ToUInt32 c
+    if x < uint32 numLowUnicodeChars then x 
+    else 
+        if not(specificUnicodeChars.ContainsKey(c)) then
+            let idx = uint32 numLowUnicodeChars + uint32 specificUnicodeChars.Count  
+            specificUnicodeChars.[c] <- idx
+            specificUnicodeCharsDecode.[idx] <- c
+        specificUnicodeChars.[c]
+
 let DecodeChar(x:Alphabet) = 
-     if !unicode then 
-         if x < uint32 numLowUnicodeChars then System.Convert.ToChar x
-         else specificUnicodeCharsDecode.[x]
-     else
-         if x >= 256u then failwithf "the Unicode character '%x' may not be used unless --unicode is specified" x;
-         System.Convert.ToChar x
-         
-         
+    if x < uint32 numLowUnicodeChars then System.Convert.ToChar x
+    else specificUnicodeCharsDecode.[x]
 
 let NumSpecificUnicodeChars() = specificUnicodeChars.Count
 let GetSpecificUnicodeChars() = 
@@ -104,16 +90,12 @@ let GetSpecificUnicodeChars() =
         |> Seq.map (fun (KeyValue(k,v)) -> k) 
 
 let GetSingleCharAlphabet() = 
-    if !unicode 
-    then Set.ofList [ for c in 0..numLowUnicodeChars-1 do yield (char c)
-                      for c in GetSpecificUnicodeChars() do yield c ]
-    else Set.ofList [ for x in 0..255 ->  (char x) ]
+    Set.ofList [ for c in 0..numLowUnicodeChars-1 do yield (char c)
+                 for c in GetSpecificUnicodeChars() do yield c ]
          
 let GetAlphabet() = 
-    if !unicode 
-    then Set.ofList [ for c in GetSingleCharAlphabet() do yield EncodeChar c
-                      for uc in 0 .. NumUnicodeCategories-1 do yield EncodeUnicodeCategoryIndex uc ]
-    else Set.ofList [ for c in GetSingleCharAlphabet() do yield EncodeChar c ]
+    Set.ofList [ for c in GetSingleCharAlphabet() do yield EncodeChar c
+                 for uc in 0 .. NumUnicodeCategories-1 do yield EncodeUnicodeCategoryIndex uc ]
 
          
 //let DecodeAlphabet (x:Alphabet) = System.Convert.ToChar(x)
@@ -232,14 +214,13 @@ let LexerStateToNfa (macros: Map<string,_>) (clauses: Clause list) =
                            // Include all unicode categories 
                            // That is, negations _only_ exclude precisely the given set of characters. You can't
                            // exclude whole classes of characters as yet
-                           if !unicode then 
-                               let ucs = chars |> Set.map(DecodeChar >> System.Char.GetUnicodeCategory)  
-                               for KeyValue(nm,uc) in unicodeCategories do
+                           let ucs = chars |> Set.map(DecodeChar >> System.Char.GetUnicodeCategory)  
+                           for KeyValue(nm,uc) in unicodeCategories do
                                    //if ucs.Contains(uc) then 
                                    //    do printfn "warning: the unicode category '\\%s' ('%s') is automatically excluded by this character set negation. Consider adding this to the negation." nm  (uc.ToString())
                                    //    yield! []
                                    //else
-                                       yield Inp(Alphabet(EncodeUnicodeCategory nm)) 
+                                         yield Inp(Alphabet(EncodeUnicodeCategory nm)) 
                          ]
             CompileRegexp re dest
 
