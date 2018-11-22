@@ -106,13 +106,11 @@ let main() =
     let printLinesIfCodeDefined (code,pos:Position) =
         if pos <> Position.Empty  // If bottom code is unspecified, then position is empty.        
         then 
-            cfprintfn os "# %d \"%s\"" pos.Line pos.FileName;
             cfprintfn os "%s" code;
 
     printLinesIfCodeDefined spec.TopCode
     let code = fst spec.TopCode
     lineCount := !lineCount + code.Replace("\r","").Split([| '\n' |]).Length;
-    cfprintfn os "# %d \"%s\"" !lineCount output;
     
     cfprintfn os "let trans : uint16[] array = ";
     cfprintfn os "    [| ";
@@ -206,11 +204,9 @@ let main() =
         cfprintfn os "  match _fslex_tables.Interpret(_fslex_state,lexbuf) with" ;
         actions |> Seq.iteri (fun i (code,pos) -> 
             cfprintfn os "  | %d -> ( " i;
-            cfprintfn os "# %d \"%s\"" pos.Line pos.FileName;
             let lines = code.Split([| '\r'; '\n' |], StringSplitOptions.RemoveEmptyEntries)
             for line in lines do
                 cfprintfn os "               %s" line;
-            cfprintfn os "# %d \"%s\"" !lineCount output;
             cfprintfn os "          )")
         cfprintfn os "  | _ -> failwith \"%s\"" ident
     
@@ -218,7 +214,6 @@ let main() =
     cfprintfn os "";
         
     printLinesIfCodeDefined spec.BottomCode
-    cfprintfn os "# 3000000 \"%s\"" output;
     
   with e -> 
     eprintf "FSLEX: error FSL000: %s" (match e with Failure s -> s | e -> e.ToString());
