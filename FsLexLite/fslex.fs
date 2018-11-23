@@ -73,7 +73,6 @@ let cfprintfn (os: #TextWriter) fmt = Printf.kfprintf (fun () -> incr lineCount;
 let main() = 
   try 
     let filename = (match !input with Some x -> x | None -> failwith "no input given") 
-    let domain = "Unicode" 
     let spec = 
       let stream,reader,lexbuf = UnicodeFileAsLexbuf(filename, !inputCodePage) 
       use stream = stream
@@ -119,7 +118,7 @@ let main() =
 
 
 
-    cfprintfn os "let trans : int16[][] = ";
+    cfprintfn os "let transitionTable : int16[][] = ";
     cfprintfn os "    [| ";
     //let specificUnicodeChars = GetSpecificUnicodeChars()
     // This emits a (numLowUnicodeChars+NumUnicodeCategories+(2*#specificUnicodeChars)+1) * #states array of encoded UInt16 values
@@ -159,7 +158,7 @@ let main() =
         
     cfprintfn os "    |] ";
     
-    fprintf os "let actions : int16[] = [|";
+    fprintf os "let acceptTable : int16[] = [|";
     for state in dfaNodes do
         if state.Accepted.Length > 0 then 
           outputCodedUInt16 os (snd state.Accepted.Head)
@@ -167,7 +166,7 @@ let main() =
           outputCodedUInt16 os sentinel
     done;
     cfprintfn os "|]";
-    cfprintfn os "let _fslex_tables = %s.%sTables(alphabetTable, trans,actions)" lexlib domain;
+    cfprintfn os "let _fslex_tables = %s.UnicodeTables(alphabetTable, transitionTable, acceptTable)" lexlib
     
     cfprintfn os "let rec _fslex_dummy () = _fslex_dummy() ";
 
