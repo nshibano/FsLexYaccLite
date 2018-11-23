@@ -4,14 +4,7 @@ module FsLexYaccLite.Lex.AST
 
 open System
 open System.Collections.Generic
-open Microsoft.FSharp.Collections
 open FsLexYaccLite.Lex.Syntax
-
-type NfaNode = 
-    { Id: int
-      Name: string
-      Transitions: Dictionary<Alphabet, NfaNode list>
-      Accepted: (int * int) list }
 
 type MultiMap<'a,'b> = Dictionary<'a,'b list>
 
@@ -22,19 +15,24 @@ let AddToMultiMap (trDict:MultiMap<_,_>) a b =
     let prev = LookupMultiMap trDict a
     trDict.[a] <- b::prev
 
+type NfaNode = 
+    { Id : int
+      Transitions: Dictionary<Alphabet, NfaNode list>
+      Accepted: (int * int) list }
+
 type NfaNodeMap() = 
-    let map = new Dictionary<int,NfaNode>()
+    let map = new Dictionary<int, NfaNode>()
     member x.Item with get(nid) = map.[nid]
     member x.Count = map.Count
 
-    member x.NewNfaNode(trs,ac) = 
+    member x.NewNfaNode(trs, ac) = 
         let nodeId = map.Count
         let trDict = new Dictionary<_,_>(List.length trs)
         for (a, b) in trs do
            AddToMultiMap trDict a b
            
-        let node : NfaNode = {Id=nodeId; Name=string nodeId; Transitions=trDict; Accepted=ac }
-        map.[nodeId] <-node;
+        let node : NfaNode = { Id=nodeId; Transitions=trDict; Accepted=ac }
+        map.[nodeId] <- node;
         node
 
 let Epsilon = -1
@@ -48,10 +46,10 @@ let LexerStateToNfa (macros: Map<string,_>) (clauses: Clause list) =
     let rec CompileRegexp re dest = 
         match re with 
         | Alt res -> 
-            let trs = List.map (fun re -> (Epsilon,CompileRegexp re dest)) res
+            let trs = List.map (fun re -> (Epsilon, CompileRegexp re dest)) res
             nfaNodeMap.NewNfaNode(trs,[])
         | Seq res -> 
-            List.foldBack (CompileRegexp) res dest 
+            List.foldBack (CompileRegexp) res dest
         | Inp (Alphabet c) -> 
             nfaNodeMap.NewNfaNode([(c, dest)],[])
             
@@ -94,7 +92,6 @@ let newDfaNodeId =
 
 type DfaNode = 
     { Id: int
-      Name: string
       mutable Transitions : (Alphabet * DfaNode) list
       Accepted: (int * int) list }
 
@@ -113,7 +110,7 @@ let NfaToDfa (nfaNodeMap:NfaNodeMap) nfaStartNode =
     let EClosure (moves : list<int>) = 
         let acc = createNfaNodeIdSetBuilder()
         for i in moves do
-            EClosure1 acc nfaNodeMap.[i];
+            EClosure1 acc nfaNodeMap.[i]
         createNfaNodeIdSet acc
 
     // Compute all the immediate one-step moves for a set of NFA states, as a dictionary
@@ -140,7 +137,6 @@ let NfaToDfa (nfaNodeMap:NfaNodeMap) nfaStartNode =
         else 
             let dfaNode =
                 { Id= newDfaNodeId(); 
-                  Name = Array.fold (fun s nid -> nfaNodeMap.[nid].Name+"-"+s) "" nfaSet
                   Transitions=[];
                   Accepted= nfaSet 
                             |> Seq.map (fun nid -> nfaNodeMap.[nid].Accepted)
