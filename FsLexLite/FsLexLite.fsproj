@@ -11,9 +11,10 @@
     <Compile Include="Parsing.fsi" />
     <Compile Include="Parsing.fs" />
     <Compile Include="Syntax.fs" />
-    <Compile Include="fslexast.fs" />
+    <Compile Include="Alphabet.fs" />
     <Compile Include="fslexpars.fsi" />
     <Compile Include="fslexpars.fs" />
+    <Compile Include="fslexast.fs" />
     <Compile Include="fslexlex.fs" />
     <Compile Include="fslex.fs" />
     <None Include="fslexlex.fsl" />

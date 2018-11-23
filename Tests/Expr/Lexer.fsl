@@ -1,7 +1,7 @@
 ﻿{
 module Test.Lexer
-open Test.Parser
 open System
+open Test.Parser
 }
 
 rule token =

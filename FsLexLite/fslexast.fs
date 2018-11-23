@@ -2,24 +2,26 @@
 
 module FsLexYaccLite.Lex.AST
 
+open System
 open System.Collections.Generic
 open Microsoft.FSharp.Collections
 open Microsoft.FSharp.Text.Lexing
 open FsLexYaccLite.Lex.Syntax
 
+let Epsilon = Int32.MinValue
 
-let encodedUnicodeCategoryBase = 0xFFFFFF00u
-let EncodeUnicodeCategoryIndex(idx:int) = encodedUnicodeCategoryBase + uint32 idx
+let encodedUnicodeCategoryBase = 0xFFFFFF00
+let EncodeUnicodeCategoryIndex(idx:int) = encodedUnicodeCategoryBase + idx
 let NumUnicodeCategories = 0
 
-let IsUnicodeCategory(x:Alphabet) = (encodedUnicodeCategoryBase <= x) && (x < encodedUnicodeCategoryBase + uint32 NumUnicodeCategories)
+let IsUnicodeCategory(x:Alphabet) = (encodedUnicodeCategoryBase <= x) && (x < encodedUnicodeCategoryBase +  NumUnicodeCategories)
 let UnicodeCategoryIndex(x:Alphabet) = (x - encodedUnicodeCategoryBase)
 
 let numLowUnicodeChars = 128
 let _ = assert (numLowUnicodeChars = 128) // see table interpreter
 //let specificUnicodeChars = new Dictionary<_,_>()
 let specificUnicodeCharsDecode = new Dictionary<_,_>()
-let EncodeChar(c:char) = System.Convert.ToUInt32 c
+let EncodeChar(c:char) = int c
     //let x = 
     //if x < uint32 numLowUnicodeChars then x 
     //else 
@@ -30,7 +32,7 @@ let EncodeChar(c:char) = System.Convert.ToUInt32 c
     //    specificUnicodeChars.[c]
 
 let DecodeChar(x:Alphabet) = 
-    if x < uint32 numLowUnicodeChars then System.Convert.ToChar x
+    if x < numLowUnicodeChars then System.Convert.ToChar x
     else specificUnicodeCharsDecode.[x]
 
 //let NumSpecificUnicodeChars() = specificUnicodeChars.Count
@@ -120,7 +122,7 @@ let LexerStateToNfa (macros: Map<string,_>) (clauses: Clause list) =
         | Macro m -> 
             if not (macros.ContainsKey(m)) then failwith ("The macro "+m+" is not defined");
             CompileRegexp (macros.[m]) dest 
-
+        | _ -> failwith "dontcare"
         //// These cases unwind the difficult cases in the syntax that rely on knowing the
         //// entire alphabet.
         ////
@@ -134,29 +136,29 @@ let LexerStateToNfa (macros: Map<string,_>) (clauses: Clause list) =
         //                            yield Inp(Alphabet(EncodeChar(c))) ])
         //    CompileRegexp re dest
 
-        | Inp Any -> 
-            let re = Alt([ for n in GetAlphabet() do yield Inp(Alphabet(n)) ])
-            CompileRegexp re dest
+        //| Inp Any -> 
+        //    let re = Alt([ for n in GetAlphabet() do yield Inp(Alphabet(n)) ])
+        //    CompileRegexp re dest
 
-        | Inp (NotCharSet chars) -> 
-            let re = Alt [ // Include any characters from those in the alphabet besides those that are not immediately excluded
-                           for c in GetSingleCharAlphabet() do 
-                               let ec = EncodeChar c
-                               if not (chars.Contains(ec)) then 
-                                   yield Inp(Alphabet(ec))
+        //| Inp (NotCharSet chars) -> 
+        //    let re = Alt [ // Include any characters from those in the alphabet besides those that are not immediately excluded
+        //                   for c in GetSingleCharAlphabet() do 
+        //                       let ec = EncodeChar c
+        //                       if not (chars.Contains(ec)) then 
+        //                           yield Inp(Alphabet(ec))
 
-                           // Include all unicode categories 
-                           // That is, negations _only_ exclude precisely the given set of characters. You can't
-                           // exclude whole classes of characters as yet
-                           //let ucs = chars |> Set.map(DecodeChar >> System.Char.GetUnicodeCategory)  
-                           //for KeyValue(nm,uc) in unicodeCategories do
-                           //        //if ucs.Contains(uc) then 
-                           //        //    do printfn "warning: the unicode category '\\%s' ('%s') is automatically excluded by this character set negation. Consider adding this to the negation." nm  (uc.ToString())
-                           //        //    yield! []
-                           //        //else
-                           //              yield Inp(Alphabet(EncodeUnicodeCategory nm)) 
-                         ]
-            CompileRegexp re dest
+        //                   // Include all unicode categories 
+        //                   // That is, negations _only_ exclude precisely the given set of characters. You can't
+        //                   // exclude whole classes of characters as yet
+        //                   //let ucs = chars |> Set.map(DecodeChar >> System.Char.GetUnicodeCategory)  
+        //                   //for KeyValue(nm,uc) in unicodeCategories do
+        //                   //        //if ucs.Contains(uc) then 
+        //                   //        //    do printfn "warning: the unicode category '\\%s' ('%s') is automatically excluded by this character set negation. Consider adding this to the negation." nm  (uc.ToString())
+        //                   //        //    yield! []
+        //                   //        //else
+        //                   //              yield Inp(Alphabet(EncodeUnicodeCategory nm)) 
+        //                 ]
+        //    CompileRegexp re dest
 
     let actions = new System.Collections.Generic.List<_>()
     
@@ -312,13 +314,17 @@ let NfaToDfa (nfaNodeMap:NfaNodeMap) nfaStartNode =
         |> List.sortBy (fun s -> s.Id)
     ruleStartNode,ruleNodes
 
-let Compile spec = 
-    List.foldBack
-        (fun (name,args,clauses) (perRuleData,dfaNodes) -> 
-            let nfa, actions, nfaNodeMap = LexerStateToNfa (Map.ofList spec.Macros) clauses
-            let ruleStartNode, ruleNodes = NfaToDfa nfaNodeMap nfa
-            //Printf.printfn "name = %s, ruleStartNode = %O" name ruleStartNode.Id;
-            (ruleStartNode,actions) :: perRuleData, ruleNodes @ dfaNodes)
-        spec.Rules
-        ([],[])
-
+let Compile spec =
+    let alphabetTable = Alphabet.createTable spec
+    let spec = Alphabet.translate alphabetTable spec
+    let macros = Map.ofList spec.Macros
+    let rules, nodes =
+        List.foldBack
+            (fun (name,args,clauses) (perRuleData,dfaNodes) -> 
+                let nfa, actions, nfaNodeMap = LexerStateToNfa macros clauses
+                let ruleStartNode, ruleNodes = NfaToDfa nfaNodeMap nfa
+                //Printf.printfn "name = %s, ruleStartNode = %O" name ruleStartNode.Id;
+                (ruleStartNode,actions) :: perRuleData, ruleNodes @ dfaNodes)
+            spec.Rules
+            ([],[])
+    (alphabetTable, rules, nodes)

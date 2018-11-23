@@ -75,40 +75,57 @@ type LexBuffer =
           EndPos = Position.Empty
           LocalStore = Dictionary() }
 
-type UnicodeTables(trans: uint16[] array, accept: uint16[]) = 
+type UnicodeTables(alphabetTable : int16[], trans: int16[][], accept: int16[]) = 
         
-    let sentinel = int UInt16.MaxValue
-    let numUnicodeCategories = 30 
-    let numLowUnicodeChars = 128 
-    let numSpecificUnicodeChars = (trans.[0].Length - 1 - numLowUnicodeChars - numUnicodeCategories) / 2
-    let lookupUnicodeCharacters state inp = 
-        let inpAsInt = int inp
-        // Is it a fast ASCII character?
-        if inpAsInt < numLowUnicodeChars then 
-            int trans.[state].[inpAsInt]
-        else 
-            // Search for a specific unicode character
-            let baseForSpecificUnicodeChars = numLowUnicodeChars
-            let rec loop i = 
-                if i >= numSpecificUnicodeChars then 
-                    // OK, if we failed then read the 'others' entry in the alphabet,
-                    // which covers all Unicode characters not covered in other
-                    // ways
-                    let baseForUnicodeCategories = numLowUnicodeChars+numSpecificUnicodeChars*2
-                    let unicodeCategory = Char.GetUnicodeCategory(inp)
-                    //System.Console.WriteLine("inp = {0}, unicodeCategory = {1}", [| box inp; box unicodeCategory |]);
-                    int trans.[state].[baseForUnicodeCategories + int32 unicodeCategory]
-                else 
-                    // This is the specific unicode character
-                    let c = char (int trans.[state].[baseForSpecificUnicodeChars+i*2])
-                    //System.Console.WriteLine("c = {0}, inp = {1}, i = {2}", [| box c; box inp; box i |]);
-                    // OK, have we found the entry for a specific unicode character?
-                    if c = inp
-                    then int trans.[state].[baseForSpecificUnicodeChars+i*2+1]
-                    else loop(i+1)
+    let [<Literal>] sentinel = -1
+
+    let binchopFloor (table : int16[]) (key : int16) =
+        if table.Length = 0 || key < table.[0] then -1
+        else
+            let mutable i = 0
+            let mutable j = table.Length
+            while j - i > 1 do
+                let k = i + (j - i) / 2
+                if table.[k] <= key then
+                    i <- k
+                else
+                    j <- k
+            i
+
+    let alphabetOfChar (table : int16[]) (c : char) = binchopFloor alphabetTable (int16 c)
+    let alphabetEof = alphabetTable.Length
+
+    //let numUnicodeCategories = 30 
+    //let numLowUnicodeChars = 128 
+    //let numSpecificUnicodeChars = (trans.[0].Length - 1 - numLowUnicodeChars - numUnicodeCategories) / 2
+    //let lookupUnicodeCharacters state inp = 
+    //    let inpAsInt = int inp
+    //    // Is it a fast ASCII character?
+    //    if inpAsInt < numLowUnicodeChars then 
+    //        int trans.[state].[inpAsInt]
+    //    else 
+    //        // Search for a specific unicode character
+    //        let baseForSpecificUnicodeChars = numLowUnicodeChars
+    //        let rec loop i = 
+    //            if i >= numSpecificUnicodeChars then 
+    //                // OK, if we failed then read the 'others' entry in the alphabet,
+    //                // which covers all Unicode characters not covered in other
+    //                // ways
+    //                let baseForUnicodeCategories = numLowUnicodeChars+numSpecificUnicodeChars*2
+    //                let unicodeCategory = Char.GetUnicodeCategory(inp)
+    //                //System.Console.WriteLine("inp = {0}, unicodeCategory = {1}", [| box inp; box unicodeCategory |]);
+    //                int trans.[state].[baseForUnicodeCategories + int32 unicodeCategory]
+    //            else 
+    //                // This is the specific unicode character
+    //                let c = char (int trans.[state].[baseForSpecificUnicodeChars+i*2])
+    //                //System.Console.WriteLine("c = {0}, inp = {1}, i = {2}", [| box c; box inp; box i |]);
+    //                // OK, have we found the entry for a specific unicode character?
+    //                if c = inp
+    //                then int trans.[state].[baseForSpecificUnicodeChars+i*2+1]
+    //                else loop(i+1)
                 
-            loop 0
-    let eofPos = numLowUnicodeChars + 2*numSpecificUnicodeChars + numUnicodeCategories 
+    //        loop 0
+    //let eofPos = numLowUnicodeChars + 2*numSpecificUnicodeChars + numUnicodeCategories 
         
     let endOfScan lexBuffer =
         if lexBuffer.AcceptAction < 0 then 
@@ -125,7 +142,7 @@ type UnicodeTables(trans: uint16[] array, accept: uint16[]) =
             lexBuffer.AcceptAction <- a
             
         if lexBuffer.ScanLength = lexBuffer.BufferMaxScanLength then 
-            let snew = int trans.[state].[eofPos] // == EOF 
+            let snew = int trans.[state].[alphabetEof] // == EOF 
             if snew = sentinel then 
                 endOfScan lexBuffer
             else 
@@ -137,9 +154,9 @@ type UnicodeTables(trans: uint16[] array, accept: uint16[]) =
         else
             // read a character - end the scan if there are no further transitions 
             let inp = lexBuffer.String.[lexBuffer.BufferScanPos]
-                
+            let alphabet = alphabetOfChar alphabetTable inp
             // Find the new state
-            let snew = lookupUnicodeCharacters state inp
+            let snew = int trans.[state].[alphabet] //alphabetOfChar alphabetTable inp //lookupUnicodeCharacters state inp
 
             if snew = sentinel then 
                 endOfScan lexBuffer
@@ -161,4 +178,4 @@ type UnicodeTables(trans: uint16[] array, accept: uint16[]) =
         lexBuffer.AcceptAction <- -1
         scanUntilSentinel lexBuffer initialState
 
-    static member Create(trans,accept) = new UnicodeTables(trans, accept)
+    //static member Create(trans,accept) = new UnicodeTables(alphabetTable trans, accept)

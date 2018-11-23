@@ -63,9 +63,9 @@ let outputInt (os: TextWriter) (n:int) = os.Write(string n)
 
 let outputCodedUInt16 (os: #TextWriter)  (n:int) = 
   os.Write n;
-  os.Write "us; ";
+  os.Write "s; ";
 
-let sentinel = 255 * 256 + 255 
+let sentinel = -1
 
 let lineCount = ref 0
 let cfprintfn (os: #TextWriter) fmt = Printf.kfprintf (fun () -> incr lineCount; os.WriteLine()) os fmt
@@ -87,7 +87,7 @@ let main() =
                | _ -> e.Message);
           exit 1
     printfn "compiling to dfas (can take a while...)";
-    let perRuleData, dfaNodes = AST.Compile spec
+    let alphabetTable, perRuleData, dfaNodes = AST.Compile spec
     let dfaNodes = dfaNodes |> List.sortBy (fun n -> n.Id) 
 
     printfn "%d states" dfaNodes.Length;
@@ -111,8 +111,15 @@ let main() =
     printLinesIfCodeDefined spec.TopCode
     let code = fst spec.TopCode
     lineCount := !lineCount + code.Replace("\r","").Split([| '\n' |]).Length;
-    
-    cfprintfn os "let trans : uint16[] array = ";
+    fprintf os "let alphabetTable : int16[] = [| "
+    for i = 0 to alphabetTable.Count - 1 do
+      outputCodedUInt16 os alphabetTable.[i]
+    cfprintfn os " |]"
+
+
+
+
+    cfprintfn os "let trans : int16[][] = ";
     cfprintfn os "    [| ";
     //let specificUnicodeChars = GetSpecificUnicodeChars()
     // This emits a (numLowUnicodeChars+NumUnicodeCategories+(2*#specificUnicodeChars)+1) * #states array of encoded UInt16 values
@@ -127,7 +134,7 @@ let main() =
     //
     // For the SpecificUnicodeChars the entries are char/next-state pairs.
     for state in dfaNodes do
-        cfprintfn os "    (* State %d *)" state.Id;
+        //cfprintfn os "    (* State %d *)" state.Id;
         fprintf os "     [| ";
         let trans = 
             let dict = new Dictionary<_,_>()
@@ -138,21 +145,21 @@ let main() =
                 outputCodedUInt16 os trans.[n].Id 
             else
                 outputCodedUInt16 os sentinel
-        for i = 0 to numLowUnicodeChars-1 do 
+        for i = 0 to Alphabet.alphabetsCount alphabetTable - 1 do 
             let c = char i
             emit (EncodeChar c);
         //for c in specificUnicodeChars do 
         //    outputCodedUInt16 os (int c); 
         //    emit (EncodeChar c);
-        for i = 0 to NumUnicodeCategories-1 do 
-            emit (EncodeUnicodeCategoryIndex i);
-        emit Eof;
+        //for i = 0 to NumUnicodeCategories-1 do 
+        //    emit (EncodeUnicodeCategoryIndex i);
+        emit (Alphabet.alphabetEof alphabetTable);
         cfprintfn os "|];"
     done;
         
     cfprintfn os "    |] ";
     
-    fprintf os "let actions : uint16[] = [|";
+    fprintf os "let actions : int16[] = [|";
     for state in dfaNodes do
         if state.Accepted.Length > 0 then 
           outputCodedUInt16 os (snd state.Accepted.Head)
@@ -160,7 +167,7 @@ let main() =
           outputCodedUInt16 os sentinel
     done;
     cfprintfn os "|]";
-    cfprintfn os "let _fslex_tables = %s.%sTables.Create(trans,actions)" lexlib domain;
+    cfprintfn os "let _fslex_tables = %s.%sTables(alphabetTable, trans,actions)" lexlib domain;
     
     cfprintfn os "let rec _fslex_dummy () = _fslex_dummy() ";
 

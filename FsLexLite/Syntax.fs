@@ -4,24 +4,30 @@ open System.Collections.Generic
 open Microsoft.FSharp.Collections
 open Microsoft.FSharp.Text.Lexing
 
-let (|KeyValue|) (kvp:KeyValuePair<_,_>) = kvp.Key,kvp.Value
-
 type Ident = string
 type Code = string * Position
 
-type Alphabet = uint32
+type Alphabet = int
+
+type CharSetItem =
+    | SingleChar of char
+    | CharRange of first : char * last : char
 
 type Input =
-  | Alphabet of Alphabet
-  | Any 
-  | NotCharSet of Set<Alphabet>
+    // after parsing
+    | CharSet of CharSetItem list
+    | NotCharSet of CharSetItem list
+    | Any 
+    | Eof
+    // after input to alphabet translation
+    | Alphabet of Alphabet
 
 type Regexp = 
-  | Alt of Regexp list
-  | Seq of Regexp list
-  | Inp of Input
-  | Star of Regexp
-  | Macro of Ident
+    | Inp of Input
+    | Alt of Regexp list
+    | Seq of Regexp list
+    | Star of Regexp
+    | Macro of Ident
 
 type Clause = Regexp * Code
 
@@ -32,5 +38,5 @@ type Spec =
       BottomCode: Code }
 
 
-let Eof : Alphabet = 0xFFFFFFFEu
-let Epsilon : Alphabet = 0xFFFFFFFFu
+//let Eof : Alphabet = 0xFFFFFFFEu
+//let Epsilon : Alphabet = 0xFFFFFFFFu
