@@ -20,4 +20,9 @@ rule token =
   | "::"                   { COLONCOLON }
   | ".."                   { DOTDOT }
   | eof                    { EOF }
+  | '"'                    { string lexbuf.StartPos lexbuf }
   | _                      { failwith "lexical error" }
+and string start =
+  parse
+  | '"' { STRING (lexbuf.String.Substring(start.AbsoluteOffset + 1, lexbuf.EndPos.AbsoluteOffset - start.AbsoluteOffset - 2)) }
+  | _   { string start lexbuf }

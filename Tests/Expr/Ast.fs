@@ -3,6 +3,7 @@
 type Expr =
     | Ident of string
     | Number of int
+    | String of string
     | Add of Expr * Expr
     | Sub of Expr * Expr
     | Mult of Expr * Expr

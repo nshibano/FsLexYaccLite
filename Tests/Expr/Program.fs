@@ -1,7 +1,7 @@
 ﻿open Microsoft.FSharp.Text.Lexing
+open System
 open Test
 open Ast
-open System
 
 let parse (s : string) =
     let lexbuf = LexBuffer.FromString(s)
@@ -76,7 +76,11 @@ let main argv =
                 (Add (Mult (Ident "a",Ident "b"),Mult (Neg (Ident "c"),Ident "d")),
                  Ident "l"),
               Some (Range (Ident "e",Add (Ident "f",Mult (Ident "g",Ident "h"))))),None))
-    
+
+    case  """ "hello" + "string" """ (Add (String "hello",String "string"))
+
     printfn "done (%s)" (if ok then "success" else "failure")
+
+    Console.ReadKey() |> ignore
 
     if ok then 0 else -1
