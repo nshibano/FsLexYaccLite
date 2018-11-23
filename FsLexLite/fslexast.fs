@@ -76,10 +76,10 @@ let LexerStateToNfa (macros: Map<string, Regexp>) (clauses: Clause list) =
     nfaStartNode,(actions |> Seq.readonly), nfaNodeMap
 
 type NfaNodeIdSetBuilder = HashSet<int>
-let createNfaNodeIdSetBuilder() = HashSet<int>()
+let createNfaNodeIdSetBuilder() : NfaNodeIdSetBuilder = HashSet<int>()
 
 type NfaNodeIdSet = int array
-let createNfaNodeIdSet (builder : NfaNodeIdSetBuilder) =
+let createNfaNodeIdSet (builder : NfaNodeIdSetBuilder) : NfaNodeIdSet =
     let ary = Array.zeroCreate<int> builder.Count
     builder.CopyTo(ary)
     Array.sortInPlace ary
@@ -126,12 +126,12 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
         EClosure1 acc nfaStartNode
         createNfaNodeIdSet acc
 
-    let dfaNodes = ref (Map.empty<NfaNodeIdSet,DfaNode>)
-
-    let GetDfaNode nfaSet = 
-        if (!dfaNodes).ContainsKey(nfaSet) then 
-            (!dfaNodes).[nfaSet]
-        else 
+    let dfaNodes = Dictionary<NfaNodeIdSet, DfaNode>(LanguagePrimitives.FastGenericEqualityComparer)
+    
+    let GetDfaNode nfaSet =
+        match dfaNodes.TryGetValue(nfaSet) with
+        | true, dfaNode -> dfaNode
+        | false, _ ->
             let dfaNode =
                 { Id = newDfaNodeId()
                   Transitions = List()
@@ -143,46 +143,32 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
                         | Some acc -> accu.Add(acc)
                         | None -> ()
                     accu.ToArray() }
-
-            dfaNodes := (!dfaNodes).Add(nfaSet,dfaNode); 
+            dfaNodes.Add(nfaSet, dfaNode)
             dfaNode
             
-    let workList = ref [nfaSet0]
-    let doneSet = ref Set.empty
+    let workList = Queue([| nfaSet0 |])
+    let doneSet = HashSet<NfaNodeIdSet>(LanguagePrimitives.FastGenericEqualityComparer)
 
-    //let count = ref 0 
-    let rec Loop () = 
-        match !workList with 
-        | [] -> ()
-        | nfaSet ::t -> 
-            workList := t;
-            if (!doneSet).Contains(nfaSet) then 
-                Loop () 
-            else
-                let moves = ComputeMoves nfaSet
-                for (KeyValue(inp,movesForInput)) in moves do
-                    assert (inp <> Epsilon)
-                    let moveSet = EClosure movesForInput
-                    if moveSet.Length <> 0 then 
-                        //incr count
-                        let dfaNode = GetDfaNode nfaSet
-                        dfaNode.Transitions.Add((inp, GetDfaNode moveSet))
-                        (* Printf.printf "%d (%s) : %s --> %d (%s)\n" dfaNode.Id dfaNode.Name (match inp with EncodeChar c -> String.make 1 c | LEof -> "eof") moveSetDfaNode.Id moveSetDfaNode.Name;*)
-                        workList := moveSet :: !workList;
+    while workList.Count > 0 do
+        let nfaSet = workList.Dequeue()
+        if doneSet.Add(nfaSet) then
+            let moves = ComputeMoves nfaSet
+            for (KeyValue(inp, movesForInput)) in moves do
+                assert (inp <> Epsilon)
+                let moveSet = EClosure movesForInput
+                if moveSet.Length > 0 then 
+                    //incr count
+                    let dfaNode = GetDfaNode nfaSet
+                    dfaNode.Transitions.Add((inp, GetDfaNode moveSet))
+                    (* Printf.printf "%d (%s) : %s --> %d (%s)\n" dfaNode.Id dfaNode.Name (match inp with EncodeChar c -> String.make 1 c | LEof -> "eof") moveSetDfaNode.Id moveSetDfaNode.Name;*)
+                    workList.Enqueue(moveSet)
 
-                doneSet := (!doneSet).Add(nfaSet);
-
-
-                Loop()
-    Loop();
-    //Printf.printfn "count = %d" !count;
     let ruleStartNode = GetDfaNode nfaSet0
-    let ruleNodes = 
-        (!dfaNodes) 
-        |> Seq.map (fun kvp -> kvp.Value) 
-        |> Seq.toList
-        |> List.sortBy (fun s -> s.Id)
-    ruleStartNode,ruleNodes
+    let ruleNodes =
+        let dfaNodes = Array.ofSeq dfaNodes.Values
+        Array.sortInPlaceBy (fun (s : DfaNode) -> s.Id) dfaNodes
+        List.ofArray dfaNodes
+    ruleStartNode, ruleNodes
 
 let Compile spec =
     let alphabetTable = Alphabet.createTable spec
@@ -193,7 +179,6 @@ let Compile spec =
             (fun (name,args,clauses) (perRuleData,dfaNodes) -> 
                 let nfa, actions, nfaNodeMap = LexerStateToNfa macros clauses
                 let ruleStartNode, ruleNodes = NfaToDfa nfaNodeMap nfa
-                //Printf.printfn "name = %s, ruleStartNode = %O" name ruleStartNode.Id;
                 (ruleStartNode,actions) :: perRuleData, ruleNodes @ dfaNodes)
             spec.Rules
             ([],[])
