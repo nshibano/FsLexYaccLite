@@ -78,19 +78,6 @@ type LexBuffer =
 type UnicodeTables(alphabetTable : uint16[], transitionTable: int16[][], acceptTable: int16[]) =
         
     let [<Literal>] sentinel = -1
-
-    let binchopFloor (table : uint16[]) (key : uint16) =
-        if table.Length = 0 || key < table.[0] then -1
-        else
-            let mutable i = 0
-            let mutable j = table.Length
-            while j - i > 1 do
-                let k = i + (j - i) / 2
-                if table.[k] <= key then
-                    i <- k
-                else
-                    j <- k
-            i
         
     let endOfScan lexBuffer =
         if lexBuffer.AcceptAction < 0 then 
@@ -117,7 +104,19 @@ type UnicodeTables(alphabetTable : uint16[], transitionTable: int16[][], acceptT
 
         else
             let inp = lexBuffer.String.[lexBuffer.BufferScanPos]
-            let alphabet = binchopFloor alphabetTable (uint16 inp)
+
+            let alphabet =
+                let key = uint16 inp
+                let mutable i = 0
+                let mutable j = alphabetTable.Length
+                while j - i > 1 do
+                    let k = i + (j - i) / 2
+                    if alphabetTable.[k] <= key then
+                        i <- k
+                    else
+                        j <- k
+                i
+
             let snew = int transitionTable.[state].[alphabet]
 
             if snew = sentinel then 
