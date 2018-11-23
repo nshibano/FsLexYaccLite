@@ -75,11 +75,11 @@ type LexBuffer =
           EndPos = Position.Empty
           LocalStore = Dictionary() }
 
-type UnicodeTables(alphabetTable : int16[], trans: int16[][], accept: int16[]) = 
+type UnicodeTables(alphabetTable : uint16[], trans: int16[][], accept: int16[]) = 
         
     let [<Literal>] sentinel = -1
 
-    let binchopFloor (table : int16[]) (key : int16) =
+    let binchopFloor (table : uint16[]) (key : uint16) =
         if table.Length = 0 || key < table.[0] then -1
         else
             let mutable i = 0
@@ -92,7 +92,7 @@ type UnicodeTables(alphabetTable : int16[], trans: int16[][], accept: int16[]) =
                     j <- k
             i
 
-    let alphabetOfChar (table : int16[]) (c : char) = binchopFloor alphabetTable (int16 c)
+    let alphabetOfChar (table : uint16[]) (c : char) = binchopFloor alphabetTable (uint16 c)
     let alphabetEof = alphabetTable.Length
 
     //let numUnicodeCategories = 30 

@@ -61,10 +61,12 @@ let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> failwit
 
 let outputInt (os: TextWriter) (n:int) = os.Write(string n)
 
-let outputCodedUInt16 (os: #TextWriter)  (n:int) = 
+let outputCodedInt16 (os: #TextWriter)  (n:int) = 
   os.Write n;
   os.Write "s; ";
-
+let outputCodedUInt16 (os: #TextWriter)  (n:int) = 
+  os.Write n;
+  os.Write "us; ";
 let sentinel = -1
 
 let lineCount = ref 0
@@ -110,7 +112,7 @@ let main() =
     printLinesIfCodeDefined spec.TopCode
     let code = fst spec.TopCode
     lineCount := !lineCount + code.Replace("\r","").Split([| '\n' |]).Length;
-    fprintf os "let alphabetTable : int16[] = [| "
+    fprintf os "let alphabetTable : uint16[] = [| "
     for i = 0 to alphabetTable.Count - 1 do
       outputCodedUInt16 os alphabetTable.[i]
     cfprintfn os " |]"
@@ -141,9 +143,9 @@ let main() =
             dict
         let emit n = 
             if trans.ContainsKey(n) then 
-                outputCodedUInt16 os trans.[n].Id 
+                outputCodedInt16 os trans.[n].Id 
             else
-                outputCodedUInt16 os sentinel
+                outputCodedInt16 os sentinel
         for i = 0 to Alphabet.alphabetsCount alphabetTable - 1 do 
             let c = char i
             emit (EncodeChar c);
@@ -161,12 +163,12 @@ let main() =
     fprintf os "let acceptTable : int16[] = [|";
     for state in dfaNodes do
         if state.Accepted.Length > 0 then 
-          outputCodedUInt16 os (snd state.Accepted.Head)
+          outputCodedInt16 os (snd state.Accepted.Head)
         else
-          outputCodedUInt16 os sentinel
+          outputCodedInt16 os sentinel
     done;
     cfprintfn os "|]";
-    cfprintfn os "let _fslex_tables = %s.UnicodeTables(alphabetTable, transitionTable, acceptTable)" lexlib
+    cfprintfn os "let scanner = %s.UnicodeTables(alphabetTable, transitionTable, acceptTable)" lexlib
     
     cfprintfn os "let rec _fslex_dummy () = _fslex_dummy() ";
 
@@ -179,7 +181,7 @@ let main() =
     for ((startNode, actions),(ident,args,_)) in List.zip perRuleData spec.Rules do
         cfprintfn os "(* Rule %s *)" ident;
         cfprintfn os "and _fslex_%s %s _fslex_state lexbuf =" ident (String.Join(" ",Array.ofList args));
-        cfprintfn os "  match _fslex_tables.Interpret(_fslex_state,lexbuf) with" ;
+        cfprintfn os "  match scanner.Interpret(_fslex_state,lexbuf) with" ;
         actions |> Seq.iteri (fun i (code,pos) -> 
             cfprintfn os "  | %d -> ( " i;
             let lines = code.Split([| '\r'; '\n' |], StringSplitOptions.RemoveEmptyEntries)
