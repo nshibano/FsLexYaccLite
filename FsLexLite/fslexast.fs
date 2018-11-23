@@ -91,7 +91,7 @@ let newDfaNodeId =
 
 type DfaNode = 
     { Id: int
-      mutable Transitions : (Alphabet * DfaNode) list
+      Transitions : List<(Alphabet * DfaNode)>
       Accepted: (int * int) array }
 
 let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode = 
@@ -133,7 +133,7 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
         else 
             let dfaNode =
                 { Id = newDfaNodeId()
-                  Transitions = []
+                  Transitions = List()
                   Accepted =
                     let accu = List()
                     for nid in nfaSet do
@@ -165,7 +165,7 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
                     if moveSet.Length <> 0 then 
                         //incr count
                         let dfaNode = GetDfaNode nfaSet
-                        dfaNode.Transitions <- (inp, GetDfaNode moveSet) :: dfaNode.Transitions;
+                        dfaNode.Transitions.Add((inp, GetDfaNode moveSet))
                         (* Printf.printf "%d (%s) : %s --> %d (%s)\n" dfaNode.Id dfaNode.Name (match inp with EncodeChar c -> String.make 1 c | LEof -> "eof") moveSetDfaNode.Id moveSetDfaNode.Name;*)
                         workList := moveSet :: !workList;
 

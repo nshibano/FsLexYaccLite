@@ -138,8 +138,8 @@ let main() =
         //cfprintfn os "    (* State %d *)" state.Id;
         fprintf os "     [| ";
         let trans = 
-            let dict = new Dictionary<_,_>()
-            state.Transitions |> List.iter dict.Add
+            let dict = Dictionary()
+            Seq.iter dict.Add state.Transitions
             dict
         let emit n = 
             if trans.ContainsKey(n) then 
