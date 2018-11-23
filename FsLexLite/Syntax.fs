@@ -13,7 +13,6 @@ type Alphabet = uint32
 
 type Input =
   | Alphabet of Alphabet
-  | UnicodeCategory of string 
   | Any 
   | NotCharSet of Set<Alphabet>
 

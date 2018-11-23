@@ -114,7 +114,7 @@ let main() =
     
     cfprintfn os "let trans : uint16[] array = ";
     cfprintfn os "    [| ";
-    let specificUnicodeChars = GetSpecificUnicodeChars()
+    //let specificUnicodeChars = GetSpecificUnicodeChars()
     // This emits a (numLowUnicodeChars+NumUnicodeCategories+(2*#specificUnicodeChars)+1) * #states array of encoded UInt16 values
         
     // Each row for the Unicode table has format 
@@ -141,9 +141,9 @@ let main() =
         for i = 0 to numLowUnicodeChars-1 do 
             let c = char i
             emit (EncodeChar c);
-        for c in specificUnicodeChars do 
-            outputCodedUInt16 os (int c); 
-            emit (EncodeChar c);
+        //for c in specificUnicodeChars do 
+        //    outputCodedUInt16 os (int c); 
+        //    emit (EncodeChar c);
         for i = 0 to NumUnicodeCategories-1 do 
             emit (EncodeUnicodeCategoryIndex i);
         emit Eof;

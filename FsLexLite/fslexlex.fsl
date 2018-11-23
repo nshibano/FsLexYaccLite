@@ -100,11 +100,6 @@ rule token = parse
      match (unicodegraph_long s.[3..10]) with 
      | None, c -> CHAR(c)
      | Some _ , _ -> failwith "Unicode characters needing surrogate pairs are not yet supported by this tool" }
- 
- | '\'' '\\' ['A'-'Z'] ['a'-'z'] '\''
-   { let s = (lexeme lexbuf).[2..3] in 
-     UNICODE_CATEGORY (s) }
-     
  | '{' { let p = lexbuf.StartPos in 
          let buff = (new StringBuilder 100) in
          // adjust the first line to get even indentation for all lines w.r.t. the left hand margin

@@ -19,7 +19,6 @@ type token =
   | AND
   | LPAREN
   | RPAREN
-  | UNICODE_CATEGORY of (string)
   | CHAR of (char)
   | CODE of (FsLexYaccLite.Lex.Syntax.Code)
   | STRING of (string)
@@ -43,7 +42,6 @@ type tokenId =
     | TOKEN_AND
     | TOKEN_LPAREN
     | TOKEN_RPAREN
-    | TOKEN_UNICODE_CATEGORY
     | TOKEN_CHAR
     | TOKEN_CODE
     | TOKEN_STRING

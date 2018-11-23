@@ -9,7 +9,6 @@ open FsLexYaccLite.Lex.AST
 %token <string> STRING IDENT
 %token <FsLexYaccLite.Lex.Syntax.Code> CODE 
 %token <char> CHAR
-%token <string> UNICODE_CATEGORY
 %token RULE PARSE LET  AND LPAREN RPAREN
 %token EOF BAR DOT PLUS STAR QMARK EQUALS UNDERSCORE LBRACK RBRACK HAT DASH
 %start spec
@@ -32,7 +31,6 @@ clauses: clause BAR clauses {$1 :: $3 } | clause { [$1] }
 clause: regexp CODE { $1, $2 }
 regexp: 
 | CHAR { Inp(Alphabet(EncodeChar $1)) }
-| UNICODE_CATEGORY { Inp(UnicodeCategory $1) }
 | EOF { Inp(Alphabet(Eof)) }
 | UNDERSCORE { Inp Any }
 | STRING { Seq([ for n in 0 .. $1.Length - 1 -> Inp(Alphabet(EncodeChar $1.[n]))]) }
