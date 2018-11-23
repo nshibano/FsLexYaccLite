@@ -163,7 +163,7 @@ let main() =
     fprintf os "let acceptTable : int16[] = [|";
     for state in dfaNodes do
         if state.Accepted.Length > 0 then 
-          outputCodedInt16 os (snd state.Accepted.Head)
+          outputCodedInt16 os (snd state.Accepted.[0])
         else
           outputCodedInt16 os sentinel
     done;

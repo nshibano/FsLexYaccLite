@@ -4,60 +4,55 @@ module FsLexYaccLite.Lex.AST
 
 open System
 open System.Collections.Generic
+
 open FsLexYaccLite.Lex.Syntax
 
-type MultiMap<'a,'b> = Dictionary<'a,'b list>
+type MultiMap<'a, 'b> = Dictionary<'a, 'b list>
 
-let LookupMultiMap (trDict:MultiMap<_,_>) a  =
-    if trDict.ContainsKey(a) then trDict.[a] else []
+let createMultiMap() : MultiMap<_, _> = Dictionary()
 
 let AddToMultiMap (trDict:MultiMap<_,_>) a b =
-    let prev = LookupMultiMap trDict a
+    let prev = if trDict.ContainsKey(a) then trDict.[a] else []
     trDict.[a] <- b::prev
 
 type NfaNode = 
     { Id : int
       Transitions: Dictionary<Alphabet, NfaNode list>
-      Accepted: (int * int) list }
+      Accepted: (int * int) option }
 
-type NfaNodeMap() = 
-    let map = new Dictionary<int, NfaNode>()
-    member x.Item with get(nid) = map.[nid]
-    member x.Count = map.Count
-
-    member x.NewNfaNode(trs, ac) = 
-        let nodeId = map.Count
-        let trDict = new Dictionary<_,_>(List.length trs)
-        for (a, b) in trs do
-           AddToMultiMap trDict a b
-           
-        let node : NfaNode = { Id=nodeId; Transitions=trDict; Accepted=ac }
-        map.[nodeId] <- node;
-        node
+type NfaNodeMap = List<NfaNode>
 
 let Epsilon = -1
 
-let LexerStateToNfa (macros: Map<string,_>) (clauses: Clause list) = 
+let LexerStateToNfa (macros: Map<string, Regexp>) (clauses: Clause list) = 
 
     /// Table allocating node ids 
     let nfaNodeMap = new NfaNodeMap()
     
+    let newNfaNode trs ac =
+        let nodeId = nfaNodeMap.Count
+        let trDict = createMultiMap()
+        for (a, b) in trs do
+            AddToMultiMap trDict a b
+        let node = { Id = nodeId; Transitions = trDict; Accepted=ac }
+        nfaNodeMap.Add node
+        node
+
     /// Compile a regular expression into the NFA
     let rec CompileRegexp re dest = 
         match re with 
         | Alt res -> 
             let trs = List.map (fun re -> (Epsilon, CompileRegexp re dest)) res
-            nfaNodeMap.NewNfaNode(trs,[])
+            newNfaNode trs None
         | Seq res -> 
             List.foldBack (CompileRegexp) res dest
         | Inp (Alphabet c) -> 
-            nfaNodeMap.NewNfaNode([(c, dest)],[])
-            
+            newNfaNode [(c, dest)] None
         | Star re -> 
-            let nfaNode = nfaNodeMap.NewNfaNode([(Epsilon, dest)],[])
+            let nfaNode = newNfaNode [(Epsilon, dest)] None
             let sre = CompileRegexp re nfaNode
             AddToMultiMap nfaNode.Transitions Epsilon sre
-            nfaNodeMap.NewNfaNode([(Epsilon,sre); (Epsilon,dest)],[])
+            newNfaNode [(Epsilon,sre); (Epsilon,dest)] None
         | Macro m -> 
             if not (macros.ContainsKey(m)) then failwith ("The macro "+m+" is not defined");
             CompileRegexp (macros.[m]) dest 
@@ -69,11 +64,11 @@ let LexerStateToNfa (macros: Map<string,_>) (clauses: Clause list) =
     let sTrans macros nodeId (regexp,code) = 
         let actionId = actions.Count
         actions.Add(code)
-        let sAccept = nfaNodeMap.NewNfaNode([],[(nodeId,actionId)])
+        let sAccept = newNfaNode [] (Some (nodeId,actionId))
         CompileRegexp regexp sAccept 
 
     let trs = clauses |> List.mapi (fun n x -> (Epsilon,sTrans macros n x)) 
-    let nfaStartNode = nfaNodeMap.NewNfaNode(trs,[])
+    let nfaStartNode = newNfaNode trs None
     nfaStartNode,(actions |> Seq.readonly), nfaNodeMap
 
 type NfaNodeIdSetBuilder = HashSet<int>
@@ -93,10 +88,10 @@ let newDfaNodeId =
 type DfaNode = 
     { Id: int
       mutable Transitions : (Alphabet * DfaNode) list
-      Accepted: (int * int) list }
+      Accepted: (int * int) array }
 
-let NfaToDfa (nfaNodeMap:NfaNodeMap) nfaStartNode = 
-    let numNfaNodes = nfaNodeMap.Count
+let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode = 
+
     let rec EClosure1 (acc:NfaNodeIdSetBuilder) (n:NfaNode) = 
         if not (acc.Contains(n.Id)) then 
             acc.Add(n.Id) |> ignore;
@@ -116,7 +111,7 @@ let NfaToDfa (nfaNodeMap:NfaNodeMap) nfaStartNode =
     // Compute all the immediate one-step moves for a set of NFA states, as a dictionary
     // mapping inputs to destination lists
     let ComputeMoves (nset:NfaNodeIdSet) = 
-        let moves = new MultiMap<_,_>()
+        let moves = createMultiMap()
         Array.iter (fun nodeId -> 
             for (KeyValue(inp,dests)) in nfaNodeMap.[nodeId].Transitions do
                 if inp <> Epsilon then 
@@ -136,12 +131,16 @@ let NfaToDfa (nfaNodeMap:NfaNodeMap) nfaStartNode =
             (!dfaNodes).[nfaSet]
         else 
             let dfaNode =
-                { Id= newDfaNodeId(); 
-                  Transitions=[];
-                  Accepted= nfaSet 
-                            |> Seq.map (fun nid -> nfaNodeMap.[nid].Accepted)
-                            |> List.concat }
-            //Printf.printfn "id = %d" dfaNode.Id;
+                { Id = newDfaNodeId()
+                  Transitions = []
+                  Accepted =
+                    let accu = List()
+                    for nid in nfaSet do
+                        let nfaNode = nfaNodeMap.[nid]
+                        match nfaNode.Accepted with
+                        | Some acc -> accu.Add(acc)
+                        | None -> ()
+                    accu.ToArray() }
 
             dfaNodes := (!dfaNodes).Add(nfaSet,dfaNode); 
             dfaNode
