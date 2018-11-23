@@ -5,77 +5,24 @@ module FsLexYaccLite.Lex.AST
 open System
 open System.Collections.Generic
 open Microsoft.FSharp.Collections
-open Microsoft.FSharp.Text.Lexing
 open FsLexYaccLite.Lex.Syntax
-
-let Epsilon = Int32.MinValue
-
-let encodedUnicodeCategoryBase = 0xFFFFFF00
-let EncodeUnicodeCategoryIndex(idx:int) = encodedUnicodeCategoryBase + idx
-let NumUnicodeCategories = 0
-
-let IsUnicodeCategory(x:Alphabet) = (encodedUnicodeCategoryBase <= x) && (x < encodedUnicodeCategoryBase +  NumUnicodeCategories)
-let UnicodeCategoryIndex(x:Alphabet) = (x - encodedUnicodeCategoryBase)
-
-let numLowUnicodeChars = 128
-let _ = assert (numLowUnicodeChars = 128) // see table interpreter
-//let specificUnicodeChars = new Dictionary<_,_>()
-let specificUnicodeCharsDecode = new Dictionary<_,_>()
-let EncodeChar(c:char) = int c
-    //let x = 
-    //if x < uint32 numLowUnicodeChars then x 
-    //else 
-    //    if not(specificUnicodeChars.ContainsKey(c)) then
-    //        let idx = uint32 numLowUnicodeChars + uint32 specificUnicodeChars.Count  
-    //        specificUnicodeChars.[c] <- idx
-    //        specificUnicodeCharsDecode.[idx] <- c
-    //    specificUnicodeChars.[c]
-
-let DecodeChar(x:Alphabet) = 
-    if x < numLowUnicodeChars then System.Convert.ToChar x
-    else specificUnicodeCharsDecode.[x]
-
-//let NumSpecificUnicodeChars() = specificUnicodeChars.Count
-//let GetSpecificUnicodeChars() = 
-//    specificUnicodeChars 
-//        |> Seq.sortBy (fun (KeyValue(k,v)) -> v) 
-//        |> Seq.map (fun (KeyValue(k,v)) -> k) 
-
-let GetSingleCharAlphabet() = 
-    Set.ofList [ for c in 0..numLowUnicodeChars-1 do yield (char c)
-    (* for c in GetSpecificUnicodeChars() do yield c *) ]
-         
-let GetAlphabet() = 
-    Set.ofList [ for c in GetSingleCharAlphabet() do yield EncodeChar c
-                 for uc in 0 .. NumUnicodeCategories-1 do yield EncodeUnicodeCategoryIndex uc ]
-
-         
-//let DecodeAlphabet (x:Alphabet) = System.Convert.ToChar(x)
-
-(*
-for i in 0 .. 65535 do 
-    let c = char i
-    if System.Char.GetUnicodeCategory c = System.Globalization.UnicodeCategory.PrivateUse then 
-        printfn "i = %x" i
-*)
-
-
 
 type NodeId = int   
 
 type NfaNode = 
-    { Id: NodeId;
-      Name: string;
-      Transitions: Dictionary<Alphabet, NfaNode list>;
+    { Id: NodeId
+      Name: string
+      Transitions: Dictionary<Alphabet, NfaNode list>
       Accepted: (int * int) list }
 
 type DfaNode = 
-    { Id: int;
-      Name: string;
-      mutable Transitions: (Alphabet * DfaNode) list;
+    { Id: int
+      Name: string
+      mutable Transitions: (Alphabet * DfaNode) list
       Accepted: (int * int) list }
 
 type MultiMap<'a,'b> = Dictionary<'a,'b list>
+
 let LookupMultiMap (trDict:MultiMap<_,_>) a  =
     if trDict.ContainsKey(a) then trDict.[a] else []
 
@@ -84,19 +31,21 @@ let AddToMultiMap (trDict:MultiMap<_,_>) a b =
     trDict.[a] <- b::prev
 
 type NfaNodeMap() = 
-    let map = new Dictionary<int,NfaNode>(100)
+    let map = new Dictionary<int,NfaNode>()
     member x.Item with get(nid) = map.[nid]
     member x.Count = map.Count
 
     member x.NewNfaNode(trs,ac) = 
-        let nodeId = map.Count+1 // ID zero is reserved
+        let nodeId = map.Count
         let trDict = new Dictionary<_,_>(List.length trs)
-        for (a,b) in trs do
+        for (a, b) in trs do
            AddToMultiMap trDict a b
            
-        let node : NfaNode = {Id=nodeId; Name=string nodeId; Transitions=trDict; Accepted=ac}
+        let node : NfaNode = {Id=nodeId; Name=string nodeId; Transitions=trDict; Accepted=ac }
         map.[nodeId] <-node;
         node
+
+let Epsilon = -1
 
 let LexerStateToNfa (macros: Map<string,_>) (clauses: Clause list) = 
 
@@ -123,42 +72,6 @@ let LexerStateToNfa (macros: Map<string,_>) (clauses: Clause list) =
             if not (macros.ContainsKey(m)) then failwith ("The macro "+m+" is not defined");
             CompileRegexp (macros.[m]) dest 
         | _ -> failwith "dontcare"
-        //// These cases unwind the difficult cases in the syntax that rely on knowing the
-        //// entire alphabet.
-        ////
-        //// Note we've delayed the expension of these until we've worked out all the 'special' Unicode characters
-        //// mentioned in the entire lexer spec, i.e. we wait until GetAlphabet returns a reliable and stable answer.
-        //| Inp (UnicodeCategory uc) -> 
-        //    let re = Alt([ yield Inp(Alphabet(EncodeUnicodeCategory uc))
-        //                   // Also include any specific characters in this category
-        //                   for c in GetSingleCharAlphabet() do 
-        //                       if System.Char.GetUnicodeCategory(c) = unicodeCategories.[uc] then 
-        //                            yield Inp(Alphabet(EncodeChar(c))) ])
-        //    CompileRegexp re dest
-
-        //| Inp Any -> 
-        //    let re = Alt([ for n in GetAlphabet() do yield Inp(Alphabet(n)) ])
-        //    CompileRegexp re dest
-
-        //| Inp (NotCharSet chars) -> 
-        //    let re = Alt [ // Include any characters from those in the alphabet besides those that are not immediately excluded
-        //                   for c in GetSingleCharAlphabet() do 
-        //                       let ec = EncodeChar c
-        //                       if not (chars.Contains(ec)) then 
-        //                           yield Inp(Alphabet(ec))
-
-        //                   // Include all unicode categories 
-        //                   // That is, negations _only_ exclude precisely the given set of characters. You can't
-        //                   // exclude whole classes of characters as yet
-        //                   //let ucs = chars |> Set.map(DecodeChar >> System.Char.GetUnicodeCategory)  
-        //                   //for KeyValue(nm,uc) in unicodeCategories do
-        //                   //        //if ucs.Contains(uc) then 
-        //                   //        //    do printfn "warning: the unicode category '\\%s' ('%s') is automatically excluded by this character set negation. Consider adding this to the negation." nm  (uc.ToString())
-        //                   //        //    yield! []
-        //                   //        //else
-        //                   //              yield Inp(Alphabet(EncodeUnicodeCategory nm)) 
-        //                 ]
-        //    CompileRegexp re dest
 
     let actions = new System.Collections.Generic.List<_>()
     

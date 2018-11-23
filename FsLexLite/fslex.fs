@@ -148,7 +148,7 @@ let main() =
                 outputCodedInt16 os sentinel
         for i = 0 to Alphabet.alphabetsCount alphabetTable - 1 do 
             let c = char i
-            emit (EncodeChar c);
+            emit (int c);
         //for c in specificUnicodeChars do 
         //    outputCodedUInt16 os (int c); 
         //    emit (EncodeChar c);
