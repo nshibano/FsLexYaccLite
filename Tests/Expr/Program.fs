@@ -81,6 +81,6 @@ let main argv =
 
     printfn "done (%s)" (if ok then "success" else "failure")
 
-    Console.ReadKey() |> ignore
+    //Console.ReadKey() |> ignore
 
     if ok then 0 else -1
