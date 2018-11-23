@@ -121,9 +121,10 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
                         AddToMultiMap moves inp dest.Id
         moves
 
-    let acc = createNfaNodeIdSetBuilder()
-    EClosure1 acc nfaStartNode;
-    let nfaSet0 = createNfaNodeIdSet acc
+    let nfaSet0 =
+        let acc = createNfaNodeIdSetBuilder()
+        EClosure1 acc nfaStartNode
+        createNfaNodeIdSet acc
 
     let dfaNodes = ref (Map.empty<NfaNodeIdSet,DfaNode>)
 
