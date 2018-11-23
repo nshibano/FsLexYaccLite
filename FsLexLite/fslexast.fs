@@ -7,18 +7,10 @@ open System.Collections.Generic
 open Microsoft.FSharp.Collections
 open FsLexYaccLite.Lex.Syntax
 
-type NodeId = int   
-
 type NfaNode = 
-    { Id: NodeId
-      Name: string
-      Transitions: Dictionary<Alphabet, NfaNode list>
-      Accepted: (int * int) list }
-
-type DfaNode = 
     { Id: int
       Name: string
-      mutable Transitions: (Alphabet * DfaNode) list
+      Transitions: Dictionary<Alphabet, NfaNode list>
       Accepted: (int * int) list }
 
 type MultiMap<'a,'b> = Dictionary<'a,'b list>
@@ -56,7 +48,7 @@ let LexerStateToNfa (macros: Map<string,_>) (clauses: Clause list) =
     let rec CompileRegexp re dest = 
         match re with 
         | Alt res -> 
-            let trs = res |> List.map (fun re -> (Epsilon,CompileRegexp re dest)) 
+            let trs = List.map (fun re -> (Epsilon,CompileRegexp re dest)) res
             nfaNodeMap.NewNfaNode(trs,[])
         | Seq res -> 
             List.foldBack (CompileRegexp) res dest 
@@ -86,58 +78,26 @@ let LexerStateToNfa (macros: Map<string,_>) (clauses: Clause list) =
     let nfaStartNode = nfaNodeMap.NewNfaNode(trs,[])
     nfaStartNode,(actions |> Seq.readonly), nfaNodeMap
 
-// TODO: consider a better representation here.
-type NfaNodeIdSetBuilder = HashSet<NodeId>
+type NfaNodeIdSetBuilder = HashSet<int>
+let createNfaNodeIdSetBuilder() = HashSet<int>()
 
-type NfaNodeIdSet(nodes: NfaNodeIdSetBuilder) = 
-    // BEWARE: the next line is performance critical
-    let s = nodes |> Seq.toArray |> (fun arr -> Array.sortInPlaceWith compare arr; arr) // 19
-
-    // These are all surprisingly slower:
-    //let s = nodes |> Seq.toArray |> Array.sort 
-    //let s = nodes |> Seq.toArray |> Array.sortWith compare // 76
-    //let s = nodes |> Seq.toArray |> (fun arr -> Array.sortInPlace arr; arr) // 76
-
-    member x.Representation = s
-    member x.Elements = s 
-    member x.Fold f z = Array.fold f z s
-    interface System.IComparable with 
-        member x.CompareTo(y:obj) = 
-            let y = (y :?> NfaNodeIdSet)
-            let xr = x.Representation
-            let yr = y.Representation
-            let c = compare xr.Length yr.Length
-            if c <> 0 then c else 
-            let n = yr.Length
-            let rec go i = 
-                if i >= n then 0 else
-                let c = compare xr.[i] yr.[i]
-                if c <> 0 then c else
-                go (i+1) 
-            go 0
-
-    override x.Equals(y:obj) = 
-        match y with 
-        | :? NfaNodeIdSet as y -> 
-            let xr = x.Representation
-            let yr = y.Representation
-            let n = yr.Length
-            xr.Length = n && 
-            (let rec go i = (i < n) && xr.[i] = yr.[i] && go (i+1) 
-             go 0)
-        | _ -> false
-
-    override x.GetHashCode() = hash s
-
-    member x.IsEmpty = (s.Length = 0)
-    member x.Iterate f = s |> Array.iter f
-
-type NodeSetSet = Set<NfaNodeIdSet>
+type NfaNodeIdSet = int array
+let createNfaNodeIdSet (builder : NfaNodeIdSetBuilder) =
+    let ary = Array.zeroCreate<int> builder.Count
+    builder.CopyTo(ary)
+    Array.sortInPlace ary
+    ary
 
 let newDfaNodeId = 
     let i = ref 0 
     fun () -> let res = !i in incr i; res
-   
+
+type DfaNode = 
+    { Id: int
+      Name: string
+      mutable Transitions : (Alphabet * DfaNode) list
+      Accepted: (int * int) list }
+
 let NfaToDfa (nfaNodeMap:NfaNodeMap) nfaStartNode = 
     let numNfaNodes = nfaNodeMap.Count
     let rec EClosure1 (acc:NfaNodeIdSetBuilder) (n:NfaNode) = 
@@ -150,27 +110,27 @@ let NfaToDfa (nfaNodeMap:NfaNodeMap) nfaStartNode =
                     //printfn "n.Id = %A, #Epsilon = %d" n.Id tr.Length
                     tr |> List.iter (EClosure1 acc) 
 
-    let EClosure (moves:list<NodeId>) = 
-        let acc = new NfaNodeIdSetBuilder(HashIdentity.Structural)
+    let EClosure (moves : list<int>) = 
+        let acc = createNfaNodeIdSetBuilder()
         for i in moves do
             EClosure1 acc nfaNodeMap.[i];
-        new NfaNodeIdSet(acc)
+        createNfaNodeIdSet acc
 
     // Compute all the immediate one-step moves for a set of NFA states, as a dictionary
     // mapping inputs to destination lists
     let ComputeMoves (nset:NfaNodeIdSet) = 
         let moves = new MultiMap<_,_>()
-        nset.Iterate(fun nodeId -> 
+        Array.iter (fun nodeId -> 
             for (KeyValue(inp,dests)) in nfaNodeMap.[nodeId].Transitions do
                 if inp <> Epsilon then 
                     match dests with 
                     | [] -> ()  // this Clause is an optimization - the list is normally empty
-                    | tr -> tr |> List.iter(fun dest -> AddToMultiMap moves inp dest.Id))
+                    | tr -> tr |> List.iter(fun dest -> AddToMultiMap moves inp dest.Id)) nset
         moves
 
-    let acc = new NfaNodeIdSetBuilder(HashIdentity.Structural)
+    let acc = createNfaNodeIdSetBuilder()
     EClosure1 acc nfaStartNode;
-    let nfaSet0 = new NfaNodeIdSet(acc)
+    let nfaSet0 = createNfaNodeIdSet acc
 
     let dfaNodes = ref (Map.empty<NfaNodeIdSet,DfaNode>)
 
@@ -180,9 +140,9 @@ let NfaToDfa (nfaNodeMap:NfaNodeMap) nfaStartNode =
         else 
             let dfaNode =
                 { Id= newDfaNodeId(); 
-                  Name = nfaSet.Fold (fun s nid -> nfaNodeMap.[nid].Name+"-"+s) ""; 
+                  Name = Array.fold (fun s nid -> nfaNodeMap.[nid].Name+"-"+s) "" nfaSet
                   Transitions=[];
-                  Accepted= nfaSet.Elements 
+                  Accepted= nfaSet 
                             |> Seq.map (fun nid -> nfaNodeMap.[nid].Accepted)
                             |> List.concat }
             //Printf.printfn "id = %d" dfaNode.Id;
@@ -204,9 +164,9 @@ let NfaToDfa (nfaNodeMap:NfaNodeMap) nfaStartNode =
             else
                 let moves = ComputeMoves nfaSet
                 for (KeyValue(inp,movesForInput)) in moves do
-                    assert (inp <> Epsilon);
-                    let moveSet = EClosure movesForInput;
-                    if not moveSet.IsEmpty then 
+                    assert (inp <> Epsilon)
+                    let moveSet = EClosure movesForInput
+                    if moveSet.Length <> 0 then 
                         //incr count
                         let dfaNode = GetDfaNode nfaSet
                         dfaNode.Transitions <- (inp, GetDfaNode moveSet) :: dfaNode.Transitions;
