@@ -145,11 +145,12 @@ type UnicodeTables(alphabetTable : uint16[], trans: int16[][], accept: int16[]) 
             let snew = int trans.[state].[alphabetEof] // == EOF 
             if snew = sentinel then 
                 endOfScan lexBuffer
-            else 
-                if lexBuffer.IsPastEndOfStream then failwith "End of file on lexing stream"
+            elif not lexBuffer.IsPastEndOfStream then
                 lexBuffer.IsPastEndOfStream <- true
                 // Printf.printf "state %d --> %d on eof\n" state snew;
                 scanUntilSentinel lexBuffer snew
+            else
+                failwith "End of file on lexing stream"
 
         else
             // read a character - end the scan if there are no further transitions 
