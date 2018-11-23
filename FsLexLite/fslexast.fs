@@ -7,22 +7,26 @@ open System.Collections.Generic
 
 open FsLexYaccLite.Lex.Syntax
 
-type MultiMap<'a, 'b> = Dictionary<'a, 'b list>
+type MultiMap<'a, 'b> = Dictionary<'a, List<'b>>
 
 let createMultiMap() : MultiMap<_, _> = Dictionary()
 
-let AddToMultiMap (trDict:MultiMap<_,_>) a b =
-    let prev = if trDict.ContainsKey(a) then trDict.[a] else []
-    trDict.[a] <- b::prev
+let AddToMultiMap (dict : MultiMap<_,_>) a b =
+    match dict.TryGetValue(a) with
+    | true, l -> l.Add(b)
+    | false, _ ->
+        let l = List()
+        l.Add(b)
+        dict.[a] <- l
 
 type NfaNode = 
     { Id : int
-      Transitions: Dictionary<Alphabet, NfaNode list>
+      Transitions : MultiMap<Alphabet, NfaNode>
       Accepted: (int * int) option }
 
 type NfaNodeMap = List<NfaNode>
 
-let Epsilon = -1
+let [<Literal>] Epsilon = -1
 
 let LexerStateToNfa (macros: Map<string, Regexp>) (clauses: Clause list) = 
 
@@ -92,17 +96,15 @@ type DfaNode =
 
 let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode = 
 
-    let rec EClosure1 (acc:NfaNodeIdSetBuilder) (n:NfaNode) = 
-        if not (acc.Contains(n.Id)) then 
-            acc.Add(n.Id) |> ignore;
-            if n.Transitions.ContainsKey(Epsilon) then
-                match n.Transitions.[Epsilon] with 
-                | [] -> () // this Clause is an optimization - the list is normally empty
-                | tr -> 
-                    //printfn "n.Id = %A, #Epsilon = %d" n.Id tr.Length
-                    tr |> List.iter (EClosure1 acc) 
+    let rec EClosure1 (acc : NfaNodeIdSetBuilder) (n : NfaNode) =
+        if acc.Add(n.Id) then
+            match n.Transitions.TryGetValue(Epsilon) with
+            | true, l ->
+                for n in l do
+                    EClosure1 acc n
+            | false, _ -> ()
 
-    let EClosure (moves : list<int>) = 
+    let EClosure (moves : List<int>) = 
         let acc = createNfaNodeIdSetBuilder()
         for i in moves do
             EClosure1 acc nfaNodeMap.[i]
@@ -110,14 +112,13 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
 
     // Compute all the immediate one-step moves for a set of NFA states, as a dictionary
     // mapping inputs to destination lists
-    let ComputeMoves (nset:NfaNodeIdSet) = 
+    let ComputeMoves (nset : NfaNodeIdSet) = 
         let moves = createMultiMap()
-        Array.iter (fun nodeId -> 
-            for (KeyValue(inp,dests)) in nfaNodeMap.[nodeId].Transitions do
-                if inp <> Epsilon then 
-                    match dests with 
-                    | [] -> ()  // this Clause is an optimization - the list is normally empty
-                    | tr -> tr |> List.iter(fun dest -> AddToMultiMap moves inp dest.Id)) nset
+        for nid in nset do
+            for KeyValue(inp, dests) in nfaNodeMap.[nid].Transitions do
+                if inp <> Epsilon then
+                    for dest in dests do
+                        AddToMultiMap moves inp dest.Id
         moves
 
     let acc = createNfaNodeIdSetBuilder()
