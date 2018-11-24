@@ -28,7 +28,7 @@ type NfaNodeMap = List<NfaNode>
 
 let [<Literal>] Epsilon = -1
 
-let LexerStateToNfa (macros: Map<string, Regexp>) (clauses: Clause list) = 
+let NfaOfRule (macros: Dictionary<string, Regexp>) (clauses: Clause list) = 
 
     /// Table allocating node ids 
     let nfaNodeMap = new NfaNodeMap()
@@ -38,7 +38,7 @@ let LexerStateToNfa (macros: Map<string, Regexp>) (clauses: Clause list) =
         let trDict = createMultiMap()
         for (a, b) in trs do
             AddToMultiMap trDict a b
-        let node = { Id = nodeId; Transitions = trDict; Accepted=ac }
+        let node = { Id = nodeId; Transitions = trDict; Accepted = ac }
         nfaNodeMap.Add node
         node
 
@@ -57,23 +57,24 @@ let LexerStateToNfa (macros: Map<string, Regexp>) (clauses: Clause list) =
             let sre = CompileRegexp re nfaNode
             AddToMultiMap nfaNode.Transitions Epsilon sre
             newNfaNode [(Epsilon,sre); (Epsilon,dest)] None
-        | Macro m -> 
-            if not (macros.ContainsKey(m)) then failwith ("The macro "+m+" is not defined");
-            CompileRegexp (macros.[m]) dest 
+        | Macro m ->
+            match macros.TryGetValue(m) with
+            | true, re -> CompileRegexp re dest
+            | false, _ -> failwith (sprintf "The macro %s is not defined" m)
         | _ -> failwith "dontcare"
 
     let actions = new System.Collections.Generic.List<_>()
     
     /// Compile an acceptance of a regular expression into the NFA
-    let sTrans macros nodeId (regexp,code) = 
+    let sTrans nodeId (regexp, code) = 
         let actionId = actions.Count
         actions.Add(code)
-        let sAccept = newNfaNode [] (Some (nodeId,actionId))
+        let sAccept = newNfaNode [] (Some (nodeId, actionId))
         CompileRegexp regexp sAccept 
 
-    let trs = clauses |> List.mapi (fun n x -> (Epsilon,sTrans macros n x)) 
+    let trs = List.mapi (fun n x -> (Epsilon, sTrans n x)) clauses
     let nfaStartNode = newNfaNode trs None
-    nfaStartNode,(actions |> Seq.readonly), nfaNodeMap
+    nfaStartNode, actions, nfaNodeMap
 
 type NfaNodeIdSetBuilder = HashSet<int>
 let createNfaNodeIdSetBuilder() : NfaNodeIdSetBuilder = HashSet<int>()
@@ -91,7 +92,7 @@ let newDfaNodeId =
 
 type DfaNode = 
     { Id: int
-      Transitions : List<(Alphabet * DfaNode)>
+      Transitions : List<Alphabet * DfaNode>
       Accepted: (int * int) array }
 
 let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode = 
@@ -157,10 +158,8 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
                 assert (inp <> Epsilon)
                 let moveSet = EClosure movesForInput
                 if moveSet.Length > 0 then 
-                    //incr count
                     let dfaNode = GetDfaNode nfaSet
                     dfaNode.Transitions.Add((inp, GetDfaNode moveSet))
-                    (* Printf.printf "%d (%s) : %s --> %d (%s)\n" dfaNode.Id dfaNode.Name (match inp with EncodeChar c -> String.make 1 c | LEof -> "eof") moveSetDfaNode.Id moveSetDfaNode.Name;*)
                     workList.Enqueue(moveSet)
 
     let ruleStartNode = GetDfaNode nfaSet0
@@ -173,11 +172,15 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
 let Compile spec =
     let alphabetTable = Alphabet.createTable spec
     let spec = Alphabet.translate alphabetTable spec
-    let macros = Map.ofList spec.Macros
+    let macros =
+        let dict = Dictionary()
+        for (k, v) in spec.Macros do
+            dict.Add(k, v)
+        dict
     let rules, nodes =
         List.foldBack
-            (fun (name,args,clauses) (perRuleData,dfaNodes) -> 
-                let nfa, actions, nfaNodeMap = LexerStateToNfa macros clauses
+            (fun (name, args, clauses) (perRuleData,dfaNodes) -> 
+                let nfa, actions, nfaNodeMap = NfaOfRule macros clauses
                 let ruleStartNode, ruleNodes = NfaToDfa nfaNodeMap nfa
                 (ruleStartNode,actions) :: perRuleData, ruleNodes @ dfaNodes)
             spec.Rules

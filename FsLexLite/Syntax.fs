@@ -1,7 +1,5 @@
 ﻿module FsLexYaccLite.Lex.Syntax
 
-open System.Collections.Generic
-open Microsoft.FSharp.Collections
 open Microsoft.FSharp.Text.Lexing
 
 type Ident = string
@@ -19,7 +17,7 @@ type Input =
     | NotCharSet of CharSetItem list
     | Any 
     | Eof
-    // after input to alphabet translation
+    // after char to alphabet translation
     | Alphabet of Alphabet
 
 type Regexp = 
@@ -32,11 +30,7 @@ type Regexp =
 type Clause = Regexp * Code
 
 type Spec = 
-    { TopCode: Code;
-      Macros: (Ident * Regexp) list;
-      Rules: (Ident * Ident list * Clause list) list;
+    { TopCode: Code
+      Macros: (Ident * Regexp) list
+      Rules: (Ident * Ident list * Clause list) list
       BottomCode: Code }
-
-
-//let Eof : Alphabet = 0xFFFFFFFEu
-//let Epsilon : Alphabet = 0xFFFFFFFFu
