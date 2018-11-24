@@ -6,7 +6,6 @@
 
   <ItemGroup>
     <Compile Include="Lexing.fs" />
-    <Compile Include="Parsing.fsi" />
     <Compile Include="Parsing.fs" />
   </ItemGroup>
 
