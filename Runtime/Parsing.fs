@@ -97,37 +97,6 @@ type Tables<'tok> =
       /// The tag of the error terminal
       tagOfErrorTerminal: int }
 
-//-------------------------------------------------------------------------
-// An implementation of stacks.
-
-// This type is in System.dll so for the moment we can't use it in FSharp.Core.dll
-//type Stack<'a> = System.Collections.Generic.Stack<'a>
-
-type internal Stack<'a>(n)  = 
-    let mutable contents = Array.zeroCreate<'a>(n)
-    let mutable count = 0
-
-    member buf.Ensure newSize = 
-        let oldSize = Array.length contents
-        if newSize > oldSize then 
-            let old = contents
-            contents <- Array.zeroCreate (max newSize (oldSize * 2));
-            Array.blit old 0 contents 0 count;
-    
-    member buf.Count = count
-    member buf.Pop() = count <- count - 1
-    member buf.Peep() = contents.[count - 1]
-    member buf.Top(n) = [ for x in contents.[max 0 (count-n)..count - 1] -> x ] |> List.rev
-    member buf.Push(x) =
-        buf.Ensure(count + 1); 
-        contents.[count] <- x; 
-        count <- count + 1
-        
-    member buf.IsEmpty = (count = 0)
-    member buf.PrintStack() = 
-        for i = 0 to (count - 1) do 
-            System.Console.Write("{0}{1}",(contents.[i]),if i=count-1 then ":" else "-") 
-
 /// Indicates a parse error has occured and parse recovery is in progress
 exception RecoverableParseError
 /// Indicates an accept action has occured
@@ -264,10 +233,10 @@ module Implementation =
         // This is used at end-of-file to make sure we can shift both the 'error' token and the 'EOF' token.
         let rec popStackUntilErrorShifted(tokenOpt) =
             // Keep popping the stack until the "error" terminal is shifted
-            if stateStack.IsEmpty then 
+            if stateStack.Count = 0 then 
                 failwith "parse error";
             
-            let currState = stateStack.Peep()
+            let currState = stateStack.Peek()
             
             let action = actionTable.Read(currState, tables.tagOfErrorTerminal)
             
@@ -284,17 +253,17 @@ module Implementation =
                 valueStack.Push(ValueInfo(box (), lexbuf.StartPos, lexbuf.EndPos));
                 stateStack.Push(nextState)
             else
-                if valueStack.IsEmpty then 
+                if valueStack.Count = 0 then 
                     failwith "parse error";
-                valueStack.Pop();
-                stateStack.Pop();
+                valueStack.Pop() |> ignore
+                stateStack.Pop() |> ignore
                 popStackUntilErrorShifted(tokenOpt)
 
         while not finished do                                                                                    
-            if stateStack.IsEmpty then 
+            if stateStack.Count = 0 then 
                 finished <- true
             else
-                let state = stateStack.Peep()
+                let state = stateStack.Peek()
                 let action = 
                     let immediateAction = int tables.immediateActions.[state]
                     if not (immediateAction = anyMarker) then
@@ -345,10 +314,10 @@ module Implementation =
                     lhsPos.[0] <- Position.Empty;                                                                     
                     lhsPos.[1] <- Position.Empty;  
                     for i = 0 to n - 1 do                                                                             
-                        if valueStack.IsEmpty then failwith "empty symbol stack";
-                        let topVal = valueStack.Peep()
-                        valueStack.Pop();
-                        stateStack.Pop();
+                        if valueStack.Count = 0 then failwith "empty symbol stack";
+                        let topVal = valueStack.Peek()
+                        valueStack.Pop() |> ignore
+                        stateStack.Pop() |> ignore
                         ruleValues.[(n-i)-1] <- topVal.value;  
                         ruleStartPoss.[(n-i)-1] <- topVal.startPos;  
                         ruleEndPoss.[(n-i)-1] <- topVal.endPos;  
@@ -360,7 +329,7 @@ module Implementation =
                           // Printf.printf "reduce %d\n" prod;                                                       
                         let redResult = reduction parseState                                                          
                         valueStack.Push(ValueInfo(redResult, lhsPos.[0], lhsPos.[1]));
-                        let currState = stateStack.Peep()
+                        let currState = stateStack.Peek()
                         let newGotoState = gotoTable.Read(int tables.productionToNonTerminalTable.[prod], currState)
                         stateStack.Push(newGotoState)
                     with                                                                                              
@@ -403,8 +372,8 @@ module Implementation =
                                  for tag in 0 .. tables.numTerminals-1 do  
                                     if not (explicit.Contains(tag)) then 
                                          yield tag ] in
-
-                        let stateStack = stateStack.Top(12) in
+                        let stateStackContent = stateStack.ToArray()
+                        let stateStack = Array.sub stateStackContent 0 (min 12 stateStackContent.Length)
                         let reducibleProductions = 
                             [ for state in stateStack do 
                                yield stateToProdIdxsTable.ReadAll(state)  ]
@@ -418,7 +387,7 @@ module Implementation =
                                     if not (explicit.Contains(tag)) then 
                                          yield tag ] in
                         //let activeRules = stateStack |> List.iter (fun state -> 
-                        let errorContext = new ParseErrorContext<'tok>(stateStack,parseState, reduceTokens,currentToken,reducibleProductions, shiftableTokens, "syntax error")
+                        let errorContext = new ParseErrorContext<'tok>(List.ofArray stateStack, parseState, reduceTokens,currentToken,reducibleProductions, shiftableTokens, "syntax error")
                         tables.parseError(errorContext);
                         popStackUntilErrorShifted(None);
                         errorSuppressionCountDown <- 3;
@@ -427,7 +396,7 @@ module Implementation =
                     finished <- true
         done;                                                                                                     
         // OK, we're done - read off the overall generated value
-        valueStack.Peep().value
+        valueStack.Peek().value
 
 type Tables<'tok> with
     /// Interpret the parser table taking input from the given lexer, using the given lex buffer, and the given start state.
