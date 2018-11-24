@@ -25,7 +25,6 @@ let main() =
         cmd "dotnet" @"build ..\..\FsYaccLite"
         
         cp @"..\..\Runtime\Lexing.fs" @"."
-        cp @"..\..\Runtime\Parsing.fsi" @"."
         cp @"..\..\Runtime\Parsing.fs" @"."
 
         cmd "dotnet" @"..\..\FsLexLite\bin\Debug\netcoreapp2.1\FsLexLite.dll --unicode Lexer.fsl --lexlib Microsoft.FSharp.Text.Lexing"

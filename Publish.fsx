@@ -39,7 +39,6 @@ let main() =
         cmd "dotnet" @"publish -c Release FsYaccLite\FsYaccLite.fsproj -o ..\Publish\FsYaccLite"
 
         cp @"Runtime\Lexing.fs"   @"Publish\Runtime"
-        cp @"Runtime\Parsing.fsi" @"Publish\Runtime"
         cp @"Runtime\Parsing.fs"  @"Publish\Runtime"
 
         if File.Exists(zipFileName) then

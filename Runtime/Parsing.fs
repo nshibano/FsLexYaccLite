@@ -1,43 +1,35 @@
 // (c) Microsoft Corporation 2005-2009. 
 
-#if INTERNALIZED_FSLEXYACC_RUNTIME
-
-namespace  Internal.Utilities.Text.Parsing
-open Internal.Utilities
-open Internal.Utilities.Text.Lexing
-
-#else
 namespace Microsoft.FSharp.Text.Parsing
 open Microsoft.FSharp.Text.Lexing
-#endif
-
-
 
 open System
 open System.Collections.Generic
 
-#if INTERNALIZED_FSLEXYACC_RUNTIME
-type internal IParseState = 
-#else
-type IParseState = 
-#endif
+/// The information accessible via the <c>parseState</c> value within parser actions.
+type IParseState =
+    /// Get the start and end position for the terminal or non-terminal at a given index matched by the production
     abstract InputRange: int -> Position * Position
+    /// Get the end position for the terminal or non-terminal at a given index matched by the production
     abstract InputEndPosition: int -> Position 
+    /// Get the start position for the terminal or non-terminal at a given index matched by the production
     abstract InputStartPosition: int -> Position 
+    /// Get the full range of positions matched by the production
     abstract ResultRange: Position * Position
+    /// Get the value produced by the terminal or non-terminal at the given position
     abstract GetInput: int -> obj 
+    /// Get the store of local values associated with this parser
+    // Dynamically typed, non-lexically scoped local store
     abstract ParserLocalStore : IDictionary<string,obj>
+    /// Raise an error in this parse context
     abstract RaiseError<'b> : unit -> 'b 
 
 //-------------------------------------------------------------------------
 // This context is passed to the error reporter when a syntax error occurs
 
+/// The context provided when a parse error occurs
 [<Sealed>]
-#if INTERNALIZED_FSLEXYACC_RUNTIME
-type internal ParseErrorContext<'tok>
-#else
 type ParseErrorContext<'tok>
-#endif
          (//lexbuf: LexBuffer<_>,
           stateStack:int list,
           parseState: IParseState, 
@@ -47,41 +39,62 @@ type ParseErrorContext<'tok>
           shiftableTokens: int list , 
           message : string) =
       //member x.LexBuffer = lexbuf
+      /// The stack of state indexes active at the parse error 
       member x.StateStack  = stateStack
+      /// The tokens that would cause a reduction at the parse error 
       member x.ReduceTokens = reduceTokens
+      /// The token that caused the parse error
       member x.CurrentToken = currentToken
+      /// The state active at the parse error 
       member x.ParseState = parseState
+      /// The stack of productions that would be reduced at the parse error 
       member x.ReducibleProductions = reducibleProductions
+      /// The token that would cause a shift at the parse error
       member x.ShiftTokens = shiftableTokens
+      /// The message associated with the parse error
       member x.Message = message
 
 
 //-------------------------------------------------------------------------
 // This is the data structure emitted as code by FSYACC.  
 
-#if INTERNALIZED_FSLEXYACC_RUNTIME
-type internal Tables<'tok> = 
-#else
+
 type Tables<'tok> = 
-#endif
-    { reductions: (IParseState -> obj) array;
+    { 
+      /// The reduction table
+      reductions: (IParseState -> obj) array;
+      /// The token number indicating the end of input
       endOfInputTag: int;
+      /// A function to compute the tag of a token
       tagOfToken: 'tok -> int;
+      /// A function to compute the data carried by a token
       dataOfToken: 'tok -> obj; 
+      /// The sparse action table elements
       actionTableElements: uint16[];  
+      /// The sparse action table row offsets
       actionTableRowOffsets: uint16[];
+      /// The number of symbols for each reduction
       reductionSymbolCounts: uint16[];
+      /// The immediate action table
       immediateActions: uint16[];
+      /// The sparse goto table
       gotos: uint16[];
+      /// The sparse goto table row offsets
       sparseGotoTableRowOffsets: uint16[];
+      /// The sparse table for the productions active for each state
       stateToProdIdxsTableElements: uint16[];  
+      /// The sparse table offsets for the productions active for each state
       stateToProdIdxsTableRowOffsets: uint16[];  
+      /// This table is logically part of the Goto table
       productionToNonTerminalTable: uint16[];
       /// For fsyacc.exe, this entry is filled in by context from the generated parser file. If no 'parse_error' function
       /// is defined by the user then ParseHelpers.parse_error is used by default (ParseHelpers is opened
       /// at the top of the generated parser file)
+      /// This function is used to hold the user specified "parse_error" or "parse_error_rich" functions
       parseError:  ParseErrorContext<'tok> -> unit;
+      /// The total number of terminals 
       numTerminals: int;
+      /// The tag of the error terminal
       tagOfErrorTerminal: int }
 
 //-------------------------------------------------------------------------
@@ -90,11 +103,7 @@ type Tables<'tok> =
 // This type is in System.dll so for the moment we can't use it in FSharp.Core.dll
 //type Stack<'a> = System.Collections.Generic.Stack<'a>
 
-#if INTERNALIZED_FSLEXYACC_RUNTIME
-type Stack<'a>(n)  = 
-#else
 type internal Stack<'a>(n)  = 
-#endif
     let mutable contents = Array.zeroCreate<'a>(n)
     let mutable count = 0
 
@@ -117,25 +126,14 @@ type internal Stack<'a>(n)  =
     member buf.IsEmpty = (count = 0)
     member buf.PrintStack() = 
         for i = 0 to (count - 1) do 
-#if FX_NO_CONSOLE
-            ()
-#else
             System.Console.Write("{0}{1}",(contents.[i]),if i=count-1 then ":" else "-") 
-#endif         
+
+/// Indicates a parse error has occured and parse recovery is in progress
 exception RecoverableParseError
+/// Indicates an accept action has occured
 exception Accept of obj
 
-#if __DEBUG
-module Flags = 
-    let mutable debug = false
-#endif
-
-#if INTERNALIZED_FSLEXYACC_RUNTIME
-module internal Implementation = 
-#else
-module Implementation = 
-#endif
-    
+module Implementation =   
     // Definitions shared with fsyacc 
     let anyMarker = 0xffff
     let shiftFlag = 0x0000
@@ -220,9 +218,6 @@ module Implementation =
     let interpret (tables: Tables<'tok>) lexer (lexbuf : LexBuffer) initialState =                                                                      
         let localStore = new Dictionary<string,obj>() in
         localStore.["LexBuffer"] <- lexbuf;
-#if __DEBUG
-        if Flags.debug then System.Console.WriteLine("\nParser: interpret tables");
-#endif
         let stateStack : Stack<int> = new Stack<_>(100)
         stateStack.Push(initialState);
         let valueStack = new Stack<ValueInfo>(100)
@@ -264,32 +259,15 @@ module Implementation =
                 member p.RaiseError()  = raise RecoverableParseError  (* NOTE: this binding tests the fairly complex logic associated with an object expression implementing a generic abstract method *)
             }       
 
-#if __DEBUG
-        let report haveLookahead lookaheadToken = 
-            if haveLookahead then sprintf "%A" lookaheadToken 
-            else "[TBC]"
-#endif
-
         // Pop the stack until we can shift the 'error' token. If 'tokenOpt' is given
         // then keep popping until we can shift both the 'error' token and the token in 'tokenOpt'.
         // This is used at end-of-file to make sure we can shift both the 'error' token and the 'EOF' token.
         let rec popStackUntilErrorShifted(tokenOpt) =
             // Keep popping the stack until the "error" terminal is shifted
-#if __DEBUG
-            if Flags.debug then System.Console.WriteLine("popStackUntilErrorShifted");
-#endif
             if stateStack.IsEmpty then 
-#if __DEBUG
-                if Flags.debug then 
-                    System.Console.WriteLine("state stack empty during error recovery - generating parse error");
-#endif
                 failwith "parse error";
             
             let currState = stateStack.Peep()
-#if __DEBUG
-            if Flags.debug then 
-                System.Console.WriteLine("In state {0} during error recovery", currState);
-#endif
             
             let action = actionTable.Read(currState, tables.tagOfErrorTerminal)
             
@@ -300,9 +278,6 @@ module Implementation =
                     let nextState = actionValue action 
                     actionKind (actionTable.Read(nextState, tables.tagOfToken(token))) = shiftFlag) then
 
-#if __DEBUG
-                if Flags.debug then System.Console.WriteLine("shifting error, continuing with error recovery");
-#endif
                 let nextState = actionValue action 
                 // The "error" non terminal needs position information, though it tends to be unreliable.
                 // Use the StartPos/EndPos from the lex buffer
@@ -311,10 +286,6 @@ module Implementation =
             else
                 if valueStack.IsEmpty then 
                     failwith "parse error";
-#if __DEBUG
-                if Flags.debug then 
-                    System.Console.WriteLine("popping stack during error recovery");
-#endif
                 valueStack.Pop();
                 stateStack.Pop();
                 popStackUntilErrorShifted(tokenOpt)
@@ -324,9 +295,6 @@ module Implementation =
                 finished <- true
             else
                 let state = stateStack.Peep()
-#if __DEBUG
-                if Flags.debug then (Console.Write("{0} value(state), state ",valueStack.Count); stateStack.PrintStack())
-#endif
                 let action = 
                     let immediateAction = int tables.immediateActions.[state]
                     if not (immediateAction = anyMarker) then
@@ -361,17 +329,11 @@ module Implementation =
                 if kind = shiftFlag then (
                     if errorSuppressionCountDown > 0 then 
                         errorSuppressionCountDown <- errorSuppressionCountDown - 1;
-#if __DEBUG
-                        if Flags.debug then Console.WriteLine("shifting, reduced errorRecoverylevel to {0}\n", errorSuppressionCountDown);
-#endif
                     let nextState = actionValue action                                     
                     if not haveLookahead then failwith "shift on end of input!";
                     let data = tables.dataOfToken lookaheadToken
                     valueStack.Push(ValueInfo(data, lookaheadStartPos, lookaheadEndPos));
                     stateStack.Push(nextState);                                                                
-#if __DEBUG
-                    if Flags.debug then Console.WriteLine("shift/consume input {0}, shift to state {1}", report haveLookahead lookaheadToken, nextState);
-#endif
                     haveLookahead <- false
 
                 ) elif kind = reduceFlag then
@@ -379,9 +341,6 @@ module Implementation =
                     let reduction = reductions.[prod]                                                             
                     let n = int tables.reductionSymbolCounts.[prod]
                        // pop the symbols, populate the values and populate the locations                              
-#if __DEBUG
-                    if Flags.debug then Console.Write("reduce popping {0} values/states, lookahead {1}", n, report haveLookahead lookaheadToken);
-#endif
                     
                     lhsPos.[0] <- Position.Empty;                                                                     
                     lhsPos.[1] <- Position.Empty;  
@@ -404,46 +363,28 @@ module Implementation =
                         let currState = stateStack.Peep()
                         let newGotoState = gotoTable.Read(int tables.productionToNonTerminalTable.[prod], currState)
                         stateStack.Push(newGotoState)
-#if __DEBUG
-                        if Flags.debug then Console.WriteLine(" goto state {0}", newGotoState)
-#endif
                     with                                                                                              
                     | Accept res ->                                                                            
                           finished <- true;                                                                             
                           valueStack.Push(ValueInfo(res, lhsPos.[0], lhsPos.[1])) 
                     | RecoverableParseError ->
-#if __DEBUG
-                          if Flags.debug then Console.WriteLine("RecoverableParseErrorException...\n");
-#endif
                           popStackUntilErrorShifted(None);
                           // User code raised a Parse_error. Don't report errors again until three tokens have been shifted 
                           errorSuppressionCountDown <- 3
                 elif kind = errorFlag then (
-#if __DEBUG
-                    if Flags.debug then Console.Write("ErrorFlag... ");
-#endif
                     // Silently discard inputs and don't report errors 
                     // until three tokens in a row have been shifted 
-#if __DEBUG
-                    if Flags.debug then printfn "error on token '%A' " (if haveLookahead then Some(lookaheadToken) else None);
-#endif
                     if errorSuppressionCountDown > 0 then 
                         // If we're in the end-of-file count down then we're very keen to 'Accept'.
                         // We can only do this by repeatedly popping the stack until we can shift both an 'error' token
                         // and an EOF token. 
                         if inEofCountDown && eofCountDown < 10 then 
-#if __DEBUG
-                            if Flags.debug then printfn "poppin stack, lokking to shift both 'error' and that token, during end-of-file error recovery" ;
-#endif
                             popStackUntilErrorShifted(if haveLookahead then Some(lookaheadToken) else None);
 
                         // If we don't haveLookahead then the end-of-file count down is over and we have no further options.
                         if not haveLookahead then 
                             failwith "parse error: unexpected end of file"
                             
-#if __DEBUG
-                        if Flags.debug then printfn "discarding token '%A' during error suppression" (if haveLookahead then Some(lookaheadToken) else None);
-#endif
                         // Discard the token
                         haveLookahead <- false
                         // Try again to shift three tokens
@@ -481,32 +422,22 @@ module Implementation =
                         tables.parseError(errorContext);
                         popStackUntilErrorShifted(None);
                         errorSuppressionCountDown <- 3;
-#if __DEBUG
-                        if Flags.debug then System.Console.WriteLine("generated syntax error and shifted error token, haveLookahead = {0}\n", haveLookahead);
-#endif
                     )
                 ) elif kind = acceptFlag then 
                     finished <- true
-#if __DEBUG
-                else
-                  if Flags.debug then System.Console.WriteLine("ALARM!!! drop through case in parser");  
-#endif
         done;                                                                                                     
         // OK, we're done - read off the overall generated value
         valueStack.Peep().value
 
-#if INTERNALIZED_FSLEXYACC_RUNTIME
-type internal Tables<'tok> with
-#else
 type Tables<'tok> with
-#endif
+    /// Interpret the parser table taking input from the given lexer, using the given lex buffer, and the given start state.
+    /// Returns an object indicating the final synthesized value for the parse.
     member tables.Interpret (lexer,lexbuf,initialState) = 
         Implementation.interpret tables lexer lexbuf initialState
-    
-#if INTERNALIZED_FSLEXYACC_RUNTIME
-module internal ParseHelpers = 
-#else
-module ParseHelpers = 
-#endif
+
+/// Helpers used by generated parsers.    
+module ParseHelpers =
+    /// The default implementation of the parse_error function
     let parse_error (_s:string) = ()
+    /// The default implementation of the parse_error_rich function
     let parse_error_rich = (None : (ParseErrorContext<_> -> unit) option)

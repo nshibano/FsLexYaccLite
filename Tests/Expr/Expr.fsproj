@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <Compile Include="Lexing.fs" />
-    <Compile Include="Parsing.fsi" />
     <Compile Include="Parsing.fs" />
     <Compile Include="Ast.fs" />
     <Compile Include="Parser.fsi" />
