@@ -32,7 +32,7 @@ let addSingleCharSplit (table : List<int>) (c : char) =
     addSplit table (int c + 1)
 
 let addCharRangeSplit (table : List<int>) (cFirst: char) (cLast : char) =
-    if not (cFirst < cLast) then failwith "error"
+    if not (cFirst < cLast) then failwithf "invalid char range specifier: \\u%04x to \\u%04x" (int cFirst) (int cLast)
     addSplit table (int cFirst)
     addSplit table (int cLast + 1)
 
