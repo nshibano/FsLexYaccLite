@@ -15,8 +15,7 @@ let expand (macros : (Ident * Regexp) list) (rules : (Ident * Ident list * Claus
         | Star re -> Star (regexpMap re)
         | Macro name ->
             match dict.TryGetValue(name) with
-            | true, re ->
-                re
+            | true, re -> re
             | false, _ -> failwithf "macro %s is not defined" name
         | _ -> re
 
