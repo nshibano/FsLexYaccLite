@@ -3,25 +3,29 @@ module Test.Lexer
 open System
 open Test.Parser
 }
+let digit = ['0' - '9']
+let letter = ['a' - 'z' 'A' - 'Z']
+let number = '0'|(['1' - '9'] digit*)
+let ident = letter (letter|digit)*
 
 rule token =
   parse
-  | '\n'                   { lexbuf.EndPos <- lexbuf.EndPos.NextLine
-                             token lexbuf }
-  | [' ' '\r' '\t']+       { token lexbuf }
-  | "if"                   { IF }
-  | "then"                 { THEN }
-  | "else"                 { ELSE }
-  | ['a' - 'z' 'A' - 'Z']+ { IDENT lexbuf.Lexeme }
-  | ['0' - '9']+           { NUMBER (int lexbuf.Lexeme) }
-  | '+'                    { PLUS }
-  | '-'                    { MINUS }
-  | '*'                    { STAR }
-  | "::"                   { COLONCOLON }
-  | ".."                   { DOTDOT }
-  | eof                    { EOF }
-  | '"'                    { string lexbuf.StartPos lexbuf }
-  | _                      { failwith "lexical error" }
+  | '\n'             { lexbuf.EndPos <- lexbuf.EndPos.NextLine
+                       token lexbuf }
+  | [' ' '\r' '\t']+ { token lexbuf }
+  | "if"             { IF }
+  | "then"           { THEN }
+  | "else"           { ELSE }
+  | ident            { IDENT lexbuf.Lexeme }
+  | number           { NUMBER (int lexbuf.Lexeme) }
+  | '+'              { PLUS }
+  | '-'              { MINUS }
+  | '*'              { STAR }
+  | "::"             { COLONCOLON }
+  | ".."             { DOTDOT }
+  | eof              { EOF }
+  | '"'              { string lexbuf.StartPos lexbuf }
+  | _                { failwith "lexical error" }
 and string start =
   parse
   | '"' { STRING (lexbuf.String.Substring(start.AbsoluteOffset + 1, lexbuf.EndPos.AbsoluteOffset - start.AbsoluteOffset - 2)) }

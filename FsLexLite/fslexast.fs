@@ -28,7 +28,7 @@ type NfaNodeMap = List<NfaNode>
 
 let [<Literal>] Epsilon = -1
 
-let NfaOfRule (macros: Dictionary<string, Regexp>) (clauses: Clause list) = 
+let NfaOfRule (clauses: Clause list) = 
 
     /// Table allocating node ids 
     let nfaNodeMap = new NfaNodeMap()
@@ -57,10 +57,6 @@ let NfaOfRule (macros: Dictionary<string, Regexp>) (clauses: Clause list) =
             let sre = CompileRegexp re nfaNode
             AddToMultiMap nfaNode.Transitions Epsilon sre
             newNfaNode [(Epsilon,sre); (Epsilon,dest)] None
-        | Macro m ->
-            match macros.TryGetValue(m) with
-            | true, re -> CompileRegexp re dest
-            | false, _ -> failwith (sprintf "The macro %s is not defined" m)
         | _ -> failwith "dontcare"
 
     let actions = new System.Collections.Generic.List<_>()
@@ -170,6 +166,7 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
     ruleStartNode, ruleNodes
 
 let Compile spec =
+    let spec = { spec with Rules = Macros.expand spec.Macros spec.Rules }
     let alphabetTable = Alphabet.createTable spec
     let spec = Alphabet.translate alphabetTable spec
     let macros =
@@ -180,7 +177,7 @@ let Compile spec =
     let rules, nodes =
         List.foldBack
             (fun (name, args, clauses) (perRuleData,dfaNodes) -> 
-                let nfa, actions, nfaNodeMap = NfaOfRule macros clauses
+                let nfa, actions, nfaNodeMap = NfaOfRule clauses
                 let ruleStartNode, ruleNodes = NfaToDfa nfaNodeMap nfa
                 (ruleStartNode,actions) :: perRuleData, ruleNodes @ dfaNodes)
             spec.Rules

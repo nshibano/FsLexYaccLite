@@ -11,6 +11,7 @@
     <Compile Include="Parsing.fsi" />
     <Compile Include="Parsing.fs" />
     <Compile Include="Syntax.fs" />
+    <Compile Include="Macros.fs" />
     <Compile Include="Alphabet.fs" />
     <Compile Include="fslexpars.fsi" />
     <Compile Include="fslexpars.fs" />
