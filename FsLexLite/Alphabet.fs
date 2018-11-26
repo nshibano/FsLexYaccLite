@@ -97,7 +97,7 @@ let createTable (spec : Spec) =
         else
             indexTable.Add(nonOtherAlphabetCount) // 'other' alphabet
     
-    if alphabetOfCharSets.Count <> nonOtherAlphabetCount then failwith "dontcare2"
+    if alphabetOfCharSets.Count <> nonOtherAlphabetCount then failwith "dontcare"
 
     let mutable alphabetsOfCharSet = Map.empty<Set<char * char>, Set<int>>
     Map.iter (fun charsets alphabet ->
@@ -115,9 +115,6 @@ let createTable (spec : Spec) =
 
 let translate (table : AlphabetTable) (spec : Spec) =
 
-    let AlphabetsOfCharSet (charset : Set<char * char>) =
-        table.AlphabetsOfCharset.[charset]
-
     let regexOfAlphabets alphabets =
         let ary = Array.ofSeq alphabets
         Array.sortInPlace ary
@@ -125,12 +122,12 @@ let translate (table : AlphabetTable) (spec : Spec) =
     
     let rec regexpMap (regexp : Regexp) =
         match regexp with
-        | Inp (CharSet l) -> regexOfAlphabets (AlphabetsOfCharSet l)
-        | Inp (NotCharSet l) ->
-            let set = AlphabetsOfCharSet l
+        | Inp (CharSet charSet) -> regexOfAlphabets table.AlphabetsOfCharset.[charSet]
+        | Inp (NotCharSet charSet) ->
+            let alphabets = table.AlphabetsOfCharset.[charSet]
             let accu = HashSet<int>()
-            for i = 0 to table.AlphabetCount - 1 do
-                if not (set.Contains(i)) then accu.Add(i) |> ignore
+            for alphabet = 0 to table.AlphabetCount - 1 do
+                if not (alphabets.Contains(alphabet)) then accu.Add(alphabet) |> ignore
             regexOfAlphabets accu
         | Inp Any -> regexOfAlphabets (Array.init (table.AlphabetCount) (fun i -> i))
         | Inp Eof -> Inp (Alphabet table.AlphabetEof)
