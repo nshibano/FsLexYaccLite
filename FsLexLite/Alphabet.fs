@@ -40,6 +40,17 @@ type AlphabetTable =
         else
             table.AlphabetOther
 
+let normalizeCharset (charset : Set<char * char>) =
+    let validate (first, last) = if first > last then failwithf "invalid char range specifier: \\u%04x to \\u%04x" (int first) (int last)
+    let mergable (first0, last0) (first1, last1) = int first0 - 1 <= int last1 && int first1 - 1 <= int last0
+    let merge (first0, last0) (first1, last1) = (min first0 first1, max last0 last1)
+    let mutable accu : (char * char) list = []
+    for range in charset do
+        validate range
+        let mergables, nonMergables = List.partition (mergable range) accu
+        accu <- List.fold merge range mergables :: nonMergables
+    Set(accu)
+
 let createTable (spec : Spec) =
 
     let rangeTable = List<int>([| 0 |])
@@ -54,7 +65,6 @@ let createTable (spec : Spec) =
             charSetsTable.Insert(i + 1, charSetsTable.[i])
  
     let addCharRangeSplit (charset : Set<char * char>) (cFirst: char) (cLast : char) =
-        if cFirst > cLast then failwithf "invalid char range specifier: \\u%04x to \\u%04x" (int cFirst) (int cLast)
         addSplit (int cFirst)
         addSplit (int cLast + 1)
         for i = binchopFloor rangeTable (int cFirst) to binchopFloor rangeTable (int cLast) do
@@ -65,7 +75,9 @@ let createTable (spec : Spec) =
         | Inp inp ->
             match inp with
             | CharSet set
-            | NotCharSet set -> Set.iter (fun (first, last) -> addCharRangeSplit set first last) set
+            | NotCharSet set ->
+                let set = normalizeCharset set
+                Set.iter (fun (first, last) -> addCharRangeSplit set first last) set
             | Any
             | Eof -> ()
             | Alphabet _ -> failwith "dontcare"
@@ -122,9 +134,9 @@ let translate (table : AlphabetTable) (spec : Spec) =
     
     let rec regexpMap (regexp : Regexp) =
         match regexp with
-        | Inp (CharSet charSet) -> regexOfAlphabets table.AlphabetsOfCharset.[charSet]
+        | Inp (CharSet charSet) -> regexOfAlphabets table.AlphabetsOfCharset.[normalizeCharset charSet]
         | Inp (NotCharSet charSet) ->
-            let alphabets = table.AlphabetsOfCharset.[charSet]
+            let alphabets = table.AlphabetsOfCharset.[normalizeCharset charSet]
             let accu = HashSet<int>()
             for alphabet = 0 to table.AlphabetCount - 1 do
                 if not (alphabets.Contains(alphabet)) then accu.Add(alphabet) |> ignore
