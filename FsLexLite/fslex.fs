@@ -113,7 +113,6 @@ let main() =
     printLinesIfCodeDefined spec.TopCode
     let code = fst spec.TopCode
     lineCount := !lineCount + code.Replace("\r","").Split([| '\n' |]).Length;
-    fprintfn os "let alphabetCount = %d" alphabetTable.AlphabetCount
     fprintf os "let alphabetRangeTable = [| "
     for i = 0 to alphabetTable.RangeTable.Length - 1 do
       outputCodedUInt16 os alphabetTable.RangeTable.[i]
@@ -172,7 +171,7 @@ let main() =
           outputCodedInt16 os sentinel
     done;
     cfprintfn os "|]";
-    cfprintfn os "let scanner = %s.UnicodeTables(alphabetCount, alphabetRangeTable, alphabetIndexTable, transitionTable, acceptTable)" lexlib
+    cfprintfn os "let scanner = %s.UnicodeTables(alphabetRangeTable, alphabetIndexTable, transitionTable, acceptTable)" lexlib
     
     cfprintfn os "let rec _fslex_dummy () = _fslex_dummy() ";
 
