@@ -294,7 +294,7 @@ module Implementation =
                         actionTable.Read(state,tag)
                         
                 let kind = actionKind action 
-                if kind = shiftFlag then (
+                if kind = shiftFlag then
                     if errorSuppressionCountDown > 0 then 
                         errorSuppressionCountDown <- errorSuppressionCountDown - 1;
                     let nextState = actionValue action                                     
@@ -304,7 +304,7 @@ module Implementation =
                     stateStack.Push(nextState);                                                                
                     haveLookahead <- false
 
-                ) elif kind = reduceFlag then
+                elif kind = reduceFlag then
                     let prod = actionValue action                                     
                     let reduction = reductions.[prod]                                                             
                     let n = int tables.reductionSymbolCounts.[prod]
@@ -322,7 +322,6 @@ module Implementation =
                         ruleEndPoss.[(n-i)-1] <- topVal.endPos;  
                         if lhsPos.[1] = Position.Empty then lhsPos.[1] <- topVal.endPos;
                         if not (topVal.startPos = Position.Empty) then lhsPos.[0] <- topVal.startPos
-                    done;                                                                                           
                     
                     try                                                                                               
                           // Printf.printf "reduce %d\n" prod;                                                       
@@ -339,7 +338,7 @@ module Implementation =
                           popStackUntilErrorShifted(None);
                           // User code raised a Parse_error. Don't report errors again until three tokens have been shifted 
                           errorSuppressionCountDown <- 3
-                elif kind = errorFlag then (
+                elif kind = errorFlag then
                     // Silently discard inputs and don't report errors 
                     // until three tokens in a row have been shifted 
                     if errorSuppressionCountDown > 0 then 
@@ -357,7 +356,7 @@ module Implementation =
                         haveLookahead <- false
                         // Try again to shift three tokens
                         errorSuppressionCountDown <- 3
-                    else (
+                    else
 
                         let currentToken = if haveLookahead then Some(lookaheadToken) else None
                         let actions,defaultAction = actionTable.ReadAll(state) 
@@ -390,10 +389,10 @@ module Implementation =
                         tables.parseError(errorContext);
                         popStackUntilErrorShifted(None);
                         errorSuppressionCountDown <- 3;
-                    )
-                ) elif kind = acceptFlag then 
+                    
+                elif kind = acceptFlag then 
                     finished <- true
-        done;                                                                                                     
+
         // OK, we're done - read off the overall generated value
         valueStack.Peek().value
 
