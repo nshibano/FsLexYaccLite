@@ -7,7 +7,7 @@ open FsLexYaccLite.Lex.Syntax
 /// If there is no such item returns -1.
 /// Therefore, -1 <= returnValue <= table.Length - 1.
 /// The table must be sorted in ascending order.
-let binchopFloor (table : List<int>) (key : int) =
+let binchopFloor (table : IReadOnlyList<int>) (key : int) =
     if table.Count = 0 || key < table.[0] then -1
     else
         let mutable i = 0
@@ -20,29 +20,54 @@ let binchopFloor (table : List<int>) (key : int) =
                 j <- k
         i
 
-/// add split between (value - 1) and value.
-let addSplit (table : List<int>) (value : int) =
-    let i = binchopFloor table (value - 1)
-    let j = binchopFloor table value
-    if i = j then
-        table.Insert(i + 1, value)
- 
-let addSingleCharSplit (table : List<int>) (c : char) =
-    addSplit table (int c)
-    addSplit table (int c + 1)
+type AlphabetTable =
+    { 
+      /// Including char range alphabets and the 'Other' alphabet. But excluding the 'Eof' alphabet.
+      AlphabetCount : int
+      /// The table which represents the char range of alphabets. To find table offset of the alphabet, do the binchpFloor with the char.
+      RangeTable : int array
+      /// IndexTable.[ofs] is alphabet index of the alphabet corresponds to char range starts from RangeTable.[ofs].
+      IndexTable : int array }
 
-let addCharRangeSplit (table : List<int>) (cFirst: char) (cLast : char) =
-    if not (cFirst < cLast) then failwithf "invalid char range specifier: \\u%04x to \\u%04x" (int cFirst) (int cLast)
-    addSplit table (int cFirst)
-    addSplit table (int cLast + 1)
+    member table.AlphabetOther = table.AlphabetCount - 1
+    member table.AlphabetEof = table.AlphabetCount
+
+let alphabetOfChar (table : AlphabetTable) (c : char) =
+    let index = table.IndexTable.[binchopFloor table.RangeTable (int c)]
+    if index >= 0 then
+        index
+    else
+        table.AlphabetOther
 
 let createTable (spec : Spec) =
-    let table = List([| 0 |])
+
+    let rangeTable = List([| 0 |])
+    let nonOtherFlagTable = List([| false |])
+
+    /// add split between (value - 1) and value.
+    let addSplit (value : int) =
+        let i = binchopFloor rangeTable (value - 1)
+        let j = binchopFloor rangeTable value
+        if i = j then
+            rangeTable.Insert(i + 1, value)
+            nonOtherFlagTable.Insert(i + 1, nonOtherFlagTable.[i])
+ 
+    let addSingleCharSplit (c : char) =
+        addSplit (int c)
+        addSplit (int c + 1)
+        nonOtherFlagTable.[binchopFloor rangeTable (int c)] <- true
+
+    let addCharRangeSplit (cFirst: char) (cLast : char) =
+        if not (cFirst < cLast) then failwithf "invalid char range specifier: \\u%04x to \\u%04x" (int cFirst) (int cLast)
+        addSplit (int cFirst)
+        addSplit (int cLast + 1)
+        for i = binchopFloor rangeTable (int cFirst) to binchopFloor rangeTable (int cLast) do
+            nonOtherFlagTable.[i] <- true
 
     let charSetItemLoop (item : CharSetItem) =
         match item with
-        | SingleChar c -> addSingleCharSplit table c
-        | CharRange (first, last) -> addCharRangeSplit table first last
+        | SingleChar c -> addSingleCharSplit c
+        | CharRange (first, last) -> addCharRangeSplit first last
 
     let inputLoop (input : Input) =
         match input with
@@ -66,14 +91,22 @@ let createTable (spec : Spec) =
         for regexp, _ in clauses do
             regexpLoop regexp
 
-    table
+    // assign alphabet indexes for charranges    
+    let nonOtherCharRangeCount = Seq.length (Seq.filter id nonOtherFlagTable)
+    let indexTable = List<int>()
+    let mutable top = 0
+    for i = 0 to rangeTable.Count - 1 do
+        if nonOtherFlagTable.[i] then
+            indexTable.Add(top)
+            top <- top + 1
+        else
+            indexTable.Add(nonOtherCharRangeCount) // 'other' alphabet
 
-/// Excluding Eof
-let alphabetsCount (table : List<int>) = table.Count
-let alphabetEof (table : List<int>) = table.Count
-let alphabetOfChar (table : List<int>) (c : char) = binchopFloor table (int c)
+    { AlphabetCount = nonOtherCharRangeCount + 1
+      RangeTable = rangeTable.ToArray()
+      IndexTable = indexTable.ToArray() }
 
-let translate (table : List<int>) (spec : Spec) =
+let translate (table : AlphabetTable) (spec : Spec) =
 
     let AlphabetsOfCharSet l =
         let accu = HashSet<int>()
@@ -100,11 +133,11 @@ let translate (table : List<int>) (spec : Spec) =
         | Inp (NotCharSet l) ->
             let set = AlphabetsOfCharSet l
             let accu = HashSet<int>()
-            for i = 0 to (alphabetsCount table) - 1 do
+            for i = 0 to table.AlphabetCount - 1 do
                 if not (set.Contains(i)) then accu.Add(i) |> ignore
             regexOfAlphabets accu
-        | Inp Any -> regexOfAlphabets (Array.init (alphabetsCount table) (fun i -> i))
-        | Inp Eof -> Inp (Alphabet (alphabetEof table))
+        | Inp Any -> regexOfAlphabets (Array.init (table.AlphabetCount) (fun i -> i))
+        | Inp Eof -> Inp (Alphabet table.AlphabetEof)
         | Alt l -> Alt (List.map regexpMap l)
         | Seq l ->  Seq (List.map regexpMap l)
         | Star regexp -> Star (regexpMap regexp)

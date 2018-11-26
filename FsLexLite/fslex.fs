@@ -14,6 +14,7 @@ open Microsoft.FSharp.Text.Lexing
 open System
 open System.Collections.Generic
 open System.IO
+open FsLexYaccLite.Lex.Alphabet
 
 //------------------------------------------------------------------
 // This code is duplicated from Microsoft.FSharp.Compiler.UnicodeLexing
@@ -112,13 +113,16 @@ let main() =
     printLinesIfCodeDefined spec.TopCode
     let code = fst spec.TopCode
     lineCount := !lineCount + code.Replace("\r","").Split([| '\n' |]).Length;
-    fprintf os "let alphabetTable : uint16[] = [| "
-    for i = 0 to alphabetTable.Count - 1 do
-      outputCodedUInt16 os alphabetTable.[i]
+    fprintfn os "let alphabetCount = %d" alphabetTable.AlphabetCount
+    fprintf os "let alphabetRangeTable = [| "
+    for i = 0 to alphabetTable.RangeTable.Length - 1 do
+      outputCodedUInt16 os alphabetTable.RangeTable.[i]
     cfprintfn os " |]"
 
-
-
+    fprintf os "let alphabetIndexTable = [| "
+    for i = 0 to alphabetTable.IndexTable.Length - 1 do
+      outputCodedUInt16 os alphabetTable.IndexTable.[i]
+    cfprintfn os " |]"
 
     cfprintfn os "let transitionTable : int16[][] = ";
     cfprintfn os "    [| ";
@@ -146,7 +150,7 @@ let main() =
                 outputCodedInt16 os trans.[n].Id 
             else
                 outputCodedInt16 os sentinel
-        for i = 0 to Alphabet.alphabetsCount alphabetTable - 1 do 
+        for i = 0 to alphabetTable.AlphabetCount - 1 do 
             let c = char i
             emit (int c);
         //for c in specificUnicodeChars do 
@@ -154,7 +158,7 @@ let main() =
         //    emit (EncodeChar c);
         //for i = 0 to NumUnicodeCategories-1 do 
         //    emit (EncodeUnicodeCategoryIndex i);
-        emit (Alphabet.alphabetEof alphabetTable);
+        emit alphabetTable.AlphabetEof
         cfprintfn os "|];"
     done;
         
@@ -168,7 +172,7 @@ let main() =
           outputCodedInt16 os sentinel
     done;
     cfprintfn os "|]";
-    cfprintfn os "let scanner = %s.UnicodeTables(alphabetTable, transitionTable, acceptTable)" lexlib
+    cfprintfn os "let scanner = %s.UnicodeTables(alphabetCount, alphabetRangeTable, alphabetIndexTable, transitionTable, acceptTable)" lexlib
     
     cfprintfn os "let rec _fslex_dummy () = _fslex_dummy() ";
 
