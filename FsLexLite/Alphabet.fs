@@ -31,13 +31,12 @@ type AlphabetTable =
 
     member table.AlphabetOther = table.AlphabetCount - 1
     member table.AlphabetEof = table.AlphabetCount
-
-let alphabetOfChar (table : AlphabetTable) (c : char) =
-    let index = table.IndexTable.[binchopFloor table.RangeTable (int c)]
-    if index >= 0 then
-        index
-    else
-        table.AlphabetOther
+    member table.AlphabetOfChar c =
+        let index = table.IndexTable.[binchopFloor table.RangeTable (int c)]
+        if index >= 0 then
+            index
+        else
+            table.AlphabetOther
 
 let createTable (spec : Spec) =
 
@@ -52,27 +51,17 @@ let createTable (spec : Spec) =
             rangeTable.Insert(i + 1, value)
             nonOtherFlagTable.Insert(i + 1, nonOtherFlagTable.[i])
  
-    let addSingleCharSplit (c : char) =
-        addSplit (int c)
-        addSplit (int c + 1)
-        nonOtherFlagTable.[binchopFloor rangeTable (int c)] <- true
-
     let addCharRangeSplit (cFirst: char) (cLast : char) =
-        if not (cFirst < cLast) then failwithf "invalid char range specifier: \\u%04x to \\u%04x" (int cFirst) (int cLast)
+        if cFirst > cLast then failwithf "invalid char range specifier: \\u%04x to \\u%04x" (int cFirst) (int cLast)
         addSplit (int cFirst)
         addSplit (int cLast + 1)
         for i = binchopFloor rangeTable (int cFirst) to binchopFloor rangeTable (int cLast) do
             nonOtherFlagTable.[i] <- true
 
-    let charSetItemLoop (item : CharSetItem) =
-        match item with
-        | SingleChar c -> addSingleCharSplit c
-        | CharRange (first, last) -> addCharRangeSplit first last
-
     let inputLoop (input : Input) =
         match input with
         | CharSet l
-        | NotCharSet l -> List.iter charSetItemLoop l
+        | NotCharSet l -> List.iter (fun (first, last) -> addCharRangeSplit first last) l
         | Any
         | Eof -> ()
         | Alphabet _ -> failwith "dontcare"
@@ -110,15 +99,12 @@ let translate (table : AlphabetTable) (spec : Spec) =
 
     let AlphabetsOfCharSet l =
         let accu = HashSet<int>()
-        for item in l do
-            match item with
-            | SingleChar c -> accu.Add(alphabetOfChar table c) |> ignore
-            | CharRange (first, last) ->
-                if not (first < last) then failwith "dontcare"
-                let first = alphabetOfChar table first
-                let last = alphabetOfChar table last
-                for x = first to last do
-                    accu.Add(x) |> ignore
+        for (first, last) in l do
+            if first > last then failwith "dontcare"
+            let first = table.AlphabetOfChar first
+            let last = table.AlphabetOfChar last
+            for x = first to last do
+                accu.Add(x) |> ignore
         accu
 
     let regexOfAlphabets set =
@@ -128,7 +114,6 @@ let translate (table : AlphabetTable) (spec : Spec) =
     
     let rec regexpMap (regexp : Regexp) =
         match regexp with
-        | Inp (CharSet [SingleChar c]) -> Inp (Alphabet (alphabetOfChar table c))
         | Inp (CharSet l) -> regexOfAlphabets (AlphabetsOfCharSet l)
         | Inp (NotCharSet l) ->
             let set = AlphabetsOfCharSet l

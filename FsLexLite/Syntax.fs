@@ -7,14 +7,10 @@ type Code = string * Position
 
 type Alphabet = int
 
-type CharSetItem =
-    | SingleChar of char
-    | CharRange of first : char * last : char
-
 type Input =
     // after parsing
-    | CharSet of CharSetItem list
-    | NotCharSet of CharSetItem list
+    | CharSet of (char * char) list
+    | NotCharSet of (char * char) list
     | Any 
     | Eof
     // after char to alphabet translation
