@@ -80,20 +80,24 @@ let createTable (spec : Spec) =
         for regexp, _ in clauses do
             regexpLoop regexp
 
-    // assign alphabet indexes for charranges    
+    // assign alphabet for set of charset.    
     let nonOtherAlphabetCount = Set.count (Set charSetsTable) - 1
     let indexTable = List<int>()
-    let mutable alphabetOfCharSets = Map<Set<Set<char * char>>, int>([| (Set.empty, nonOtherAlphabetCount) |]) // the empty corresponds to the alphabet 'other' 
+    let mutable alphabetOfCharSets = Map.empty<Set<Set<char * char>>, int>
 
     for i = 0 to rangeTable.Count - 1 do
-        match Map.tryFind charSetsTable.[i] alphabetOfCharSets with
-        | Some alphabet -> indexTable.Add(alphabet)
-        | None ->
-            let newAlphabet = alphabetOfCharSets.Count
-            alphabetOfCharSets <- Map.add charSetsTable.[i] newAlphabet alphabetOfCharSets
-            indexTable.Add(newAlphabet)
+        let charSets = charSetsTable.[i]
+        if not charSets.IsEmpty then
+            match Map.tryFind charSets alphabetOfCharSets with
+            | Some alphabet -> indexTable.Add(alphabet)
+            | None ->
+                let newAlphabet = alphabetOfCharSets.Count
+                alphabetOfCharSets <- Map.add charSets newAlphabet alphabetOfCharSets
+                indexTable.Add(newAlphabet)
+        else
+            indexTable.Add(nonOtherAlphabetCount) // 'other' alphabet
     
-    if alphabetOfCharSets.Count - 1 <> nonOtherAlphabetCount then failwith "dontcare"
+    if alphabetOfCharSets.Count <> nonOtherAlphabetCount then failwith "dontcare2"
 
     let mutable alphabetsOfCharSet = Map.empty<Set<char * char>, Set<int>>
     Map.iter (fun charsets alphabet ->
