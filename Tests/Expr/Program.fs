@@ -89,6 +89,7 @@ let main argv =
               Some (Range (Ident "e",Add (Ident "f",Mult (Ident "g",Ident "h"))))),None))
 
     case  """ "hello" + "string" """ (Add (String "hello",String "string"))
+    case  """ "こんにちは" + "世界" """ (Add (String "こんにちは",String "世界"))
 
     printfn "done (%s)" (if ok then "success" else "failure")
 
