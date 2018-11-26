@@ -75,7 +75,7 @@ type LexBuffer =
           EndPos = Position.Empty
           LocalStore = Dictionary() }
 
-type UnicodeTables(alphabetRangeTable : uint16[], alphabetIndexTable : uint16[], transitionTable: int16[][], acceptTable: int16[]) =
+type UnicodeTables(charRangeTable : uint16[], alphabetTable : uint16[], transitionTable: int16[][], acceptTable: int16[]) =
         
     let [<Literal>] sentinel = -1
         
@@ -93,7 +93,7 @@ type UnicodeTables(alphabetRangeTable : uint16[], alphabetIndexTable : uint16[],
             lexBuffer.AcceptAction <- a
             
         if lexBuffer.ScanLength = lexBuffer.BufferMaxScanLength then
-            let snew = int transitionTable.[state].[int alphabetIndexTable.[alphabetIndexTable.Length - 1] + 1] // Get Eof entry. The final of range table is always 'Other' alphabet. And 'Other' + 1 is 'Eof'.
+            let snew = int transitionTable.[state].[int alphabetTable.[alphabetTable.Length - 1] + 1] // Get Eof entry. The final of range table is always 'Other' alphabet. And 'Other' + 1 is 'Eof'.
             if snew = sentinel then 
                 endOfScan lexBuffer
             elif not lexBuffer.IsPastEndOfStream then
@@ -108,14 +108,14 @@ type UnicodeTables(alphabetRangeTable : uint16[], alphabetIndexTable : uint16[],
             let alphabet =
                 let key = uint16 inp
                 let mutable i = 0
-                let mutable j = alphabetRangeTable.Length
+                let mutable j = charRangeTable.Length
                 while j - i > 1 do
                     let k = i + (j - i) / 2
-                    if alphabetRangeTable.[k] <= key then
+                    if charRangeTable.[k] <= key then
                         i <- k
                     else
                         j <- k
-                int alphabetIndexTable.[i]
+                int alphabetTable.[i]
 
             let snew = int transitionTable.[state].[alphabet]
 
