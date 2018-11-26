@@ -30,10 +30,10 @@ optbar: { } | BAR { }
 clauses: clause BAR clauses {$1 :: $3 } | clause { [$1] }
 clause: regexp CODE { $1, $2 }
 regexp: 
-| CHAR                               { Inp (CharSet [($1, $1)]) }
+| CHAR                               { Inp (CharSet (Set.singleton ($1, $1))) }
 | EOF                                { Inp Eof }
 | UNDERSCORE                         { Inp Any }
-| STRING                             { Seq (List.init $1.Length (fun i -> Inp (CharSet [($1.[i], $1.[i])]))) }
+| STRING                             { Seq (List.init $1.Length (fun i -> Inp (CharSet (Set.singleton($1.[i], $1.[i]))))) }
 | IDENT                              { Macro $1 }
 | regexp regexp %prec regexp_seq     { Seq [$1; $2] }
 | regexp PLUS %prec regexp_plus      { Seq [$1; Star $1] }
@@ -41,13 +41,13 @@ regexp:
 | regexp QMARK %prec regexp_opt      { Alt [Seq []; $1] }
 | regexp BAR regexp %prec regexp_alt { Alt [$1; $3] }
 | LPAREN regexp RPAREN               { $2 }
-| LBRACK CharSet RBRACK              { Inp (CharSet (List.rev $2)) }
-| LBRACK HAT CharSet RBRACK          { Inp (NotCharSet (List.rev $3)) }
+| LBRACK CharSet RBRACK              { Inp (CharSet $2) }
+| LBRACK HAT CharSet RBRACK          { Inp (NotCharSet $3) }
 
 CharSet : 
-    | CharSet CHAR           { ($2, $2) :: $1 }
-    | CharSet CHAR DASH CHAR { ($2, $4) :: $1 }
-    | /* e */                { [] }
+    | CharSet CHAR           { Set.add ($2, $2) $1 }
+    | CharSet CHAR DASH CHAR { Set.add ($2, $4) $1 }
+    | /* e */                { Set.empty }
 
 
 

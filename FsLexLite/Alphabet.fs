@@ -27,7 +27,9 @@ type AlphabetTable =
       /// The table which represents the char range of alphabets. To find table offset of the alphabet, do the binchpFloor with the char.
       RangeTable : int array
       /// IndexTable.[ofs] is alphabet index of the alphabet corresponds to char range starts from RangeTable.[ofs].
-      IndexTable : int array }
+      IndexTable : int array
+      /// Map for translation of regex.
+      AlphabetsOfCharset : Map<Set<char * char>, Set<int>> }
 
     member table.AlphabetOther = table.AlphabetCount - 1
     member table.AlphabetEof = table.AlphabetCount
@@ -40,8 +42,8 @@ type AlphabetTable =
 
 let createTable (spec : Spec) =
 
-    let rangeTable = List([| 0 |])
-    let nonOtherFlagTable = List([| false |])
+    let rangeTable = List<int>([| 0 |])
+    let charSetsTable = List<Set<Set<char * char>>>([| Set.empty |])
 
     /// add split between (value - 1) and value.
     let addSplit (value : int) =
@@ -49,26 +51,24 @@ let createTable (spec : Spec) =
         let j = binchopFloor rangeTable value
         if i = j then
             rangeTable.Insert(i + 1, value)
-            nonOtherFlagTable.Insert(i + 1, nonOtherFlagTable.[i])
+            charSetsTable.Insert(i + 1, charSetsTable.[i])
  
-    let addCharRangeSplit (cFirst: char) (cLast : char) =
+    let addCharRangeSplit (charset : Set<char * char>) (cFirst: char) (cLast : char) =
         if cFirst > cLast then failwithf "invalid char range specifier: \\u%04x to \\u%04x" (int cFirst) (int cLast)
         addSplit (int cFirst)
         addSplit (int cLast + 1)
         for i = binchopFloor rangeTable (int cFirst) to binchopFloor rangeTable (int cLast) do
-            nonOtherFlagTable.[i] <- true
-
-    let inputLoop (input : Input) =
-        match input with
-        | CharSet l
-        | NotCharSet l -> List.iter (fun (first, last) -> addCharRangeSplit first last) l
-        | Any
-        | Eof -> ()
-        | Alphabet _ -> failwith "dontcare"
+            charSetsTable.[i] <- Set.add charset charSetsTable.[i]
     
     let rec regexpLoop (regexp : Regexp) =
         match regexp with
-        | Inp inp -> inputLoop inp
+        | Inp inp ->
+            match inp with
+            | CharSet set
+            | NotCharSet set -> Set.iter (fun (first, last) -> addCharRangeSplit set first last) set
+            | Any
+            | Eof -> ()
+            | Alphabet _ -> failwith "dontcare"
         | Alt l -> List.iter regexpLoop l
         | Seq l ->  List.iter regexpLoop l
         | Star regexp -> regexpLoop regexp
@@ -81,34 +81,41 @@ let createTable (spec : Spec) =
             regexpLoop regexp
 
     // assign alphabet indexes for charranges    
-    let nonOtherCharRangeCount = Seq.length (Seq.filter id nonOtherFlagTable)
+    let nonOtherAlphabetCount = Set.count (Set charSetsTable) - 1
     let indexTable = List<int>()
-    let mutable top = 0
-    for i = 0 to rangeTable.Count - 1 do
-        if nonOtherFlagTable.[i] then
-            indexTable.Add(top)
-            top <- top + 1
-        else
-            indexTable.Add(nonOtherCharRangeCount) // 'other' alphabet
+    let mutable alphabetOfCharSets = Map<Set<Set<char * char>>, int>([| (Set.empty, nonOtherAlphabetCount) |]) // the empty corresponds to the alphabet 'other' 
 
-    { AlphabetCount = nonOtherCharRangeCount + 1
+    for i = 0 to rangeTable.Count - 1 do
+        match Map.tryFind charSetsTable.[i] alphabetOfCharSets with
+        | Some alphabet -> indexTable.Add(alphabet)
+        | None ->
+            let newAlphabet = alphabetOfCharSets.Count
+            alphabetOfCharSets <- Map.add charSetsTable.[i] newAlphabet alphabetOfCharSets
+            indexTable.Add(newAlphabet)
+    
+    if alphabetOfCharSets.Count - 1 <> nonOtherAlphabetCount then failwith "dontcare"
+
+    let mutable alphabetsOfCharSet = Map.empty<Set<char * char>, Set<int>>
+    Map.iter (fun charsets alphabet ->
+        Set.iter (fun charset ->
+            let alphabets =
+                match alphabetsOfCharSet.TryFind(charset) with
+                | Some alphabets -> alphabets
+                | None -> Set.empty
+            alphabetsOfCharSet <- Map.add charset (Set.add alphabet alphabets) alphabetsOfCharSet) charsets) alphabetOfCharSets
+
+    { AlphabetCount = nonOtherAlphabetCount + 1
       RangeTable = rangeTable.ToArray()
-      IndexTable = indexTable.ToArray() }
+      IndexTable = indexTable.ToArray()
+      AlphabetsOfCharset = alphabetsOfCharSet }
 
 let translate (table : AlphabetTable) (spec : Spec) =
 
-    let AlphabetsOfCharSet l =
-        let accu = HashSet<int>()
-        for (first, last) in l do
-            if first > last then failwith "dontcare"
-            let first = table.AlphabetOfChar first
-            let last = table.AlphabetOfChar last
-            for x = first to last do
-                accu.Add(x) |> ignore
-        accu
+    let AlphabetsOfCharSet (charset : Set<char * char>) =
+        table.AlphabetsOfCharset.[charset]
 
-    let regexOfAlphabets set =
-        let ary = Array.ofSeq set
+    let regexOfAlphabets alphabets =
+        let ary = Array.ofSeq alphabets
         Array.sortInPlace ary
         Alt (List.ofArray (Array.map (fun a -> Inp (Alphabet a)) ary))
     
@@ -127,7 +134,6 @@ let translate (table : AlphabetTable) (spec : Spec) =
         | Seq l ->  Seq (List.map regexpMap l)
         | Star regexp -> Star (regexpMap regexp)
         | Macro _ -> regexp
-        | Inp (CharSet [])
         | Inp (Alphabet _) -> failwith "dontcare"
 
     { spec with

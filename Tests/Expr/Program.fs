@@ -1,7 +1,17 @@
 ﻿open Microsoft.FSharp.Text.Lexing
 open System
+open System.Collections.Generic
 open Test
 open Ast
+
+let getTokens (s : string) = 
+    let lexbuf = LexBuffer.FromString(s)
+    let accu = List()
+    while not lexbuf.IsPastEndOfStream do
+        try
+            accu.Add(Lexer.token lexbuf)
+        with _ -> lexbuf.IsPastEndOfStream <- true
+    accu.ToArray()
 
 let parse (s : string) =
     let lexbuf = LexBuffer.FromString(s)
@@ -24,6 +34,7 @@ let case (src : string) (e1 : Expr) =
     with _ ->
         ok <- false
         printfn "error (expected success but parse error): \"%s\"" src
+        printfn "%A" (getTokens src)
 
 let error (src : string) =
     try

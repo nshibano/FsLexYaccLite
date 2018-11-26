@@ -433,7 +433,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 33 "fslexpars.fsy"
-                                                            Inp (CharSet [(_1, _1)]) 
+                                                            Inp (CharSet (Set.singleton (_1, _1))) 
                    )
 # 33 "fslexpars.fsy"
                  : 'regexp));
@@ -464,7 +464,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 36 "fslexpars.fsy"
-                                                            Seq (List.init _1.Length (fun i -> Inp (CharSet [(_1.[i], _1.[i])]))) 
+                                                            Seq (List.init _1.Length (fun i -> Inp (CharSet (Set.singleton(_1.[i], _1.[i]))))) 
                    )
 # 36 "fslexpars.fsy"
                  : 'regexp));
@@ -554,7 +554,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 44 "fslexpars.fsy"
-                                                            Inp (CharSet (List.rev _2)) 
+                                                            Inp (CharSet _2) 
                    )
 # 44 "fslexpars.fsy"
                  : 'regexp));
@@ -565,7 +565,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 45 "fslexpars.fsy"
-                                                            Inp (NotCharSet (List.rev _3)) 
+                                                            Inp (NotCharSet _3) 
                    )
 # 45 "fslexpars.fsy"
                  : 'regexp));
@@ -577,7 +577,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 48 "fslexpars.fsy"
-                                                    (_2, _2) :: _1 
+                                                    Set.add (_2, _2) _1 
                    )
 # 48 "fslexpars.fsy"
                  : 'CharSet));
@@ -590,7 +590,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 49 "fslexpars.fsy"
-                                                    (_2, _4) :: _1 
+                                                    Set.add (_2, _4) _1 
                    )
 # 49 "fslexpars.fsy"
                  : 'CharSet));
@@ -600,7 +600,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 50 "fslexpars.fsy"
-                                                    [] 
+                                                    Set.empty 
                    )
 # 50 "fslexpars.fsy"
                  : 'CharSet));

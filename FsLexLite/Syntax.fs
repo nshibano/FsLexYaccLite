@@ -9,9 +9,9 @@ type Alphabet = int
 
 type Input =
     // after parsing
-    | CharSet of (char * char) list
-    | NotCharSet of (char * char) list
-    | Any 
+    | CharSet of Set<char * char>
+    | NotCharSet of Set<char * char>
+    | Any
     | Eof
     // after char to alphabet translation
     | Alphabet of Alphabet
