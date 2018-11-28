@@ -125,9 +125,9 @@ type UnicodeTables(charRangeTable : uint16[], alphabetTable : uint16[], transiti
                 lexBuffer.ScanLength <- lexBuffer.ScanLength + 1
                 scanUntilSentinel lexBuffer snew
 
-    member this.Interpret(initialState, lexBuffer : LexBuffer) = 
+    member this.Interpret(lexBuffer : LexBuffer) = 
         lexBuffer.ScanStart <- lexBuffer.ScanStart + lexBuffer.LexemeLength
         lexBuffer.ScanLength <- 0
         lexBuffer.LexemeLength <- 0
         lexBuffer.AcceptAction <- -1
-        scanUntilSentinel lexBuffer initialState
+        scanUntilSentinel lexBuffer 0

@@ -80,11 +80,12 @@ let main() =
     printfn "compiling to dfas (can take a while...)"
     
     let rules = List.map (fun (name, args, clauses) ->
-        let expanded = Macros.expand spec.Macros clauses
+        let regexps = List.map fst clauses
+        let expanded = Macros.expand spec.Macros regexps
         let alphabetTable = Alphabet.createTable expanded
         let translated = Alphabet.translate alphabetTable expanded
-        let dfaNodes = AST.Compile (List.map fst translated)
-        let actions = List.map snd translated
+        let dfaNodes = AST.Compile translated
+        let actions = List.map snd clauses
         (name, args, alphabetTable, dfaNodes, actions)) spec.Rules
     
     printfn "writing output"
@@ -105,14 +106,14 @@ let main() =
             fprintfn os "%s" code;
     
     let printInt16Array (name : string) (ary : int16 array) =
-        fprintf os "let %s = [| " name
+        fprintf os "let private %s = [| " name
         for i = 0 to ary.Length - 1 do
             if i <> 0 then fprintf os "; "
             fprintf os "%ds" ary.[i]
         fprintfn os " |]"
     
     let printUInt16Array (name : string) (ary : uint16 array) =
-        fprintf os "let %s = [| " name
+        fprintf os "let private %s = [| " name
         for i = 0 to ary.Length - 1 do
             if i <> 0 then fprintf os "; "
             fprintf os "%dus" ary.[i]
@@ -125,7 +126,7 @@ let main() =
         printUInt16Array (name + "_charRangeTable") (Array.map uint16 alphabetTable.RangeTable)
         printUInt16Array (name + "_alphabetTable") (Array.map uint16 alphabetTable.IndexTable)
 
-        fprintfn os "let %s_transitionTable =" name
+        fprintfn os "let private %s_transitionTable =" name
         fprintfn os "    [|";
 
         for state in dfaNodes do
@@ -154,13 +155,13 @@ let main() =
                 else
                     int16 sentinel) dfaNodes)
 
-        fprintfn os "let %s_tables = %s.UnicodeTables(%s_charRangeTable, %s_alphabetTable, %s_transitionTable, %s_acceptTable)" name lexlib name name name name
+        fprintfn os "let private %s_tables = %s.UnicodeTables(%s_charRangeTable, %s_alphabetTable, %s_transitionTable, %s_acceptTable)" name lexlib name name name name
     
     for i = 0 to rules.Length - 1 do
         let name, args, alphabetTable, dfaNodes, actions = rules.[i]
         fprintfn os "%s %s%s lexbuf =" (if i = 0 then "let rec" else "and") name (String.concat "" (List.map (fun s -> " " + s) args))
-        fprintfn os "    match %s_tables.Interpret(%d, lexbuf) with" name 0
-        Seq.iteri (fun i (code : string, _) -> 
+        fprintfn os "    match %s_tables.Interpret(lexbuf) with" name
+        Seq.iteri (fun i (code : string, _) ->
             fprintfn os "    | %d ->" i;
             let lines = code.Split([| '\r'; '\n' |], StringSplitOptions.RemoveEmptyEntries)
             let getIndentLevel (s : string) =

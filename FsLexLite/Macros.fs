@@ -4,7 +4,7 @@ open System.Collections.Generic
 
 open Syntax
 
-let expand (macros : (Ident * Regexp) list) (clauses : Clause list) =
+let expand (macros : (Ident * Regexp) list) (regexps : Regexp list) =
 
     let dict = Dictionary()
 
@@ -22,4 +22,4 @@ let expand (macros : (Ident * Regexp) list) (clauses : Clause list) =
     for name, re in macros do
         dict.Add(name, regexpMap re)
 
-    List.map (fun (re : Regexp, code : Code) -> (regexpMap re, code)) clauses    
+    List.map regexpMap regexps 

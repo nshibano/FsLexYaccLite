@@ -50,7 +50,7 @@ let normalizeCharset (charset : Set<char * char>) =
         accu <- List.fold merge range mergables :: nonMergables
     Set(accu)
 
-let createTable (clauses : Clause list) =
+let createTable (regexps : Regexp list) =
 
     let rangeTable = List<int>([| 0 |])
     let charSetsTable = List<Set<Set<char * char>>>([| Set.empty |])
@@ -84,9 +84,8 @@ let createTable (clauses : Clause list) =
         | Seq l ->  List.iter regexpLoop l
         | Star regexp -> regexpLoop regexp
         | Macro _ -> failwith "dontcare"
-
-    for regexp, _ in clauses do
-        regexpLoop regexp
+    
+    List.iter regexpLoop regexps
 
     // assign alphabet for set of charset.    
     let nonOtherAlphabetCount = Set.count (Set charSetsTable) - 1
@@ -121,7 +120,7 @@ let createTable (clauses : Clause list) =
       IndexTable = indexTable.ToArray()
       AlphabetsOfCharset = alphabetsOfCharSet }
 
-let translate (table : AlphabetTable) (clauses : Clause list) =
+let translate (table : AlphabetTable) (regexps : Regexp list) =
 
     let regexOfAlphabets alphabets =
         let ary = Array.ofSeq alphabets
@@ -145,4 +144,4 @@ let translate (table : AlphabetTable) (clauses : Clause list) =
         | Macro _
         | Inp (Alphabet _) -> failwith "dontcare"
 
-    List.map (fun (regexp, code) -> (regexpMap regexp, code)) clauses
+    List.map regexpMap regexps
