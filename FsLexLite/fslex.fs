@@ -157,19 +157,11 @@ let main() =
 
     fprintfn os "let scanner = %s.UnicodeTables(charRangeTable, alphabetTable, transitionTable, acceptTable)" lexlib
     
-    // These actions push the additional start state and come first, because they are then typically inlined into later
-    // rules. This means more tailcalls are taken as direct branches, increasing efficiency and 
-    // improving stack usage on platforms that do not take tailcalls.
     let rules = Array.ofList (List.zip perRuleData spec.Rules)
     for i = 0 to rules.Length - 1 do
-        let (startNode, _),(ident,args,_) = rules.[i]
-        fprintfn os "(* Rule %s *)" ident;
-        fprintfn os "%s %s %s (lexbuf : %s.LexBuffer) = _fslex_%s %s %d lexbuf" (if i = 0 then "let rec" else "and") ident (String.Join(" ",Array.ofList args)) lexlib ident (String.Join(" ",Array.ofList args)) startNode.Id;
-    for i = 0 to rules.Length - 1 do
-        let (_, actions),(ident,args,_) = rules.[i]
-        fprintfn os "(* Rule %s *)" ident;
-        fprintfn os "and _fslex_%s %s _fslex_state lexbuf =" ident (String.Join(" ",Array.ofList args));
-        fprintfn os "  match scanner.Interpret(_fslex_state,lexbuf) with" ;
+        let (startNode, actions), (ident, args, _) = rules.[i]
+        fprintfn os "%s %s%s lexbuf =" (if i = 0 then "let rec" else "and") ident (String.concat "" (List.map (fun s -> " " + s) args))
+        fprintfn os "  match scanner.Interpret(%d, lexbuf) with" startNode.Id
         actions |> Seq.iteri (fun i (code,pos) -> 
             fprintfn os "  | %d -> ( " i;
             let lines = code.Split([| '\r'; '\n' |], StringSplitOptions.RemoveEmptyEntries)
