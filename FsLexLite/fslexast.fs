@@ -22,13 +22,13 @@ let AddToMultiMap (dict : MultiMap<_,_>) a b =
 type NfaNode = 
     { Id : int
       Transitions : MultiMap<Alphabet, NfaNode>
-      Accepted: (int * int) option }
+      Accepted: int option }
 
 type NfaNodeMap = List<NfaNode>
 
 let [<Literal>] Epsilon = -1
 
-let NfaOfRule (clauses: Clause list) = 
+let NfaOfRule (regexps: Regexp list) = 
 
     /// Table allocating node ids 
     let nfaNodeMap = new NfaNodeMap()
@@ -59,18 +59,13 @@ let NfaOfRule (clauses: Clause list) =
             newNfaNode [(Epsilon,sre); (Epsilon,dest)] None
         | _ -> failwith "dontcare"
 
-    let actions = new System.Collections.Generic.List<_>()
-    
-    /// Compile an acceptance of a regular expression into the NFA
-    let sTrans nodeId (regexp, code) = 
-        let actionId = actions.Count
-        actions.Add(code)
-        let sAccept = newNfaNode [] (Some (nodeId, actionId))
-        CompileRegexp regexp sAccept 
-
-    let trs = List.mapi (fun n x -> (Epsilon, sTrans n x)) clauses
+    let trs = List.mapi (fun nodeId regexp ->
+        (Epsilon,
+         let sAccept = newNfaNode [] (Some nodeId)
+         CompileRegexp regexp sAccept)) regexps
     let nfaStartNode = newNfaNode trs None
-    nfaStartNode, actions, nfaNodeMap
+
+    nfaStartNode, nfaNodeMap
 
 type NfaNodeIdSetBuilder = HashSet<int>
 let createNfaNodeIdSetBuilder() : NfaNodeIdSetBuilder = HashSet<int>()
@@ -82,16 +77,19 @@ let createNfaNodeIdSet (builder : NfaNodeIdSetBuilder) : NfaNodeIdSet =
     Array.sortInPlace ary
     ary
 
-let newDfaNodeId = 
-    let i = ref 0 
-    fun () -> let res = !i in incr i; res
+let dfaNodeIdTop = ref 0
+let newDfaNodeId() = 
+    let id = !dfaNodeIdTop
+    incr dfaNodeIdTop
+    id
 
 type DfaNode = 
     { Id: int
       Transitions : List<Alphabet * DfaNode>
-      Accepted: (int * int) array }
+      Accepted: int array }
 
 let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode = 
+    dfaNodeIdTop := 0
 
     let rec EClosure1 (acc : NfaNodeIdSetBuilder) (n : NfaNode) =
         if acc.Add(n.Id) then
@@ -132,14 +130,7 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
             let dfaNode =
                 { Id = newDfaNodeId()
                   Transitions = List()
-                  Accepted =
-                    let accu = List()
-                    for nid in nfaSet do
-                        let nfaNode = nfaNodeMap.[nid]
-                        match nfaNode.Accepted with
-                        | Some acc -> accu.Add(acc)
-                        | None -> ()
-                    accu.ToArray() }
+                  Accepted = Array.choose (fun nid -> nfaNodeMap.[nid].Accepted) (Array.sort (Array.ofSeq nfaSet)) }
             dfaNodes.Add(nfaSet, dfaNode)
             dfaNode
             
@@ -158,28 +149,10 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
                     dfaNode.Transitions.Add((inp, GetDfaNode moveSet))
                     workList.Enqueue(moveSet)
 
-    let ruleStartNode = GetDfaNode nfaSet0
-    let ruleNodes =
-        let dfaNodes = Array.ofSeq dfaNodes.Values
-        Array.sortInPlaceBy (fun (s : DfaNode) -> s.Id) dfaNodes
-        List.ofArray dfaNodes
-    ruleStartNode, ruleNodes
+    let dfaNodes = Array.ofSeq dfaNodes.Values
+    Array.sortInPlaceBy (fun (node : DfaNode) -> node.Id) dfaNodes
+    dfaNodes
 
-let Compile spec =
-    let spec = { spec with Rules = Macros.expand spec.Macros spec.Rules }
-    let alphabetTable = Alphabet.createTable spec
-    let spec = Alphabet.translate alphabetTable spec
-    let macros =
-        let dict = Dictionary()
-        for (k, v) in spec.Macros do
-            dict.Add(k, v)
-        dict
-    let rules, nodes =
-        List.foldBack
-            (fun (name, args, clauses) (perRuleData,dfaNodes) -> 
-                let nfa, actions, nfaNodeMap = NfaOfRule clauses
-                let ruleStartNode, ruleNodes = NfaToDfa nfaNodeMap nfa
-                (ruleStartNode,actions) :: perRuleData, ruleNodes @ dfaNodes)
-            spec.Rules
-            ([],[])
-    (alphabetTable, rules, nodes)
+let Compile (regexps : Regexp list) =
+    let nfaStart, nfaNodes = NfaOfRule regexps
+    NfaToDfa nfaNodes nfaStart

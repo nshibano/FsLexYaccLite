@@ -60,14 +60,6 @@ let usage =
 
 let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> failwith "more than one input given" | None -> input := Some x) "fslex <filename>"
 
-let outputInt (os: TextWriter) (n:int) = os.Write(string n)
-
-let outputCodedInt16 (os: #TextWriter)  (n:int) = 
-  os.Write n;
-  os.Write "s; ";
-let outputCodedUInt16 (os: #TextWriter)  (n:int) = 
-  os.Write n;
-  os.Write "us; ";
 let sentinel = -1
 
 let main() = 
@@ -85,12 +77,17 @@ let main() =
                | Failure s -> s 
                | _ -> e.Message);
           exit 1
-    printfn "compiling to dfas (can take a while...)";
-    let alphabetTable, perRuleData, dfaNodes = AST.Compile spec
-    let dfaNodes = dfaNodes |> List.sortBy (fun n -> n.Id) 
-
-    printfn "%d states" dfaNodes.Length;
-    printfn "writing output"; 
+    printfn "compiling to dfas (can take a while...)"
+    
+    let rules = List.map (fun (name, args, clauses) ->
+        let expanded = Macros.expand spec.Macros clauses
+        let alphabetTable = Alphabet.createTable expanded
+        let translated = Alphabet.translate alphabetTable expanded
+        let dfaNodes = AST.Compile (List.map fst translated)
+        let actions = List.map snd translated
+        (name, args, alphabetTable, dfaNodes, actions)) spec.Rules
+    
+    printfn "writing output"
     
     let output = 
         match !out with 
@@ -123,52 +120,74 @@ let main() =
     
     printLinesIfCodeDefined spec.TopCode
 
-    printUInt16Array "charRangeTable" (Array.map uint16 alphabetTable.RangeTable)
-    printUInt16Array "alphabetTable" (Array.map uint16 alphabetTable.IndexTable)
+    for name, args, alphabetTable, dfaNodes, actions in rules do
 
-    fprintfn os "let transitionTable =";
-    fprintfn os "    [|";
+        printUInt16Array (name + "_charRangeTable") (Array.map uint16 alphabetTable.RangeTable)
+        printUInt16Array (name + "_alphabetTable") (Array.map uint16 alphabetTable.IndexTable)
 
-    for state in dfaNodes do
-        fprintf os "        [| "
-        let trans = 
-            let dict = Dictionary()
-            Seq.iter dict.Add state.Transitions
-            dict
-        let emit n = 
-            let code =
-                if trans.ContainsKey(n) then 
-                    trans.[n].Id 
-                else sentinel
-            fprintf os "%ds" code
-        for i = 0 to alphabetTable.AlphabetCount - 1 do 
-            emit i
-            fprintf os "; "
-        emit alphabetTable.AlphabetEof
-        fprintfn os " |]"
-    fprintfn os "    |]"
+        fprintfn os "let %s_transitionTable =" name
+        fprintfn os "    [|";
+
+        for state in dfaNodes do
+            fprintf os "        [| "
+            let trans = 
+                let dict = Dictionary()
+                Seq.iter dict.Add state.Transitions
+                dict
+            let emit n = 
+                let code =
+                    if trans.ContainsKey(n) then 
+                        trans.[n].Id 
+                    else sentinel
+                fprintf os "%ds" code
+            for i = 0 to alphabetTable.AlphabetCount - 1 do 
+                emit i
+                fprintf os "; "
+            emit alphabetTable.AlphabetEof
+            fprintfn os " |]"
+        fprintfn os "    |]"
     
-    printInt16Array "acceptTable"
-        (Array.map (fun state ->
-            if state.Accepted.Length > 0 then 
-                int16 (snd state.Accepted.[0])
-            else
-                int16 sentinel) (Array.ofList dfaNodes))
+        printInt16Array (name + "_acceptTable")
+            (Array.map (fun state ->
+                if state.Accepted.Length > 0 then 
+                    int16 state.Accepted.[0]
+                else
+                    int16 sentinel) dfaNodes)
 
-    fprintfn os "let scanner = %s.UnicodeTables(charRangeTable, alphabetTable, transitionTable, acceptTable)" lexlib
+        fprintfn os "let %s_tables = %s.UnicodeTables(%s_charRangeTable, %s_alphabetTable, %s_transitionTable, %s_acceptTable)" name lexlib name name name name
     
-    let rules = Array.ofList (List.zip perRuleData spec.Rules)
     for i = 0 to rules.Length - 1 do
-        let (startNode, actions), (ident, args, _) = rules.[i]
-        fprintfn os "%s %s%s lexbuf =" (if i = 0 then "let rec" else "and") ident (String.concat "" (List.map (fun s -> " " + s) args))
-        fprintfn os "  match scanner.Interpret(%d, lexbuf) with" startNode.Id
-        actions |> Seq.iteri (fun i (code,pos) -> 
-            fprintfn os "  | %d -> ( " i;
+        let name, args, alphabetTable, dfaNodes, actions = rules.[i]
+        fprintfn os "%s %s%s lexbuf =" (if i = 0 then "let rec" else "and") name (String.concat "" (List.map (fun s -> " " + s) args))
+        fprintfn os "    match %s_tables.Interpret(%d, lexbuf) with" name 0
+        Seq.iteri (fun i (code : string, _) -> 
+            fprintfn os "    | %d ->" i;
             let lines = code.Split([| '\r'; '\n' |], StringSplitOptions.RemoveEmptyEntries)
-            for line in lines do
-                fprintfn os "               %s" line;
-            fprintfn os "          )")
-        fprintfn os "  | _ -> failwith \"%s\"" ident
+            let getIndentLevel (s : string) =
+                let mutable level = 0
+                let mutable pos = 0
+                while pos < s.Length do
+                    match s.[pos] with
+                    | ' ' ->
+                        level <- level + 1
+                        pos <- pos + 1
+                    | '\t' ->
+                        level <- level + 4
+                        pos <- pos + 1
+                    | _ -> pos <- s.Length
+                level
+
+            let shiftIndentLevel incr (s : string) =
+                let current = getIndentLevel s
+                String(' ', current + incr) + s.TrimStart([|' '; '\t'|])
+
+            let setIndent (level : int) (lines : string array) =
+                let min = Array.min (Array.map getIndentLevel lines)
+                Array.map (shiftIndentLevel (level - min)) lines
+
+            for line in setIndent 8 lines do
+                fprintfn os "%s" line) actions
+        fprintfn os "    | _ -> failwith \"%s\"" name
 
     fprintfn os ""
         

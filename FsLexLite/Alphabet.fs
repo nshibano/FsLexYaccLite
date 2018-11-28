@@ -50,7 +50,7 @@ let normalizeCharset (charset : Set<char * char>) =
         accu <- List.fold merge range mergables :: nonMergables
     Set(accu)
 
-let createTable (spec : Spec) =
+let createTable (clauses : Clause list) =
 
     let rangeTable = List<int>([| 0 |])
     let charSetsTable = List<Set<Set<char * char>>>([| Set.empty |])
@@ -83,13 +83,10 @@ let createTable (spec : Spec) =
         | Alt l -> List.iter regexpLoop l
         | Seq l ->  List.iter regexpLoop l
         | Star regexp -> regexpLoop regexp
-        | Macro _ -> ()
-    
-    for _, regexp in spec.Macros do
+        | Macro _ -> failwith "dontcare"
+
+    for regexp, _ in clauses do
         regexpLoop regexp
-    for _, _, clauses in spec.Rules do
-        for regexp, _ in clauses do
-            regexpLoop regexp
 
     // assign alphabet for set of charset.    
     let nonOtherAlphabetCount = Set.count (Set charSetsTable) - 1
@@ -124,7 +121,7 @@ let createTable (spec : Spec) =
       IndexTable = indexTable.ToArray()
       AlphabetsOfCharset = alphabetsOfCharSet }
 
-let translate (table : AlphabetTable) (spec : Spec) =
+let translate (table : AlphabetTable) (clauses : Clause list) =
 
     let regexOfAlphabets alphabets =
         let ary = Array.ofSeq alphabets
@@ -145,10 +142,7 @@ let translate (table : AlphabetTable) (spec : Spec) =
         | Alt l -> Alt (List.map regexpMap l)
         | Seq l ->  Seq (List.map regexpMap l)
         | Star regexp -> Star (regexpMap regexp)
-        | Macro _ -> regexp
+        | Macro _
         | Inp (Alphabet _) -> failwith "dontcare"
 
-    { spec with
-        Macros = List.map (fun (name, re) -> (name, regexpMap re)) spec.Macros
-        Rules = List.map (fun (name, args, clauses) -> (name, args, List.map (fun (regexp, code) -> (regexpMap regexp, code)) clauses)) spec.Rules }
-
+    List.map (fun (regexp, code) -> (regexpMap regexp, code)) clauses
