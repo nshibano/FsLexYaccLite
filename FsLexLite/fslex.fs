@@ -106,70 +106,58 @@ let main() =
         if pos <> Position.Empty  // If bottom code is unspecified, then position is empty.        
         then 
             fprintfn os "%s" code;
-
+    
+    let printInt16Array (name : string) (ary : int16 array) =
+        fprintf os "let %s = [| " name
+        for i = 0 to ary.Length - 1 do
+            if i <> 0 then fprintf os "; "
+            fprintf os "%ds" ary.[i]
+        fprintfn os " |]"
+    
+    let printUInt16Array (name : string) (ary : uint16 array) =
+        fprintf os "let %s = [| " name
+        for i = 0 to ary.Length - 1 do
+            if i <> 0 then fprintf os "; "
+            fprintf os "%dus" ary.[i]
+        fprintfn os " |]"
+    
     printLinesIfCodeDefined spec.TopCode
-    let code = fst spec.TopCode
-    fprintf os "let charRangeTable = [| "
-    for i = 0 to alphabetTable.RangeTable.Length - 1 do
-      outputCodedUInt16 os alphabetTable.RangeTable.[i]
-    fprintfn os " |]"
 
-    fprintf os "let alphabetTable = [| "
-    for i = 0 to alphabetTable.IndexTable.Length - 1 do
-      outputCodedUInt16 os alphabetTable.IndexTable.[i]
-    fprintfn os " |]"
+    printUInt16Array "charRangeTable" (Array.map uint16 alphabetTable.RangeTable)
+    printUInt16Array "alphabetTable" (Array.map uint16 alphabetTable.IndexTable)
 
-    fprintfn os "let transitionTable : int16[][] = ";
-    fprintfn os "    [| ";
-    //let specificUnicodeChars = GetSpecificUnicodeChars()
-    // This emits a (numLowUnicodeChars+NumUnicodeCategories+(2*#specificUnicodeChars)+1) * #states array of encoded UInt16 values
-        
-    // Each row for the Unicode table has format 
-    //      128 entries for ASCII characters
-    //      A variable number of 2*UInt16 entries for SpecificUnicodeChars 
-    //      30 entries, one for each UnicodeCategory
-    //      1 entry for EOF
-    //
-    // Each entry is an encoded UInt16 value indicating the next state to transition to for this input.
-    //
-    // For the SpecificUnicodeChars the entries are char/next-state pairs.
+    fprintfn os "let transitionTable =";
+    fprintfn os "    [|";
+
     for state in dfaNodes do
-        //fprintfn os "    (* State %d *)" state.Id;
-        fprintf os "     [| ";
+        fprintf os "        [| "
         let trans = 
             let dict = Dictionary()
             Seq.iter dict.Add state.Transitions
             dict
         let emit n = 
-            if trans.ContainsKey(n) then 
-                outputCodedInt16 os trans.[n].Id 
-            else
-                outputCodedInt16 os sentinel
+            let code =
+                if trans.ContainsKey(n) then 
+                    trans.[n].Id 
+                else sentinel
+            fprintf os "%ds" code
         for i = 0 to alphabetTable.AlphabetCount - 1 do 
-            let c = char i
-            emit (int c);
-        //for c in specificUnicodeChars do 
-        //    outputCodedUInt16 os (int c); 
-        //    emit (EncodeChar c);
-        //for i = 0 to NumUnicodeCategories-1 do 
-        //    emit (EncodeUnicodeCategoryIndex i);
+            emit i
+            fprintf os "; "
         emit alphabetTable.AlphabetEof
-        fprintfn os "|];"
-    done;
-        
-    fprintfn os "    |] ";
+        fprintfn os " |]"
+    fprintfn os "    |]"
     
-    fprintf os "let acceptTable : int16[] = [|";
-    for state in dfaNodes do
-        if state.Accepted.Length > 0 then 
-          outputCodedInt16 os (snd state.Accepted.[0])
-        else
-          outputCodedInt16 os sentinel
-    done;
-    fprintfn os "|]";
+    printInt16Array "acceptTable"
+        (Array.map (fun state ->
+            if state.Accepted.Length > 0 then 
+                int16 (snd state.Accepted.[0])
+            else
+                int16 sentinel) (Array.ofList dfaNodes))
+
     fprintfn os "let scanner = %s.UnicodeTables(charRangeTable, alphabetTable, transitionTable, acceptTable)" lexlib
     
-    fprintfn os "let rec _fslex_dummy () = _fslex_dummy() ";
+    fprintfn os "let rec _fslex_dummy () = _fslex_dummy() "
 
     // These actions push the additional start state and come first, because they are then typically inlined into later
     // rules. This means more tailcalls are taken as direct branches, increasing efficiency and 
