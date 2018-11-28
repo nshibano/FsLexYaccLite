@@ -50,7 +50,7 @@ let normalizeCharset (charset : Set<char * char>) =
         accu <- List.fold merge range mergables :: nonMergables
     Set(accu)
 
-let createTable (regexps : Regexp list) =
+let createTable chopAsciiChars (regexps : Regexp list) =
 
     let rangeTable = List<int>([| 0 |])
     let charSetsTable = List<Set<Set<char * char>>>([| Set.empty |])
@@ -62,7 +62,11 @@ let createTable (regexps : Regexp list) =
         if i = j then
             rangeTable.Insert(i + 1, value)
             charSetsTable.Insert(i + 1, charSetsTable.[i])
- 
+    
+    if chopAsciiChars then
+        for i = 0 to 128 do
+            addSplit i
+    
     let addCharRangeSplit (charset : Set<char * char>) (cFirst: char) (cLast : char) =
         addSplit (int cFirst)
         addSplit (int cLast + 1)

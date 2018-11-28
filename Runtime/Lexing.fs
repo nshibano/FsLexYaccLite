@@ -106,16 +106,19 @@ type UnicodeTables(charRangeTable : uint16[], alphabetTable : uint16[], transiti
             let inp = lexBuffer.String.[lexBuffer.BufferScanPos]
 
             let alphabet =
-                let key = uint16 inp
-                let mutable i = 0
-                let mutable j = charRangeTable.Length
-                while j - i > 1 do
-                    let k = i + (j - i) / 2
-                    if charRangeTable.[k] <= key then
-                        i <- k
-                    else
-                        j <- k
-                int alphabetTable.[i]
+                if inp < '\128' then
+                    int alphabetTable.[int inp]
+                else
+                    let key = uint16 inp
+                    let mutable i = 128
+                    let mutable j = charRangeTable.Length
+                    while j - i > 1 do
+                        let k = i + (j - i) / 2
+                        if charRangeTable.[k] <= key then
+                            i <- k
+                        else
+                            j <- k
+                    int alphabetTable.[i]
 
             let snew = int transitionTable.[state].[alphabet]
 

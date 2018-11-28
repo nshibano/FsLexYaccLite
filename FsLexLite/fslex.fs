@@ -77,14 +77,16 @@ let main() =
                | Failure s -> s 
                | _ -> e.Message);
           exit 1
-    printfn "compiling to dfas (can take a while...)"
     
     let rules = List.map (fun (name, args, clauses) ->
+        printfn "compiling lexing table for rule \"%s\"" name
         let regexps = List.map fst clauses
         let expanded = Macros.expand spec.Macros regexps
-        let alphabetTable = Alphabet.createTable expanded
+        let alphabetTable = Alphabet.createTable true expanded
+        printfn "%d alphabets" alphabetTable.AlphabetCount
         let translated = Alphabet.translate alphabetTable expanded
         let dfaNodes = AST.Compile translated
+        printfn "%d states" dfaNodes.Length
         let actions = List.map snd clauses
         (name, args, alphabetTable, dfaNodes, actions)) spec.Rules
     
