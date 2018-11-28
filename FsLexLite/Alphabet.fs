@@ -21,8 +21,7 @@ let binchopFloor (table : IReadOnlyList<int>) (key : int) =
         i
 
 type AlphabetTable =
-    { 
-      /// Including char range alphabets and the 'Other' alphabet. But excluding the 'Eof' alphabet.
+    { /// Including char range alphabets and the 'Other' alphabet. But excluding the 'Eof' alphabet.
       AlphabetCount : int
       /// The table which represents the char range of alphabets. To find table offset of the alphabet, do the binchpFloor with the char.
       RangeTable : int array

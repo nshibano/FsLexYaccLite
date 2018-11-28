@@ -70,9 +70,6 @@ let outputCodedUInt16 (os: #TextWriter)  (n:int) =
   os.Write "us; ";
 let sentinel = -1
 
-let lineCount = ref 0
-let cfprintfn (os: #TextWriter) fmt = Printf.kfprintf (fun () -> incr lineCount; os.WriteLine()) os fmt
-
 let main() = 
   try 
     let filename = (match !input with Some x -> x | None -> failwith "no input given") 
@@ -103,28 +100,27 @@ let main() =
     use os = System.IO.File.CreateText output
 
     if (!light = Some(false)) || (!light = None && (Path.HasExtension(output) && Path.GetExtension(output) = ".ml")) then
-        cfprintfn os "#light \"off\"";
+        fprintfn os "#light \"off\"";
     
     let printLinesIfCodeDefined (code,pos:Position) =
         if pos <> Position.Empty  // If bottom code is unspecified, then position is empty.        
         then 
-            cfprintfn os "%s" code;
+            fprintfn os "%s" code;
 
     printLinesIfCodeDefined spec.TopCode
     let code = fst spec.TopCode
-    lineCount := !lineCount + code.Replace("\r","").Split([| '\n' |]).Length;
     fprintf os "let charRangeTable = [| "
     for i = 0 to alphabetTable.RangeTable.Length - 1 do
       outputCodedUInt16 os alphabetTable.RangeTable.[i]
-    cfprintfn os " |]"
+    fprintfn os " |]"
 
     fprintf os "let alphabetTable = [| "
     for i = 0 to alphabetTable.IndexTable.Length - 1 do
       outputCodedUInt16 os alphabetTable.IndexTable.[i]
-    cfprintfn os " |]"
+    fprintfn os " |]"
 
-    cfprintfn os "let transitionTable : int16[][] = ";
-    cfprintfn os "    [| ";
+    fprintfn os "let transitionTable : int16[][] = ";
+    fprintfn os "    [| ";
     //let specificUnicodeChars = GetSpecificUnicodeChars()
     // This emits a (numLowUnicodeChars+NumUnicodeCategories+(2*#specificUnicodeChars)+1) * #states array of encoded UInt16 values
         
@@ -138,7 +134,7 @@ let main() =
     //
     // For the SpecificUnicodeChars the entries are char/next-state pairs.
     for state in dfaNodes do
-        //cfprintfn os "    (* State %d *)" state.Id;
+        //fprintfn os "    (* State %d *)" state.Id;
         fprintf os "     [| ";
         let trans = 
             let dict = Dictionary()
@@ -158,10 +154,10 @@ let main() =
         //for i = 0 to NumUnicodeCategories-1 do 
         //    emit (EncodeUnicodeCategoryIndex i);
         emit alphabetTable.AlphabetEof
-        cfprintfn os "|];"
+        fprintfn os "|];"
     done;
         
-    cfprintfn os "    |] ";
+    fprintfn os "    |] ";
     
     fprintf os "let acceptTable : int16[] = [|";
     for state in dfaNodes do
@@ -170,31 +166,31 @@ let main() =
         else
           outputCodedInt16 os sentinel
     done;
-    cfprintfn os "|]";
-    cfprintfn os "let scanner = %s.UnicodeTables(charRangeTable, alphabetTable, transitionTable, acceptTable)" lexlib
+    fprintfn os "|]";
+    fprintfn os "let scanner = %s.UnicodeTables(charRangeTable, alphabetTable, transitionTable, acceptTable)" lexlib
     
-    cfprintfn os "let rec _fslex_dummy () = _fslex_dummy() ";
+    fprintfn os "let rec _fslex_dummy () = _fslex_dummy() ";
 
     // These actions push the additional start state and come first, because they are then typically inlined into later
     // rules. This means more tailcalls are taken as direct branches, increasing efficiency and 
     // improving stack usage on platforms that do not take tailcalls.
     for ((startNode, actions),(ident,args,_)) in List.zip perRuleData spec.Rules do
-        cfprintfn os "(* Rule %s *)" ident;
-        cfprintfn os "and %s %s (lexbuf : %s.LexBuffer) = _fslex_%s %s %d lexbuf" ident (String.Join(" ",Array.ofList args)) lexlib ident (String.Join(" ",Array.ofList args)) startNode.Id;
+        fprintfn os "(* Rule %s *)" ident;
+        fprintfn os "and %s %s (lexbuf : %s.LexBuffer) = _fslex_%s %s %d lexbuf" ident (String.Join(" ",Array.ofList args)) lexlib ident (String.Join(" ",Array.ofList args)) startNode.Id;
     for ((startNode, actions),(ident,args,_)) in List.zip perRuleData spec.Rules do
-        cfprintfn os "(* Rule %s *)" ident;
-        cfprintfn os "and _fslex_%s %s _fslex_state lexbuf =" ident (String.Join(" ",Array.ofList args));
-        cfprintfn os "  match scanner.Interpret(_fslex_state,lexbuf) with" ;
+        fprintfn os "(* Rule %s *)" ident;
+        fprintfn os "and _fslex_%s %s _fslex_state lexbuf =" ident (String.Join(" ",Array.ofList args));
+        fprintfn os "  match scanner.Interpret(_fslex_state,lexbuf) with" ;
         actions |> Seq.iteri (fun i (code,pos) -> 
-            cfprintfn os "  | %d -> ( " i;
+            fprintfn os "  | %d -> ( " i;
             let lines = code.Split([| '\r'; '\n' |], StringSplitOptions.RemoveEmptyEntries)
             for line in lines do
-                cfprintfn os "               %s" line;
-            cfprintfn os "          )")
-        cfprintfn os "  | _ -> failwith \"%s\"" ident
+                fprintfn os "               %s" line;
+            fprintfn os "          )")
+        fprintfn os "  | _ -> failwith \"%s\"" ident
     
 
-    cfprintfn os "";
+    fprintfn os "";
         
     printLinesIfCodeDefined spec.BottomCode
     
