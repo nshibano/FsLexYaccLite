@@ -75,7 +75,7 @@ type LexBuffer =
           EndPos = Position.Empty
           LocalStore = Dictionary() }
 
-type UnicodeTables(charRangeTable : uint16[], alphabetTable : uint16[], transitionTable: int16[][], acceptTable: int16[]) =
+type UnicodeTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[], nonAsciiAlphabetTable : uint16[], transitionTable: int16[][], acceptTable: int16[]) =
         
     let [<Literal>] sentinel = -1
         
@@ -93,7 +93,7 @@ type UnicodeTables(charRangeTable : uint16[], alphabetTable : uint16[], transiti
             lexBuffer.AcceptAction <- a
             
         if lexBuffer.ScanLength = lexBuffer.BufferMaxScanLength then
-            let snew = int transitionTable.[state].[int alphabetTable.[alphabetTable.Length - 1] + 1] // Get Eof entry. The final of range table is always 'Other' alphabet. And 'Other' + 1 is 'Eof'.
+            let snew = int transitionTable.[state].[transitionTable.[state].Length - 1] // get eof entry
             if snew = sentinel then 
                 endOfScan lexBuffer
             elif not lexBuffer.IsPastEndOfStream then
@@ -107,18 +107,18 @@ type UnicodeTables(charRangeTable : uint16[], alphabetTable : uint16[], transiti
 
             let alphabet =
                 if inp < '\128' then
-                    int alphabetTable.[int inp]
+                    int asciiAlphabetTable.[int inp]
                 else
                     let key = uint16 inp
-                    let mutable i = 128
-                    let mutable j = charRangeTable.Length
+                    let mutable i = 0
+                    let mutable j = nonAsciiCharRangeTable.Length
                     while j - i > 1 do
                         let k = i + (j - i) / 2
-                        if charRangeTable.[k] <= key then
+                        if nonAsciiCharRangeTable.[k] <= key then
                             i <- k
                         else
                             j <- k
-                    int alphabetTable.[i]
+                    int nonAsciiAlphabetTable.[i]
 
             let snew = int transitionTable.[state].[alphabet]
 

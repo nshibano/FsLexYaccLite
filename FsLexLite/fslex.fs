@@ -125,8 +125,9 @@ let main() =
 
     for name, args, alphabetTable, dfaNodes, actions in rules do
 
-        printUInt16Array (name + "_charRangeTable") (Array.map uint16 alphabetTable.RangeTable)
-        printUInt16Array (name + "_alphabetTable") (Array.map uint16 alphabetTable.IndexTable)
+        printUInt16Array (name + "_asciiAlphabetTable") (Array.map uint16 (Array.sub alphabetTable.IndexTable 0 128))
+        printUInt16Array (name + "_nonAsciiCharRangeTable") (Array.map uint16 (Array.sub alphabetTable.RangeTable 128 (alphabetTable.RangeTable.Length - 128)))
+        printUInt16Array (name + "_nonAsciiAlphabetTable") (Array.map uint16 (Array.sub alphabetTable.IndexTable 128 (alphabetTable.IndexTable.Length - 128)))
 
         fprintfn os "let private %s_transitionTable =" name
         fprintfn os "    [|";
@@ -157,7 +158,7 @@ let main() =
                 else
                     int16 sentinel) dfaNodes)
 
-        fprintfn os "let private %s_tables = %s.UnicodeTables(%s_charRangeTable, %s_alphabetTable, %s_transitionTable, %s_acceptTable)" name lexlib name name name name
+        fprintfn os "let private %s_tables = %s.UnicodeTables(%s_asciiAlphabetTable, %s_nonAsciiCharRangeTable, %s_nonAsciiAlphabetTable, %s_transitionTable, %s_acceptTable)" name lexlib name name name name name
     
     for i = 0 to rules.Length - 1 do
         let name, args, alphabetTable, dfaNodes, actions = rules.[i]
