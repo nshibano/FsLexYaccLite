@@ -27,9 +27,9 @@ type PrecedenceInfo = (Associativity * int) option
 type Symbol = Terminal of string | NonTerminal of string
 
 type Production =
-    { NonTerminal : string
+    { Head : string
+      Body : Symbol list
       PrecedenceInfo : PrecedenceInfo
-      Symbols : Symbol list
       Code : Code option }
 
 type ProcessedParserSpec = 
@@ -61,7 +61,7 @@ let processParserSpecAst (spec : ParserSpec) =
                     match precsym with 
                     | Some sym -> if explicitPrecInfo.ContainsKey(sym) then Some explicitPrecInfo.[sym] else None
                     | None -> None
-                { NonTerminal = nonterm; PrecedenceInfo = precInfo; Symbols = List.map (fun s -> if terminalSet.Contains s then Terminal s else NonTerminal s) syms; Code = code }))
+                { Head = nonterm; PrecedenceInfo = precInfo; Body = List.map (fun s -> if terminalSet.Contains s then Terminal s else NonTerminal s) syms; Code = code }))
          |> List.concat
 
     let nonTerminals = List.map fst spec.Rules
@@ -72,7 +72,7 @@ let processParserSpecAst (spec : ParserSpec) =
             failwith (sprintf "NonTerminal '%s' has no productions" nt)
 
     for prod in prods do
-        for sym in prod.Symbols do 
+        for sym in prod.Body do 
            match sym with 
            | NonTerminal nt -> checkNonTerminal nt 
            | Terminal t -> if not (terminalSet.Contains t) then failwith (sprintf "token %s is not declared" t)
@@ -228,17 +228,17 @@ type ProductionTable(ntTab:NonTerminalTable, termTab:TerminalTable, nonTerminals
     let a =  
         prodsWithIdxs
         |> List.map(fun (_, prod) -> 
-              prod.Symbols 
+              prod.Body 
               |> Array.ofList  
               |> Array.map (function 
                             | Terminal t -> PTerminal (termTab.ToIndex t) 
                             | NonTerminal nt -> PNonTerminal (ntTab.ToIndex nt )) )
         |> Array.ofList
-    let b = Array.ofList (List.map (fun (_, prod) -> ntTab.ToIndex prod.NonTerminal) prodsWithIdxs)
+    let b = Array.ofList (List.map (fun (_, prod) -> ntTab.ToIndex prod.Head) prodsWithIdxs)
     let c = Array.ofList (List.map (fun (_, prod) -> prod.PrecedenceInfo) prodsWithIdxs)
     let productions = 
         nonTerminals
-        |> List.map(fun nt -> (ntTab.ToIndex nt, List.choose (fun (i, prod) -> if prod.NonTerminal = nt then Some i else None) prodsWithIdxs))
+        |> List.map(fun nt -> (ntTab.ToIndex nt, List.choose (fun (i, prod) -> if prod.Head = nt then Some i else None) prodsWithIdxs))
         |> CreateDictionary
 
     member prodTab.Symbols(i) = a.[i]
@@ -320,7 +320,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let endOfInputTerminal = "$$"
     let dummyLookahead = "#"
     let terminals = spec.Terminals @ [(dummyLookahead, None); (endOfInputTerminal, None)]
-    let prods = List.map2 (fun fakeStartNonTerminal startSymbol -> { NonTerminal = fakeStartNonTerminal; PrecedenceInfo = None; Symbols = [NonTerminal startSymbol]; Code = None }) fakeStartNonTerminals spec.StartSymbols @ spec.Productions
+    let prods = List.map2 (fun fakeStartNonTerminal startSymbol -> { Head = fakeStartNonTerminal; PrecedenceInfo = None; Body = [NonTerminal startSymbol]; Code = None }) fakeStartNonTerminals spec.StartSymbols @ spec.Productions
     let startNonTerminalIdx_to_prodIdx (i : int) = i
 
     // Build indexed tables 
@@ -853,7 +853,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     /// The final results
     let states = kernels |> Array.ofList 
-    let prods = Array.ofList (List.map (fun (prod : Production) -> (prod.NonTerminal, ntTab.ToIndex prod.NonTerminal, prod.Symbols, prod.Code)) prods)
+    let prods = Array.ofList (List.map (fun (prod : Production) -> (prod.Head, ntTab.ToIndex prod.Head, prod.Body, prod.Code)) prods)
 
     logf (fun logStream -> 
         printf  "writing tables to log\n"; stdout.Flush();
