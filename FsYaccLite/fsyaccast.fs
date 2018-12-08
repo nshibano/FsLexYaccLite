@@ -47,23 +47,24 @@ let OutputAssoc os p =
 //---------------------------------------------------------------------
 // PreProcess Raw Parser Spec AST
 
-type PrecedenceInfo = 
-    | ExplicitPrec of Associativity * int 
-    | NoPrecedence
-      
-type Production = Production of NonTerminal : string * PrecedenceInfo * Symbol list * Code option
+type PrecedenceInfo = (Associativity * int) option
+
+type Production =
+    { NonTerminal : string
+      PrecedenceInfo : PrecedenceInfo
+      Symbols : Symbol list
+      Action : Code option }
 
 type ProcessedParserSpec = 
-    { Terminals: (string * PrecedenceInfo) list;
-      NonTerminals: string list;
-      Productions: Production list;
+    { Terminals: (string * PrecedenceInfo) list
+      NonTerminals: string list
+      Productions: Production list
       StartSymbols: string list }
 
-
-let ProcessParserSpecAst (spec: ParserSpec) = 
+let ProcessParserSpecAst (spec : ParserSpec) = 
     let explicitPrecInfo = 
         spec.Associativities 
-        |> List.mapi (fun n precSpecs -> precSpecs |> List.map (fun (precSym, assoc) -> precSym,ExplicitPrec (assoc, 10000 - n)))
+        |> List.mapi (fun n precSpecs -> precSpecs |> List.map (fun (precSym, assoc) -> precSym, Some (assoc, 10000 - n)))
         |> List.concat
     
     for (key,_) in explicitPrecInfo |> Seq.countBy fst |> Seq.filter (fun (_,n) -> n > 1)  do
@@ -72,7 +73,7 @@ let ProcessParserSpecAst (spec: ParserSpec) =
     let explicitPrecInfo = 
         explicitPrecInfo |> Map.ofList
 
-    let implicitSymPrecInfo = NoPrecedence
+    let implicitSymPrecInfo = None
     let terminals = List.map fst spec.Tokens @ ["error"]in 
     let terminalSet = Set.ofList terminals
     let IsTerminal z = terminalSet.Contains(z)
@@ -86,11 +87,11 @@ let ProcessParserSpecAst (spec: ParserSpec) =
             rules |> List.mapi (fun j (Rule(syms,precsym,code)) -> 
                 let precInfo = 
                     let precsym = List.foldBack (fun x acc -> match acc with Some _ -> acc | None -> match x with z when IsTerminal z -> Some z | _ -> acc) syms precsym
-                    let implicitPrecInfo = NoPrecedence
+                    let implicitPrecInfo = None
                     match precsym with 
                     | None -> implicitPrecInfo 
                     | Some sym -> if explicitPrecInfo.ContainsKey(sym) then explicitPrecInfo.[sym] else implicitPrecInfo
-                Production(nonterm, precInfo, List.map mkSym syms, code)))
+                { NonTerminal = nonterm; PrecedenceInfo = precInfo; Symbols = List.map mkSym syms; Action = code }))
          |> List.concat
     let nonTerminals = List.map fst spec.Rules
     let nonTerminalSet = Set.ofList nonTerminals
@@ -98,8 +99,8 @@ let ProcessParserSpecAst (spec: ParserSpec) =
         if nt <> "error" && not (nonTerminalSet.Contains(nt)) then 
             failwith (sprintf "NonTerminal '%s' has no productions" nt)
 
-    for (Production(nt,_,syms,_)) in prods do
-        for sym in syms do 
+    for prod in prods do
+        for sym in prod.Symbols do 
            match sym with 
            | NonTerminal nt -> 
                checkNonTerminal nt 
@@ -141,8 +142,8 @@ type Action =
     
 let outputPrecInfo os p = 
     match p with 
-    | ExplicitPrec (assoc,n) -> fprintf os "explicit %a %d" OutputAssoc assoc n
-    | NoPrecedence  -> fprintf os "noprec"
+    | Some (assoc,n) -> fprintf os "explicit %a %d" OutputAssoc assoc n
+    | None  -> fprintf os "noprec"
 
 
 /// LR(0) kernels
@@ -252,18 +253,18 @@ type ProductionTable(ntTab:NonTerminalTable, termTab:TerminalTable, nonTerminals
     let prodsWithIdxs = List.mapi (fun i n -> (i,n)) prods
     let a =  
         prodsWithIdxs
-        |> List.map(fun (_,Production(_,_,syms,_)) -> 
-              syms 
+        |> List.map(fun (_, prod) -> 
+              prod.Symbols 
               |> Array.ofList  
               |> Array.map (function 
                             | Terminal t -> PTerminal (termTab.ToIndex t) 
                             | NonTerminal nt -> PNonTerminal (ntTab.ToIndex nt )) )
         |> Array.ofList
-    let b = Array.ofList (List.map (fun (_,Production(nt,_,_,_)) -> ntTab.ToIndex nt) prodsWithIdxs)
-    let c = Array.ofList (List.map (fun (_,Production(_,prec,_,_)) -> prec) prodsWithIdxs)
+    let b = Array.ofList (List.map (fun (_, prod) -> ntTab.ToIndex prod.NonTerminal) prodsWithIdxs)
+    let c = Array.ofList (List.map (fun (_, prod) -> prod.PrecedenceInfo) prodsWithIdxs)
     let productions = 
         nonTerminals
-        |> List.map(fun nt -> (ntTab.ToIndex nt, List.choose (fun (i,Production(nt2,prec,syms,_)) -> if nt2=nt then Some i else None) prodsWithIdxs))
+        |> List.map(fun nt -> (ntTab.ToIndex nt, List.choose (fun (i, prod) -> if prod.NonTerminal = nt then Some i else None) prodsWithIdxs))
         |> CreateDictionary
 
     member prodTab.Symbols(i) = a.[i]
@@ -343,9 +344,9 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let nonTerminals = fakeStartNonTerminals@spec.NonTerminals
     let endOfInputTerminal = "$$"
     let dummyLookahead = "#"
-    let dummyPrec = NoPrecedence
+    let dummyPrec = None
     let terminals = spec.Terminals @ [(dummyLookahead,dummyPrec); (endOfInputTerminal,dummyPrec)]
-    let prods = List.map2 (fun a b -> Production(a, dummyPrec,[NonTerminal b],None)) fakeStartNonTerminals spec.StartSymbols @ spec.Productions
+    let prods = List.map2 (fun a b -> { NonTerminal = a; PrecedenceInfo =  dummyPrec; Symbols = [NonTerminal b]; Action = None }) fakeStartNonTerminals spec.StartSymbols @ spec.Productions
     let startNonTerminalIdx_to_prodIdx (i:int) = i
 
     // Build indexed tables 
@@ -735,14 +736,14 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                             | _ -> "", ""
                         let pstr = 
                             match p with 
-                            | ExplicitPrec (assoc,n) -> 
+                            | Some (assoc,n) -> 
                                 let astr = 
                                     match assoc with 
                                     | LeftAssoc -> "left"
                                     | RightAssoc -> "right"
                                     | NonAssoc -> "nonassoc"
                                 sprintf "[explicit %s %d]" astr n
-                            | NoPrecedence  -> 
+                            | None  -> 
                                 "noprec"
                         an, "{" + pstr + " " + astr + "}"
                     let a1n, astr1 = reportAction x1
@@ -759,7 +760,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                 | (((precReduce,Reduce prodIdx) as reduceItem), 
                    ((precShift,Shift sIdx) as shiftItem)) -> 
                     match precReduce, precShift with 
-                    | (ExplicitPrec (_,p1) as pp, ExplicitPrec(assocNew,p2)) -> 
+                    | (Some (_,p1) as pp, Some(assocNew,p2)) -> 
                       if p1 < p2 then shiftItem
                       elif p1 > p2 then reduceItem
                       else
@@ -779,7 +780,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                        shiftItem
                 | ((prec1,Reduce prodIdx1),(prec2, Reduce prodIdx2)) -> 
                     match prec1, prec2 with 
-                    | (ExplicitPrec (_,p1), ExplicitPrec(assocNew,p2)) when newprec -> 
+                    | (Some (_,p1), Some(assocNew,p2)) when newprec -> 
                         if p1 < p2 then itemNew
                         elif p1 > p2 then itemSoFar
                         else
@@ -799,7 +800,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         // This build the action table for one state. 
         let ComputeActions kernelIdx = 
             let kernel = kernelTab.Kernel kernelIdx
-            let arr = Array.create terminals.Length (NoPrecedence,Error)
+            let arr = Array.create terminals.Length (None, Error)
 
             //printf  "building lookahead table LR(1) items for kernelIdx %d\n" kernelIdx; stdout.Flush();
 
@@ -888,7 +889,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     /// The final results
     let states = kernels |> Array.ofList 
-    let prods = Array.ofList (List.map (fun (Production(nt,prec,syms,code)) -> (nt, ntTab.ToIndex nt, syms,code)) prods)
+    let prods = Array.ofList (List.map (fun (prod : Production) -> (prod.NonTerminal, ntTab.ToIndex prod.NonTerminal, prod.Symbols, prod.Action)) prods)
 
     logf (fun logStream -> 
         printf  "writing tables to log\n"; stdout.Flush();
