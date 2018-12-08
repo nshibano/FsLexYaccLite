@@ -188,7 +188,7 @@ let LeastFixedPoint f set =
 /// A general standard memoization utility. Be sure to apply to only one (function) argument to build the
 /// residue function!
 let Memoize f = 
-    let t = new Dictionary<_,_>(1000)
+    let t = new Dictionary<_,_>()
     fun x -> 
         let ok,v = t.TryGetValue(x) 
         if ok then v else let res = f x in t.[x] <- res; res 
@@ -309,30 +309,27 @@ type PropagateTable() =
 
 /// Compile a pre-processed LALR parser spec to tables following the Dragon book algorithm
 let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
-    let stopWatch = new System.Diagnostics.Stopwatch()
-    let reportTime() = printfn "time: %A" stopWatch.Elapsed; stopWatch.Reset(); stopWatch.Start()
-    stopWatch.Start()
+    let stopWatch = System.Diagnostics.Stopwatch.StartNew()
+    let reportTime() =
+        printfn "time: %A" stopWatch.Elapsed
+        stopWatch.Restart()
 
     // Augment the grammar 
-    let fakeStartNonTerminals = spec.StartSymbols |> List.map(fun nt -> "_start" + nt) 
-    let nonTerminals = fakeStartNonTerminals@spec.NonTerminals
+    let fakeStartNonTerminals = List.map (fun nt -> "_start" + nt) spec.StartSymbols
+    let nonTerminals = fakeStartNonTerminals @ spec.NonTerminals
     let endOfInputTerminal = "$$"
     let dummyLookahead = "#"
-    let dummyPrec = None
-    let terminals = spec.Terminals @ [(dummyLookahead,dummyPrec); (endOfInputTerminal,dummyPrec)]
-    let prods = List.map2 (fun a b -> { NonTerminal = a; PrecedenceInfo =  dummyPrec; Symbols = [NonTerminal b]; Code = None }) fakeStartNonTerminals spec.StartSymbols @ spec.Productions
-    let startNonTerminalIdx_to_prodIdx (i:int) = i
+    let terminals = spec.Terminals @ [(dummyLookahead, None); (endOfInputTerminal, None)]
+    let prods = List.map2 (fun fakeStartNonTerminal startSymbol -> { NonTerminal = fakeStartNonTerminal; PrecedenceInfo = None; Symbols = [NonTerminal startSymbol]; Code = None }) fakeStartNonTerminals spec.StartSymbols @ spec.Productions
+    let startNonTerminalIdx_to_prodIdx (i : int) = i
 
     // Build indexed tables 
     let ntTab = NonTerminalTable(nonTerminals)
     let termTab = TerminalTable(terminals)
     let prodTab = ProductionTable(ntTab,termTab,nonTerminals,prods)
+
     let dummyLookaheadIdx = termTab.ToIndex dummyLookahead
     let endOfInputTerminalIdx = termTab.ToIndex endOfInputTerminal
-
-
-    // printf "terminalPrecInfo(ELSE) = %a\n" outputPrecInfo (termTab.PrecInfoOfIndex (termTab.ToIndex "ELSE"));
-
     let errorTerminalIdx = termTab.ToIndex "error"
 
     // Compute the FIRST function
