@@ -152,7 +152,7 @@ let main() =
   logf (fun oso -> fprintfn oso "<pre>\nOutput file describing compiled parser placed in %s and %s" output outputi);
 
   printfn "building tables"; 
-  let spec1 = ProcessParserSpecAst spec 
+  let spec1 = processParserSpecAst spec 
   let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
       CompilerLalrParserSpec logf !newprec !norec spec1 
   logf (fun oso -> fprintfn oso "</pre>");
