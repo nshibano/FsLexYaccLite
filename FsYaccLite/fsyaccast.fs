@@ -21,9 +21,7 @@ type ParserSpec=
 and Rule = Rule of Identifier list * Identifier option * Code option
 and Associativity = LeftAssoc | RightAssoc | NonAssoc
 
-type Terminal = string
-type NonTerminal = string
-type Symbol = Terminal of Terminal | NonTerminal of NonTerminal
+type Symbol = Terminal of string | NonTerminal of string
 
 
 //---------------------------------------------------------------------
@@ -53,13 +51,13 @@ type PrecedenceInfo =
     | ExplicitPrec of Associativity * int 
     | NoPrecedence
       
-type Production = Production of NonTerminal * PrecedenceInfo * Symbol list * Code option
+type Production = Production of NonTerminal : string * PrecedenceInfo * Symbol list * Code option
 
 type ProcessedParserSpec = 
-    { Terminals: (Terminal * PrecedenceInfo) list;
-      NonTerminals: NonTerminal list;
+    { Terminals: (string * PrecedenceInfo) list;
+      NonTerminals: string list;
       Productions: Production list;
-      StartSymbols: NonTerminal list }
+      StartSymbols: string list }
 
 
 let ProcessParserSpecAst (spec: ParserSpec) = 
@@ -227,7 +225,7 @@ let CreateDictionary xs =
     dict
 
 /// Allocate indexes for each non-terminal
-type NonTerminalTable(nonTerminals:NonTerminal list) = 
+type NonTerminalTable(nonTerminals: string list) = 
     let nonterminalsWithIdxs = List.mapi (fun (i:NonTerminalIndex) n -> (i,n)) nonTerminals
     let nonterminalIdxs = List.map fst nonterminalsWithIdxs
     let a = Array.ofList nonTerminals
@@ -237,7 +235,7 @@ type NonTerminalTable(nonTerminals:NonTerminal list) =
     member table.Indexes = nonterminalIdxs
 
 /// Allocate indexes for each terminal
-type TerminalTable(terminals:(Terminal * PrecedenceInfo) list) = 
+type TerminalTable(terminals:(string * PrecedenceInfo) list) = 
     let terminalsWithIdxs = List.mapi (fun i (t,_) -> (i,t)) terminals
     let terminalIdxs = List.map fst terminalsWithIdxs
     let a = Array.ofList (List.map fst terminals)
