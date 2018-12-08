@@ -9,45 +9,22 @@ open Microsoft.FSharp.Text.Lexing
 
 type Identifier = string
 type Code = string * Position
+type Rule = Rule of Identifier list * Identifier option * Code option
+type Associativity = LeftAssoc | RightAssoc | NonAssoc
 
 type ParserSpec= 
-    { Header         : Code;
-      Tokens         : (Identifier * string option) list;
-      Types          : (Identifier * string) list;
-      Associativities: (Identifier * Associativity) list list;
-      StartSymbols   : Identifier list;
-      Rules          : (Identifier * Rule list) list }
+    { Header : Code
+      Tokens : (Identifier * string option) list
+      Types : (Identifier * string) list
+      Associativities : (Identifier * Associativity) list list
+      StartSymbols : Identifier list
+      Rules : (Identifier * Rule list) list }
       
-and Rule = Rule of Identifier list * Identifier option * Code option
-and Associativity = LeftAssoc | RightAssoc | NonAssoc
-
-type Symbol = Terminal of string | NonTerminal of string
-
-
-//---------------------------------------------------------------------
-// Output Raw Parser Spec AST
-
-let StringOfSym sym = match sym with Terminal s -> "'" + s + "'" | NonTerminal s -> s
-
-let OutputSym os sym = fprintf os "%s" (StringOfSym sym)
-
-let OutputSyms os syms =
-    fprintf os "%s" (String.Join(" ",Array.map StringOfSym syms))
-
-let OutputTerminalSet os (tset:string seq)  =
-    fprintf os "%s" (String.Join(";", tset |> Seq.toArray))
-
-let OutputAssoc os p = 
-    match p with 
-    | LeftAssoc -> fprintf os "left"
-    | RightAssoc -> fprintf os "right"
-    | NonAssoc -> fprintf os "nonassoc"
-
-
 //---------------------------------------------------------------------
 // PreProcess Raw Parser Spec AST
 
 type PrecedenceInfo = (Associativity * int) option
+type Symbol = Terminal of string | NonTerminal of string
 
 type Production =
     { NonTerminal : string
@@ -139,12 +116,20 @@ type Action =
   | Reduce of ProductionIndex
   | Accept
   | Error
+
+//---------------------------------------------------------------------
+// Output Raw Parser Spec AST
+
+let stringOfAssoc (assoc : Associativity) =
+    match assoc with
+    | LeftAssoc -> "left"
+    | RightAssoc -> "right"
+    | NonAssoc -> "nonassoc"
     
 let outputPrecInfo os p = 
     match p with 
-    | Some (assoc,n) -> fprintf os "explicit %a %d" OutputAssoc assoc n
+    | Some (assoc,n) -> fprintf os "explicit %s %d" (stringOfAssoc assoc) n
     | None  -> fprintf os "noprec"
-
 
 /// LR(0) kernels
 type Kernel = Set<Item0>
@@ -736,15 +721,8 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                             | _ -> "", ""
                         let pstr = 
                             match p with 
-                            | Some (assoc,n) -> 
-                                let astr = 
-                                    match assoc with 
-                                    | LeftAssoc -> "left"
-                                    | RightAssoc -> "right"
-                                    | NonAssoc -> "nonassoc"
-                                sprintf "[explicit %s %d]" astr n
-                            | None  -> 
-                                "noprec"
+                            | Some (assoc, n) -> sprintf "[explicit %s %d]" (stringOfAssoc assoc) n
+                            | None  -> "noprec"
                         an, "{" + pstr + " " + astr + "}"
                     let a1n, astr1 = reportAction x1
                     let a2n, astr2 = reportAction x2
