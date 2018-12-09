@@ -137,9 +137,9 @@ type NonTerminalIndex = int
 ///
 /// We use an active pattern to reverse the embedding.
 type SymbolIndex = int
-let PTerminal(i:TerminalIndex) : SymbolIndex = -i-1
-let PNonTerminal(i:NonTerminalIndex) : SymbolIndex = i
-let (|PTerminal|PNonTerminal|) x = if x < 0 then PTerminal (-(x+1)) else PNonTerminal x
+let PNonTerminal (i : NonTerminalIndex) : SymbolIndex = i
+let PTerminal (i : TerminalIndex) : SymbolIndex = ~~~i
+let (|PTerminal|PNonTerminal|) i = if i > 0 then PNonTerminal i else PTerminal (~~~i)
 
 /// Indexes in the LookaheadTable, SpontaneousTable, PropagateTable
 /// Embed in a single integer, since these are faster
@@ -311,7 +311,7 @@ type PropagateTable() =
 let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
     let stopWatch = System.Diagnostics.Stopwatch.StartNew()
     let reportTime() =
-        printfn "time: %A" stopWatch.Elapsed
+        printfn "time: %d(ms)" stopWatch.ElapsedMilliseconds
         stopWatch.Restart()
 
     // Augment the grammar 
@@ -336,24 +336,24 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     printf  "computing first function..."; stdout.Flush();
 
     let computedFirstTable = 
-        let seed = 
+        let seed : Map<SymbolIndex, Set<int option>> =
             Map.ofList
-             [ for term in termTab.Indexes do yield (PTerminal(term),Set.singleton (Some term))
-               for nonTerm in ntTab.Indexes do 
-                  yield 
-                    (PNonTerminal nonTerm, 
-                     List.foldBack 
-                       (fun prodIdx acc -> match prodTab.Symbol prodIdx 0 with None -> Set.add None acc | Some _ -> acc) 
-                       prodTab.Productions.[nonTerm] 
-                       Set.empty) ]
-                 
-        let add changed ss (x,y) = 
-            let s = Map.find x ss
-            if Set.contains y s then ss 
-            else (changed := true; Map.add x (Set.add y s) ss)
+             [ // For terminals, add itself (Some term) to its first-set. 
+               for term in termTab.Indexes do
+                  yield (PTerminal term, Set.singleton (Some term))
 
-        let oneRound (ss:Map<_,_>) = 
-            let changed = ref false
+               // For non-terminals, start with empty set.
+               for nonTerm in ntTab.Indexes do
+                  yield (PNonTerminal nonTerm, Set.empty)
+             ]
+                 
+        let add (firstSets : Map<SymbolIndex, Set<int option>>) (symbolIndex, first) = 
+            let s = Map.find symbolIndex firstSets
+            if Set.contains first s then firstSets 
+            else
+                Map.add symbolIndex (Set.add first s) firstSets
+
+        let oneRound (firstSets : Map<SymbolIndex, Set<int option>>) = 
             let frontier = 
                 let res = ref []
                 for nonTermX in ntTab.Indexes do 
@@ -361,26 +361,31 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                         let rhs = Array.toList (prodTab.Symbols prodIdx)
                         let rec place l =
                             match l with
-                            | (yi::t) -> 
+                            | yi :: t ->
+                                // add non-empty first-set items of first symbol of the production body to the first-set of this non-terminal
                                 res := 
                                    List.choose 
-                                     (function None -> None | Some a -> Some (PNonTerminal nonTermX,Some a)) 
-                                     (Set.toList ss.[yi]) 
-                                   @ !res;
-                                if ss.[yi].Contains(None) then place t;
-                            | [] -> 
-                                res := (PNonTerminal nonTermX,None) :: !res
+                                     (function None -> None | Some a -> Some (PNonTerminal nonTermX, Some a)) 
+                                     (Set.toList firstSets.[yi]) 
+                                   @ !res
+                                // if the first symbol of production body is nullable, check for that case
+                                if firstSets.[yi].Contains(None) then place t
+                            | [] ->
+                                // This is production with empty body. We can add 'empty' to the first-set.
+                                res := (PNonTerminal nonTermX, None) :: !res
                         place rhs
                 !res
-            let ss' = List.fold (add changed) ss frontier
-            !changed, ss'
+            List.fold add firstSets frontier
 
-        let rec loop ss = 
-            let changed, ss' = oneRound ss
-            if changed then loop ss' else ss'
-        loop seed 
+        let rec loop (firstSets : Map<SymbolIndex, Set<int option>>) = 
+            let firstSets' = oneRound firstSets
+            if firstSets' = firstSets then
+                firstSets'
+            else
+                loop firstSets'
+        
+        loop seed
             
-      
     /// Compute the first set of the given sequence of non-terminals. If any of the non-terminals
     /// have an empty token in the first set then we have to iterate through those. 
     let ComputeFirstSetOfTokenList =
