@@ -130,12 +130,7 @@ type KernelIdx = int
 type TerminalIndex = int
 type NonTerminalIndex = int
 
-/// Representation of Symbols.
-/// Ideally would be declared as 
-///    type SymbolIndex = PTerminal of TerminalIndex | PNonTerminal of NonTerminalIndex
-/// but for performance reasons we embed as a simple integer (saves ~10%)
-///
-/// We use an active pattern to reverse the embedding.
+/// Representation of Symbols
 type SymbolIndex = int
 let PNonTerminal (i : NonTerminalIndex) : SymbolIndex = i
 let PTerminal (i : TerminalIndex) : SymbolIndex = ~~~i
@@ -240,7 +235,7 @@ type ProductionTable(ntTab:NonTerminalTable, termTab:TerminalTable, nonTerminals
         nonTerminals
         |> List.map(fun nt -> (ntTab.ToIndex nt, List.choose (fun (i, prod) -> if prod.Head = nt then Some i else None) prodsWithIdxs))
         |> CreateDictionary
-
+    member this.ProductionCount = a.Length
     member prodTab.Symbols(i) = a.[i]
     member prodTab.NonTerminal(i) = b.[i]
     member prodTab.Precedence(i) = c.[i]
@@ -335,57 +330,53 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     // Compute the FIRST function
     printf  "computing first function..."; stdout.Flush();
 
-    let computedFirstTable = 
-        let seed : Map<SymbolIndex, Set<int option>> =
-            Map.ofList
-             [ // For terminals, add itself (Some term) to its first-set. 
-               for term in termTab.Indexes do
-                  yield (PTerminal term, Set.singleton (Some term))
-
-               // For non-terminals, start with empty set.
-               for nonTerm in ntTab.Indexes do
-                  yield (PNonTerminal nonTerm, Set.empty)
-             ]
-                 
-        let add (firstSets : Map<SymbolIndex, Set<int option>>) (symbolIndex, first) = 
-            let s = Map.find symbolIndex firstSets
-            if Set.contains first s then firstSets 
-            else
-                Map.add symbolIndex (Set.add first s) firstSets
-
-        let oneRound (firstSets : Map<SymbolIndex, Set<int option>>) = 
-            let frontier = 
-                let res = ref []
-                for nonTermX in ntTab.Indexes do 
-                    for prodIdx in prodTab.Productions.[nonTermX] do
-                        let rhs = Array.toList (prodTab.Symbols prodIdx)
-                        let rec place l =
-                            match l with
-                            | yi :: t ->
-                                // add non-empty first-set items of first symbol of the production body to the first-set of this non-terminal
-                                res := 
-                                   List.choose 
-                                     (function None -> None | Some a -> Some (PNonTerminal nonTermX, Some a)) 
-                                     (Set.toList firstSets.[yi]) 
-                                   @ !res
-                                // if the first symbol of production body is nullable, check for that case
-                                if firstSets.[yi].Contains(None) then place t
-                            | [] ->
-                                // This is production with empty body. We can add 'empty' to the first-set.
-                                res := (PNonTerminal nonTermX, None) :: !res
-                        place rhs
-                !res
-            List.fold add firstSets frontier
-
-        let rec loop (firstSets : Map<SymbolIndex, Set<int option>>) = 
-            let firstSets' = oneRound firstSets
-            if firstSets' = firstSets then
-                firstSets'
-            else
-                loop firstSets'
+    let computedFirstTable =
+        let mutable firstSets = Map.empty<SymbolIndex, Set<TerminalIndex option>>
         
-        loop seed
-            
+        // For terminals, add itself (Some term) to its first-set.
+        for term in termTab.Indexes do
+            firstSets <- Map.add (PTerminal term) (Set.singleton (Some term)) firstSets
+
+        // For non-terminals, start with empty set.
+        for nonTerm in ntTab.Indexes do
+            firstSets <- Map.add (PNonTerminal nonTerm) Set.empty firstSets
+        
+        let add symbolIndex firstSetItem = 
+            let set = firstSets.[symbolIndex]
+            if not (Set.contains firstSetItem set) then 
+                firstSets <- Map.add symbolIndex (Set.add firstSetItem set) firstSets
+
+        let scan() =
+            for prodIdx = 0 to prodTab.ProductionCount - 1 do
+                let head = prodTab.NonTerminal prodIdx
+                let body = prodTab.Symbols prodIdx
+                let mutable pos = 0
+                while pos < body.Length do
+                    // add first symbols of production body to the first-set of this production head 
+                    for firstSetItem in firstSets.[body.[pos]] do
+                        if firstSetItem.IsSome then
+                            add (PNonTerminal head) firstSetItem
+                    if firstSets.[body.[pos]].Contains None then
+                        // the symbol at pos can be empty, therefore go through the following symbols
+                        pos <- pos + 1
+                    else
+                        // otherwise, stop here
+                        pos <- Int32.MaxValue
+                if pos = body.Length then
+                    // the scan for production body symbols were gone through the end of the body
+                    // therefore all symbols in production body can be empty
+                    // therefore this production is nullable
+                    add (PNonTerminal head) None
+                
+        let mutable cont = true
+        while cont do
+            let atStart = firstSets
+            scan()
+            if LanguagePrimitives.PhysicalEquality firstSets atStart then
+                cont <- false
+        
+        firstSets
+
     /// Compute the first set of the given sequence of non-terminals. If any of the non-terminals
     /// have an empty token in the first set then we have to iterate through those. 
     let ComputeFirstSetOfTokenList =
