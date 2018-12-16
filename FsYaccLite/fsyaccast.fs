@@ -380,16 +380,17 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     /// Compute the first set of the given sequence of non-terminals. If any of the non-terminals
     /// have an empty token in the first set then we have to iterate through those. 
     let ComputeFirstSetOfTokenList =
-        Memoize (fun (str,term) -> 
-            let acc = new System.Collections.Generic.List<_>()
+        Memoize (fun (str : SymbolIndex list, term : TerminalIndex) ->
+            let acc = List<TerminalIndex>()
             let rec add l = 
                 match l with 
                 | [] -> acc.Add(term)
-                | sym::moreSyms -> 
+                | sym :: moreSyms -> 
                     let firstSetOfSym = computedFirstTable.[sym]
-                    firstSetOfSym |> Set.iter (function None -> () | Some v -> acc.Add(v)) 
-                    if firstSetOfSym.Contains(None) then add moreSyms 
-            add str;
+                    Set.iter (function Some v -> acc.Add(v) | None -> ()) firstSetOfSym
+                    if firstSetOfSym.Contains(None) then
+                        add moreSyms 
+            add str
             Set.ofSeq acc)
     
     // (int,int) representation of LR(0) items 
