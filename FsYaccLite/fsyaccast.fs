@@ -98,10 +98,6 @@ type Item0 = //uint32
     { ProductionIndex : int
       DotIndex : int }
 
-let mkItem0 (prodIdx, dotIdx) : Item0 = { ProductionIndex = prodIdx; DotIndex = dotIdx } //(uint32 prodIdx <<< 16) ||| uint32 dotIdx
-let prodIdx_of_item0 (item0 : Item0) = item0.ProductionIndex //int32 (item0 >>> 16)
-let dotIdx_of_item0 (item0 : Item0) = item0.DotIndex //int32 (item0 &&& 0xFFFFu)
-
 /// Part of the output of CompilerLalrParserSpec
 type Action = 
   | Shift of stateIndex : int
@@ -368,25 +364,25 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             Set.ofSeq acc)
     
     // (int,int) representation of LR(0) items 
-    let prodIdx_to_item0 idx = mkItem0(idx,0) 
-    let prec_of_item0 item0 = productionPrecedences.[prodIdx_of_item0 item0]
-    let ntIdx_of_item0 item0 = productionsHeads.[prodIdx_of_item0 item0]
+    let prodIdx_to_item0 idx = { ProductionIndex = idx; DotIndex = 0 }
+    let prec_of_item0 (item0 : Item0) = productionPrecedences.[item0.ProductionIndex]
+    let ntIdx_of_item0 (item0 : Item0) = productionsHeads.[item0.ProductionIndex]
 
-    let lsyms_of_item0 item0 = 
-        let prodIdx = prodIdx_of_item0 item0
-        let dotIdx = dotIdx_of_item0 item0
+    let lsyms_of_item0 (item0 : Item0) = 
+        let prodIdx = item0.ProductionIndex
+        let dotIdx = item0.DotIndex
         let syms = productionBodies.[prodIdx]
         if dotIdx <= 0 then [||] else syms.[..dotIdx-1]
 
-    let rsyms_of_item0 item0 = 
-        let prodIdx = prodIdx_of_item0 item0
-        let dotIdx = dotIdx_of_item0 item0
+    let rsyms_of_item0 (item0 : Item0) = 
+        let prodIdx = item0.ProductionIndex
+        let dotIdx = item0.DotIndex
         let syms = productionBodies.[prodIdx]
         syms.[dotIdx..]
 
-    let rsym_of_item0 item0 = 
-        let prodIdx = prodIdx_of_item0 item0
-        let dotIdx = dotIdx_of_item0 item0
+    let rsym_of_item0 (item0 : Item0) = 
+        let prodIdx = item0.ProductionIndex
+        let dotIdx = item0.DotIndex
         let body = productionBodies.[prodIdx]
         if dotIdx < body.Length then
             Some body.[dotIdx]
@@ -394,14 +390,12 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             None
         else failwith "unreachable"
 
-    let advance_of_item0 item0 = 
-        let prodIdx = prodIdx_of_item0 item0
-        let dotIdx = dotIdx_of_item0 item0
-        mkItem0(prodIdx,dotIdx+1)
+    let advance_of_item0 (item0 : Item0) = { item0 with DotIndex = item0.DotIndex + 1 }
+
     let fakeStartNonTerminalsSet = Set.ofList (fakeStartNonTerminals |> List.map (fun s -> indexOfNonTerminal.[s]))
 
-    let IsStartItem item0 = fakeStartNonTerminalsSet.Contains(ntIdx_of_item0 item0)
-    let IsKernelItem item0 = (IsStartItem item0 || dotIdx_of_item0 item0 <> 0)
+    let IsStartItem (item0 : Item0) = fakeStartNonTerminalsSet.Contains(ntIdx_of_item0 item0)
+    let IsKernelItem (item0 : Item0) = (IsStartItem item0 || item0.DotIndex <> 0)
 
     let StringOfSym sym = match sym with TerminalIndex s -> "'" + fst terminals.[s] + "'" | NonTerminalIndex s -> nonTerminals.[s]
 
@@ -766,7 +760,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                 | None ->
                     for lookahead in lookaheads do
                         if not (IsStartItem(item0)) then
-                            let prodIdx = prodIdx_of_item0 item0
+                            let prodIdx = item0.ProductionIndex
                             let prec = prec_of_item0 item0
                             let action = (prec, Reduce prodIdx)
                             addResolvingPrecedence arr kernelIdx lookahead action 
@@ -785,7 +779,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             let immediateAction =
                 match Set.toList closure with
                 | [item0] ->
-                    let pItem0 = prodIdx_of_item0 item0
+                    let pItem0 = item0.ProductionIndex
                     match (rsym_of_item0 item0) with 
                     | None when (List.init terminals.Length id |> List.forall(fun terminalIdx -> arr.[terminalIdx] |> function (_, Reduce pItem0) -> true | (_, Error) when not <| norec -> true | _ -> false))
                         -> Some (Reduce pItem0)
@@ -804,7 +798,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                     | None ->
                         for terminalIdx = 0 to terminals.Length - 1 do
                             if snd(arr.[terminalIdx]) = Error then 
-                                let prodIdx = prodIdx_of_item0 item0
+                                let prodIdx = item0.ProductionIndex
                                 let action = (prec, (if IsStartItem(item0) then Accept else Reduce prodIdx))
                                 addResolvingPrecedence arr kernelIdx terminalIdx action
                     | _  -> ()
@@ -835,7 +829,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         printf  "writing tables to log\n"; stdout.Flush();
         OutputLalrTables logStream     (prods, states, startKernelIdxs, actionTable, immediateActionTable, gotoTable, (indexOfTerminal.[endOfInputTerminal]), errorTerminalIdx));
 
-    let states = states |> Array.map (Set.toList >> List.map prodIdx_of_item0)
+    let states = states |> Array.map (Set.toList >> List.map (fun (item0 : Item0) -> item0.ProductionIndex))
     (prods, states, startKernelIdxs, 
      actionTable, immediateActionTable, gotoTable, 
      (indexOfTerminal.[endOfInputTerminal]), 
