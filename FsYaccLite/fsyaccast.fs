@@ -142,7 +142,6 @@ type SymbolIndex =
 ///
 ///   type KernelItemIndex = KernelItemIdx of KernelIdx * Item0
 type KernelItemIndex = { KernelIndex : int; Item0 : Item0 }
-let KernelItemIdx (i1,i2) = { KernelIndex = i1; Item0 = i2 }
 
 /// Indexes into the memoizing table for the Goto computations
 /// Embed in a single integer, since these are faster
@@ -516,7 +515,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     // Give an index to each LR(0) kernel, and from now on refer to them only by index 
     let kernelTab = new KernelTable(kernels)
     let startKernelIdxs = List.map kernelTab.Index startKernels
-    let startKernelItemIdxs = List.map2 (fun a b -> KernelItemIdx(a,b)) startKernelIdxs startItems
+    let startKernelItemIdxs = List.map2 (fun kernel item0 -> { KernelIndex = kernel; Item0 = item0 }) startKernelIdxs startItems
 
     let outputKernelItemIdx os (kernelIdx,item0)  =
         fprintf os "kernel %d, item %a" kernelIdx OutputItem0 item0
@@ -593,7 +592,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             //printf  "kernelIdx = %d\n" kernelIdx; stdout.Flush();
             let kernel = kernelTab.Kernel(kernelIdx)
             for item0 in kernel do  
-                let item0Idx = KernelItemIdx(kernelIdx,item0)
+                let item0Idx = { KernelIndex = kernelIdx; Item0 = item0 }
                 let jset = closure1OfItem0WithDummy item0
                 //printf  "#jset = %d\n" jset.Count; stdout.Flush();
                 for (KeyValue(closureItem0, lookaheadTokens)) in jset.IEnumerable do
@@ -605,7 +604,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                          | None -> ()
                          | Some gotoKernelIdx ->
                               let gotoItem = advance_of_item0 closureItem0
-                              let gotoItemIdx = KernelItemIdx(gotoKernelIdx,gotoItem)
+                              let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item0 = gotoItem }
                               for lookaheadToken in lookaheadTokens do
                                   if lookaheadToken = dummyLookaheadIdx 
                                   then propagate.Add(item0Idx, gotoItemIdx) |> ignore
@@ -741,7 +740,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             // Compute the LR(1) items based on lookaheads
             let items = 
                  [ for item0 in kernel do
-                     let kernelItemIdx = KernelItemIdx(kernelIdx,item0)
+                     let kernelItemIdx = { KernelIndex = kernelIdx; Item0 = item0 }
                      let lookaheads = lookaheadTable.GetLookaheads(kernelItemIdx)
                      yield (item0,lookaheads) ]
                  |> ComputeClosure1
