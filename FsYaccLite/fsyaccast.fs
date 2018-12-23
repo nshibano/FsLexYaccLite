@@ -93,8 +93,7 @@ let processParserSpecAst (spec : ParserSpec) =
 //-------------------------------------------------
 // Process LALR(1) grammars to tables
 
-/// Represent (ProductionIndex,ProdictionDotIndex) as one integer 
-type Item0 = //uint32
+type Item0 =
     { ProductionIndex : int
       DotIndex : int }
 
@@ -123,7 +122,7 @@ let outputPrecInfo os p =
 type Kernel = Set<Item0>
 
 /// Indexes of LR(0) kernels in the KernelTable
-type KernelIdx = int
+type KernelIndex = int
 
 /// Indexes in the TerminalTable and NonTerminalTable
 type TerminalIndex = int
@@ -131,27 +130,13 @@ type NonTerminalIndex = int
 
 /// Representation of Symbols
 type SymbolIndex =
-    | NonTerminalIndex of int
-    | TerminalIndex of int
+    | TerminalIndex of int : TerminalIndex
+    | NonTerminalIndex of int : NonTerminalIndex
 
-/// Indexes in the LookaheadTable, SpontaneousTable, PropagateTable
-/// Embed in a single integer, since these are faster
-/// keys for the dictionary hash tables
-///
-/// Logically:
-///
-///   type KernelItemIndex = KernelItemIdx of KernelIdx * Item0
 type KernelItemIndex = { KernelIndex : int; Item0 : Item0 }
 
-/// Indexes into the memoizing table for the Goto computations
-/// Embed in a single integer, since these are faster
-/// keys for the dictionary hash tables
-///
-/// Logically:
-///
-///   type GotoItemIndex = GotoItemIdx of KernelIdx * SymbolIndex
 type GotoItemIndex =
-    { KernelIndex : int
+    { KernelIndex : KernelIndex
       SymbolIndex : SymbolIndex }
 
 /// Create a work list and loop until it is exhausted, calling a worker function for
