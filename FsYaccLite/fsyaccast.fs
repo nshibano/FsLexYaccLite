@@ -93,7 +93,7 @@ let processParserSpecAst (spec : ParserSpec) =
 //-------------------------------------------------
 // Process LALR(1) grammars to tables
 
-type Item0 =
+type Item =
     { ProductionIndex : int
       DotIndex : int }
 
@@ -119,7 +119,7 @@ let outputPrecInfo os p =
     | None  -> fprintf os "noprec"
 
 /// LR(0) kernels
-type Kernel = Set<Item0>
+type Kernel = Set<Item>
 
 /// Indexes of LR(0) kernels in the KernelTable
 type KernelIndex = int
@@ -133,7 +133,7 @@ type SymbolIndex =
     | TerminalIndex of int : TerminalIndex
     | NonTerminalIndex of int : NonTerminalIndex
 
-type KernelItemIndex = { KernelIndex : int; Item0 : Item0 }
+type KernelItemIndex = { KernelIndex : int; Item : Item }
 
 type GotoItemIndex =
     { KernelIndex : KernelIndex
@@ -195,7 +195,7 @@ type KernelTable(kernels) =
 
 /// Hold the results of cpmuting the LALR(1) closure of an LR(0) kernel
 type Closure1Table() = 
-    let t = new Dictionary<Item0,HashSet<TerminalIndex>>()
+    let t = new Dictionary<Item,HashSet<TerminalIndex>>()
     member table.Add(a,b) = 
         if not (t.ContainsKey(a)) then t.[a] <- new HashSet<_>(HashIdentity.Structural)
         t.[a].Add(b)
@@ -342,25 +342,23 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             Set.ofSeq acc)
     
     // (int,int) representation of LR(0) items 
-    let prodIdx_to_item0 idx = { ProductionIndex = idx; DotIndex = 0 }
-    let prec_of_item0 (item0 : Item0) = productionPrecedences.[item0.ProductionIndex]
-    let ntIdx_of_item0 (item0 : Item0) = productionsHeads.[item0.ProductionIndex]
+    let createItem productionIndex = { ProductionIndex = productionIndex; DotIndex = 0 }
+    let precedenceOfItem (item : Item) = productionPrecedences.[item.ProductionIndex]
+    let headOfItem (item : Item) = productionsHeads.[item.ProductionIndex]
 
-    let lsyms_of_item0 (item0 : Item0) = 
-        let prodIdx = item0.ProductionIndex
-        let dotIdx = item0.DotIndex
-        let syms = productionBodies.[prodIdx]
+    let lsyms_of_item (item : Item) = 
+        let syms = productionBodies.[item.ProductionIndex]
+        let dotIdx = item.DotIndex
         if dotIdx <= 0 then [||] else syms.[..dotIdx-1]
 
-    let rsyms_of_item0 (item0 : Item0) = 
-        let prodIdx = item0.ProductionIndex
-        let dotIdx = item0.DotIndex
-        let syms = productionBodies.[prodIdx]
+    let rsyms_of_item (item : Item) = 
+        let syms = productionBodies.[item.ProductionIndex]
+        let dotIdx = item.DotIndex
         syms.[dotIdx..]
 
-    let rsym_of_item0 (item0 : Item0) = 
-        let prodIdx = item0.ProductionIndex
-        let dotIdx = item0.DotIndex
+    let rsym_of_item (item : Item) = 
+        let prodIdx = item.ProductionIndex
+        let dotIdx = item.DotIndex
         let body = productionBodies.[prodIdx]
         if dotIdx < body.Length then
             Some body.[dotIdx]
@@ -368,12 +366,12 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             None
         else failwith "unreachable"
 
-    let advance_of_item0 (item0 : Item0) = { item0 with DotIndex = item0.DotIndex + 1 }
+    let advance_of_item (item : Item) = { item with DotIndex = item.DotIndex + 1 }
 
     let fakeStartNonTerminalsSet = Set.ofList (fakeStartNonTerminals |> List.map (fun s -> indexOfNonTerminal.[s]))
 
-    let IsStartItem (item0 : Item0) = fakeStartNonTerminalsSet.Contains(ntIdx_of_item0 item0)
-    let IsKernelItem (item0 : Item0) = (IsStartItem item0 || item0.DotIndex <> 0)
+    let IsStartItem (item : Item) = fakeStartNonTerminalsSet.Contains(headOfItem item)
+    let IsKernelItem (item : Item) = (IsStartItem item || item.DotIndex <> 0)
 
     let StringOfSym sym = match sym with TerminalIndex s -> "'" + fst terminals.[s] + "'" | NonTerminalIndex s -> nonTerminals.[s]
 
@@ -383,11 +381,11 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         fprintf os "%s" (String.Join(" ",Array.map StringOfSym syms))
 
     // Print items and other stuff 
-    let OutputItem0 os item0 =
-        fprintf os "    %s -&gt; %a . %a" (nonTerminals.[(ntIdx_of_item0 item0)]) (* outputPrecInfo precInfo *) OutputSyms (lsyms_of_item0 item0) OutputSyms (rsyms_of_item0 item0) 
+    let OutputItem os item =
+        fprintf os "    %s -&gt; %a . %a" (nonTerminals.[(headOfItem item)]) (* outputPrecInfo precInfo *) OutputSyms (lsyms_of_item item) OutputSyms (rsyms_of_item item) 
         
-    let OutputItem0Set os s = 
-        Set.iter (fun item -> fprintf os "%a\n" OutputItem0 item) s
+    let OutputItemSet os s = 
+        Set.iter (fun item -> fprintf os "%a\n" OutputItem item) s
 
     let OutputFirstSet os m = 
         Set.iter (function None ->  fprintf os "&lt;empty&gt;" | Some x -> fprintf os "  term %s\n" x) m
@@ -421,7 +419,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     
     let OutputCombined os m = 
         Array.iteri (fun i (a,b,c,d) ->
-            fprintf os "<div id=\"s%d\">state %d:</div>\n  items:\n%a\n  actions:\n%a\n  immediate action: %a\n  gotos:\n%a\n" i i OutputItem0Set a OutputActions b OutputImmediateActions c OutputGotos d) m
+            fprintf os "<div id=\"s%d\">state %d:</div>\n  items:\n%a\n  actions:\n%a\n  immediate action: %a\n  gotos:\n%a\n" i i OutputItemSet a OutputActions b OutputImmediateActions c OutputGotos d) m
     
     let OutputLalrTables os (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx) = 
         let combined = Array.ofList (List.map2 (fun x (y,(z,w)) -> x,y,z,w) (Array.toList states) (List.zip (Array.toList actionTable) (List.zip (Array.toList immediateActionTable) (Array.toList gotoTable))))
@@ -436,12 +434,12 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     // Closure of LR(0) nonTerminals, items etc 
     let ComputeClosure0NonTerminal = 
         Memoize (fun nt -> 
-            let seed = (Array.foldBack (prodIdx_to_item0 >> Set.add) productionsOfNonTerminal.[nt] Set.empty)
+            let seed = (Array.foldBack (createItem >> Set.add) productionsOfNonTerminal.[nt] Set.empty)
             LeastFixedPoint 
-                (fun item0 -> 
-                   match rsym_of_item0 item0 with
+                (fun item -> 
+                   match rsym_of_item item with
                    | None -> []
-                   | Some(NonTerminalIndex ntB) ->  List.ofArray (Array.map prodIdx_to_item0 productionsOfNonTerminal.[ntB])
+                   | Some(NonTerminalIndex ntB) ->  List.ofArray (Array.map createItem productionsOfNonTerminal.[ntB])
                    | Some(TerminalIndex _) -> [])
                 seed)
 
@@ -453,27 +451,27 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     // Close a set under epsilon moves
     let ComputeClosure0 iset = 
-        Set.fold (fun acc x -> ComputeClosure0Symbol (rsym_of_item0 x) acc) iset iset 
+        Set.fold (fun acc x -> ComputeClosure0Symbol (rsym_of_item x) acc) iset iset 
 
     // Right symbols after closing under epsilon moves
     let RelevantSymbolsOfKernel kernel =
         let kernelClosure0 = ComputeClosure0 kernel
-        Set.fold (fun acc x -> Option.fold (fun acc x -> Set.add x acc) acc (rsym_of_item0 x)) Set.empty kernelClosure0 
+        Set.fold (fun acc x -> Option.fold (fun acc x -> Set.add x acc) acc (rsym_of_item x)) Set.empty kernelClosure0 
 
     // Goto set of a kernel of LR(0) nonTerminals, items etc 
     // Input is kernel, output is kernel
     let ComputeGotosOfKernel iset sym = 
         let isetClosure = ComputeClosure0 iset
         let acc = new System.Collections.Generic.List<_>(10)
-        isetClosure |> Set.iter (fun item0 -> 
-              match rsym_of_item0 item0 with 
-              | Some sym2 when sym = sym2 -> acc.Add(advance_of_item0 item0) 
+        isetClosure |> Set.iter (fun item -> 
+              match rsym_of_item item with 
+              | Some sym2 when sym = sym2 -> acc.Add(advance_of_item item) 
               | _ -> ()) 
         Set.ofSeq acc
     
     // Build the full set of LR(0) kernels 
     reportTime(); printf "building kernels..."; stdout.Flush();
-    let startItems = List.mapi (fun i _ -> prodIdx_to_item0 (startNonTerminalIdx_to_prodIdx i)) fakeStartNonTerminals
+    let startItems = List.mapi (fun i _ -> createItem (startNonTerminalIdx_to_prodIdx i)) fakeStartNonTerminals
     let startKernels = List.map Set.singleton startItems
     let kernels = 
 
@@ -494,10 +492,10 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     // Give an index to each LR(0) kernel, and from now on refer to them only by index 
     let kernelTab = new KernelTable(kernels)
     let startKernelIdxs = List.map kernelTab.Index startKernels
-    let startKernelItemIdxs = List.map2 (fun kernel item0 -> { KernelIndex = kernel; Item0 = item0 }) startKernelIdxs startItems
+    let startKernelItemIdxs = List.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
 
-    let outputKernelItemIdx os (kernelIdx,item0)  =
-        fprintf os "kernel %d, item %a" kernelIdx OutputItem0 item0
+    let outputKernelItemIdx os (kernelIdx, item)  =
+        fprintf os "kernel %d, item %a" kernelIdx OutputItem item
 
     /// A cached version of the "goto" computation on LR(0) kernels 
     let gotoKernel = 
@@ -522,17 +520,17 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     
     let ComputeClosure1 iset = 
         let acc = new Closure1Table()
-        ProcessWorkList iset (fun addToWorkList (item0,pretokens:Set<TerminalIndex>) ->
+        ProcessWorkList iset (fun addToWorkList (item, pretokens:Set<TerminalIndex>) ->
             pretokens |> Set.iter (fun pretoken -> 
-                if not (acc.Contains(item0,pretoken)) then
-                    acc.Add(item0,pretoken) |> ignore
-                    let rsyms = rsyms_of_item0 item0 
+                if not (acc.Contains(item, pretoken)) then
+                    acc.Add(item, pretoken) |> ignore
+                    let rsyms = rsyms_of_item item
                     if rsyms.Length > 0 then 
                         match rsyms.[0] with 
                         | (NonTerminalIndex ntB) -> 
                              let firstSet = ComputeFirstSetOfTokenList (Array.toList rsyms.[1..],pretoken)
                              for prodIdx in productionsOfNonTerminal.[ntB] do
-                                 addToWorkList (prodIdx_to_item0 prodIdx,firstSet)
+                                 addToWorkList (createItem prodIdx,firstSet)
                         | TerminalIndex _ -> ()))
         acc
 
@@ -558,8 +556,8 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
         
     let spontaneous, propagate  =
-        let closure1OfItem0WithDummy = 
-            Memoize (fun item0 -> ComputeClosure1 [(item0,Set.ofList [dummyLookaheadIdx])])
+        let closure1OfItemWithDummy = 
+            Memoize (fun item -> ComputeClosure1 [(item, Set.ofList [dummyLookaheadIdx])])
 
         let spontaneous = new SpontaneousTable()
         let propagate = new PropagateTable()
@@ -569,23 +567,23 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             printf  "."; stdout.Flush();
             //printf  "kernelIdx = %d\n" kernelIdx; stdout.Flush();
             let kernel = kernelTab.Kernel(kernelIdx)
-            for item0 in kernel do  
-                let item0Idx = { KernelIndex = kernelIdx; Item0 = item0 }
-                let jset = closure1OfItem0WithDummy item0
+            for item in kernel do  
+                let itemIdx = { KernelIndex = kernelIdx; Item = item }
+                let jset = closure1OfItemWithDummy item
                 //printf  "#jset = %d\n" jset.Count; stdout.Flush();
-                for (KeyValue(closureItem0, lookaheadTokens)) in jset.IEnumerable do
+                for (KeyValue(closureItem, lookaheadTokens)) in jset.IEnumerable do
                     incr count
-                    match rsym_of_item0 closureItem0 with 
+                    match rsym_of_item closureItem with 
                     | None -> ()
                     | Some rsym ->
                          match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = rsym } with 
                          | None -> ()
                          | Some gotoKernelIdx ->
-                              let gotoItem = advance_of_item0 closureItem0
-                              let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item0 = gotoItem }
+                              let gotoItem = advance_of_item closureItem
+                              let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = gotoItem }
                               for lookaheadToken in lookaheadTokens do
                                   if lookaheadToken = dummyLookaheadIdx 
-                                  then propagate.Add(item0Idx, gotoItemIdx) |> ignore
+                                  then propagate.Add(itemIdx, gotoItemIdx) |> ignore
                                   else spontaneous.Add(gotoItemIdx, lookaheadToken) |> ignore
 
 
@@ -717,16 +715,16 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
             // Compute the LR(1) items based on lookaheads
             let items = 
-                 [ for item0 in kernel do
-                     let kernelItemIdx = { KernelIndex = kernelIdx; Item0 = item0 }
+                 [ for item in kernel do
+                     let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
                      let lookaheads = lookaheadTable.GetLookaheads(kernelItemIdx)
-                     yield (item0,lookaheads) ]
+                     yield (item, lookaheads) ]
                  |> ComputeClosure1
 
-            for (KeyValue(item0,lookaheads)) in items.IEnumerable do
+            for (KeyValue(item, lookaheads)) in items.IEnumerable do
 
-                let nonTermA = ntIdx_of_item0 item0
-                match rsym_of_item0 item0 with 
+                let nonTermA = headOfItem item
+                match rsym_of_item item with 
                 | Some (TerminalIndex termIdx) -> 
                     let action =
                       match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = TerminalIndex termIdx } with 
@@ -736,13 +734,13 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                     addResolvingPrecedence arr kernelIdx termIdx (prec, action) 
                 | None ->
                     for lookahead in lookaheads do
-                        if not (IsStartItem(item0)) then
-                            let prodIdx = item0.ProductionIndex
-                            let prec = prec_of_item0 item0
+                        if not (IsStartItem(item)) then
+                            let prodIdx = item.ProductionIndex
+                            let prec = precedenceOfItem item
                             let action = (prec, Reduce prodIdx)
                             addResolvingPrecedence arr kernelIdx lookahead action 
                         elif lookahead = endOfInputTerminalIdx then
-                            let prec = prec_of_item0 item0
+                            let prec = precedenceOfItem item
                             let action = (prec,Accept)
                             addResolvingPrecedence arr kernelIdx lookahead action 
                         else ()
@@ -755,11 +753,11 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
             let immediateAction =
                 match Set.toList closure with
-                | [item0] ->
-                    let pItem0 = item0.ProductionIndex
-                    match (rsym_of_item0 item0) with 
-                    | None when (List.init terminals.Length id |> List.forall(fun terminalIdx -> arr.[terminalIdx] |> function (_, Reduce pItem0) -> true | (_, Error) when not <| norec -> true | _ -> false))
-                        -> Some (Reduce pItem0)
+                | [item] ->
+                    let pItem = item.ProductionIndex
+                    match (rsym_of_item item) with 
+                    | None when (List.init terminals.Length id |> List.forall(fun terminalIdx -> arr.[terminalIdx] |> function (_, Reduce pItem) -> true | (_, Error) when not <| norec -> true | _ -> false))
+                        -> Some (Reduce pItem)
 
                     | None when (List.init terminals.Length id |> List.forall(fun terminalIdx -> arr.[terminalIdx] |> function (_, Accept) -> true | (_, Error) when not <| norec -> true | _ -> false))
                         -> Some Accept
@@ -769,14 +767,14 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
             // A -> B C . rules give rise to reductions in favour of errors 
             if not <| norec then
-                for item0 in ComputeClosure0 kernel do
-                    let prec = prec_of_item0 item0
-                    match rsym_of_item0 item0 with 
+                for item in ComputeClosure0 kernel do
+                    let prec = precedenceOfItem item
+                    match rsym_of_item item with 
                     | None ->
                         for terminalIdx = 0 to terminals.Length - 1 do
                             if snd(arr.[terminalIdx]) = Error then 
-                                let prodIdx = item0.ProductionIndex
-                                let action = (prec, (if IsStartItem(item0) then Accept else Reduce prodIdx))
+                                let prodIdx = item.ProductionIndex
+                                let action = (prec, (if IsStartItem(item) then Accept else Reduce prodIdx))
                                 addResolvingPrecedence arr kernelIdx terminalIdx action
                     | _  -> ()
 
@@ -806,7 +804,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         printf  "writing tables to log\n"; stdout.Flush();
         OutputLalrTables logStream     (prods, states, startKernelIdxs, actionTable, immediateActionTable, gotoTable, (indexOfTerminal.[endOfInputTerminal]), errorTerminalIdx));
 
-    let states = states |> Array.map (Set.toList >> List.map (fun (item0 : Item0) -> item0.ProductionIndex))
+    let states = states |> Array.map (Set.toList >> List.map (fun (item : Item) -> item.ProductionIndex))
     (prods, states, startKernelIdxs, 
      actionTable, immediateActionTable, gotoTable, 
      (indexOfTerminal.[endOfInputTerminal]), 
