@@ -136,15 +136,16 @@ type GotoItemIndex =
 /// Create a work list and loop until it is exhausted, calling a worker function for
 /// each element. Pass a function to queue additional work on the work list 
 /// to the worker function
-let ProcessWorkList start f =
-    let work = ref (start : 'a list)
-    let queueWork = (fun x -> work := x :: !work)
-    let rec loop() = 
+let ProcessWorkList<'a> (start : 'a list) (f : ('a -> unit) -> 'a -> unit) =
+    let work = ref start
+    let queueWork x =
+        work := x :: !work
+    let rec loop() =
         match !work with 
         | [] -> ()
-        | x::t -> 
-            work := t; 
-            f queueWork x;
+        | x :: t -> 
+            work := t
+            f queueWork x
             loop()
     loop()
 
@@ -155,13 +156,15 @@ let LeastFixedPoint f set =
           f(item) |> List.iter (fun i2 -> if not (Set.contains i2 !acc) then (acc := Set.add i2 !acc; queueWork i2)) )
     !acc
 
-/// A general standard memoization utility. Be sure to apply to only one (function) argument to build the
-/// residue function!
-let Memoize f = 
-    let t = new Dictionary<_,_>()
-    fun x -> 
-        let ok,v = t.TryGetValue(x) 
-        if ok then v else let res = f x in t.[x] <- res; res 
+let memoize f = 
+    let d = Dictionary(HashIdentity.Structural)
+    fun x ->
+        match d.TryGetValue(x) with
+        | true, y -> y
+        | false, _ ->
+            let y = f x
+            d.[x] <- y
+            y
 
 /// A mutable table maping kernels to sets of lookahead tokens
 type LookaheadTable() = 
@@ -322,7 +325,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     /// Compute the first set of the given sequence of non-terminals. If any of the non-terminals
     /// have an empty token in the first set then we have to iterate through those. 
     let ComputeFirstSetOfTokenList =
-        Memoize (fun (str : SymbolIndex list, term : TerminalIndex) ->
+        memoize (fun (str : SymbolIndex list, term : TerminalIndex) ->
             let acc = List<TerminalIndex>()
             let rec add l = 
                 match l with 
@@ -427,7 +430,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     // Closure of LR(0) nonTerminals, items etc 
     let ComputeClosure0NonTerminal = 
-        Memoize (fun nt -> 
+        memoize (fun nt -> 
             let seed = (Array.foldBack (createItem >> Set.add) productionsOfNonTerminal.[nt] Set.empty)
             LeastFixedPoint 
                 (fun item -> 
@@ -493,7 +496,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     /// A cached version of the "goto" computation on LR(0) kernels 
     let gotoKernel = 
-        Memoize (fun (gotoItemIndex : GotoItemIndex) -> 
+        memoize (fun (gotoItemIndex : GotoItemIndex) -> 
             let gset = ComputeGotosOfKernel (kernelTab.Kernel gotoItemIndex.KernelIndex) gotoItemIndex.SymbolIndex
             if gset.IsEmpty then None else Some (kernelTab.Index gset))
 
@@ -551,7 +554,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         
     let spontaneous, propagate  =
         let closure1OfItemWithDummy = 
-            Memoize (fun item -> ComputeClosure1 [(item, Set.ofList [dummyLookaheadIdx])])
+            memoize (fun item -> ComputeClosure1 [(item, Set.ofList [dummyLookaheadIdx])])
 
         let spontaneous = new SpontaneousTable()
         let propagate = new PropagateTable()
