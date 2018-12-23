@@ -141,7 +141,6 @@ let (|PTerminal|PNonTerminal|) (i : SymbolIndex) =
     match i with
     | NonTerminalIndex i -> PNonTerminal i
     | TerminalIndex i -> PTerminal i
-//    if i > 0 then PNonTerminal i else PTerminal (~~~i)
 
 /// Indexes in the LookaheadTable, SpontaneousTable, PropagateTable
 /// Embed in a single integer, since these are faster
@@ -152,7 +151,6 @@ let (|PTerminal|PNonTerminal|) (i : SymbolIndex) =
 ///   type KernelItemIndex = KernelItemIdx of KernelIdx * Item0
 type KernelItemIndex = int64
 let KernelItemIdx (i1,i2) = ((int64 i1) <<< 32) ||| int64 i2
-
 
 /// Indexes into the memoizing table for the Goto computations
 /// Embed in a single integer, since these are faster
@@ -200,62 +198,6 @@ let Memoize f =
     fun x -> 
         let ok,v = t.TryGetValue(x) 
         if ok then v else let res = f x in t.[x] <- res; res 
-
-/// A standard utility to create a dictionary from a list of pairs
-let CreateDictionary xs = 
-    let dict = new Dictionary<_,_>()
-    for x,y in xs do dict.Add(x,y)
-    dict
-
-/// Allocate indexes for each non-terminal
-type NonTerminalTable(nonTerminals: string list) = 
-    let nonterminalsWithIdxs = List.mapi (fun (i:NonTerminalIndex) n -> (i,n)) nonTerminals
-    let nonterminalIdxs = List.map fst nonterminalsWithIdxs
-    let a = Array.ofList nonTerminals
-    let b = CreateDictionary [ for i,x in nonterminalsWithIdxs -> x,i ];
-    member table.OfIndex(i) = a.[i]
-    member table.ToIndex(i) = b.[i]
-    member table.Indexes = nonterminalIdxs
-
-/// Allocate indexes for each terminal
-type TerminalTable(terminals:(string * PrecedenceInfo) list) = 
-    let terminalsWithIdxs = List.mapi (fun i (t,_) -> (i,t)) terminals
-    let terminalIdxs = List.map fst terminalsWithIdxs
-    let a = Array.ofList (List.map fst terminals)
-    let b = Array.ofList (List.map snd terminals)
-    let c = CreateDictionary [ for i,x in terminalsWithIdxs -> x,i ]
-
-    member table.OfIndex(i) = a.[i]
-    member table.PrecInfoOfIndex(i) = b.[i]
-    member table.ToIndex(i) = c.[i]
-    member table.Indexes = terminalIdxs
-
-/// Allocate indexes for each production
-type ProductionTable(ntTab:NonTerminalTable, termTab:TerminalTable, nonTerminals:string list, prods: Production list) =
-    let prodsWithIdxs = List.mapi (fun i n -> (i,n)) prods
-    let a =  
-        prodsWithIdxs
-        |> List.map(fun (_, prod) -> 
-              prod.Body 
-              |> Array.ofList  
-              |> Array.map (function 
-                            | Terminal t -> PTerminal (termTab.ToIndex t) 
-                            | NonTerminal nt -> PNonTerminal (ntTab.ToIndex nt )) )
-        |> Array.ofList
-    let b = Array.ofList (List.map (fun (_, prod) -> ntTab.ToIndex prod.Head) prodsWithIdxs)
-    let c = Array.ofList (List.map (fun (_, prod) -> prod.PrecedenceInfo) prodsWithIdxs)
-    let productions = 
-        nonTerminals
-        |> List.map(fun nt -> (ntTab.ToIndex nt, List.choose (fun (i, prod) -> if prod.Head = nt then Some i else None) prodsWithIdxs))
-        |> CreateDictionary
-    member this.ProductionCount = a.Length
-    member prodTab.Symbols(i) = a.[i] // body (rhs) of i-th production
-    member prodTab.NonTerminal(i) = b.[i] // head (lhs) of i-th production
-    member prodTab.Precedence(i) = c.[i] // precedence of i-th production
-    member prodTab.Symbol i n = // n-th symbol of the i-th production. None if index is out of range.
-        let syms = prodTab.Symbols i
-        if n >= syms.Length then None else Some (syms.[n])
-    member prodTab.Productions = productions // non-terminal index -> collection of production indexes of productions which reduces to that non-terminal 
 
 /// A mutable table maping kernels to sets of lookahead tokens
 type LookaheadTable() = 
@@ -331,8 +273,8 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let productions = Array.ofList (List.map2 (fun fakeStartNonTerminal startSymbol -> { Head = fakeStartNonTerminal; PrecedenceInfo = None; Body = [NonTerminal startSymbol]; Code = None }) fakeStartNonTerminals spec.StartSymbols @ spec.Productions)
     let startNonTerminalIdx_to_prodIdx (i : int) = i
 
-    // Build indexed tables 
-    //let ntTab = NonTerminalTable(nonTerminals)
+    // Build indexed tables
+
     let indexOfNonTerminal =
         let d = Dictionary<string, int>()
         for i = 0 to nonTerminals.Length - 1 do
@@ -350,8 +292,6 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         | Terminal s -> TerminalIndex (indexOfTerminal.[s])
         | NonTerminal s -> NonTerminalIndex (indexOfNonTerminal.[s])
 
-    //let termTab = TerminalTable(terminals)
-    //let prodTab = ProductionTable(ntTab,termTab,nonTerminals,prods)
     let productionsHeads = Array.map (fun p -> indexOfNonTerminal.[p.Head]) productions
     let productionBodies = Array.map (fun p -> Array.map indexOfSymbol (Array.ofList p.Body)) productions
     let productionPrecedences = Array.map (fun p -> p.PrecedenceInfo) productions
@@ -386,8 +326,8 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
         let scan() =
             for prodIdx = 0 to productions.Length - 1 do
-                let head = productionsHeads.[prodIdx] // prodTab.NonTerminal prodIdx
-                let body = productionBodies.[prodIdx] //prodTab.Symbols prodIdx
+                let head = productionsHeads.[prodIdx]
+                let body = productionBodies.[prodIdx]
                 let mutable pos = 0
                 while pos < body.Length do
                     // add first symbols of production body to the first-set of this production head 
