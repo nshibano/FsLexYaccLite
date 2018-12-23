@@ -152,13 +152,7 @@ type KernelItemIndex = { KernelIndex : int; Item0 : Item0 }
 ///   type GotoItemIndex = GotoItemIdx of KernelIdx * SymbolIndex
 type GotoItemIndex =
     { KernelIndex : int
-      SymbolIndex : SymbolIndex } //uint64
-let GotoItemIdx (i1:KernelIdx,i2:SymbolIndex) =
-    { KernelIndex = i1
-      SymbolIndex = i2 }
-    ////(uint64 (uint32 i1) <<< 32) ||| uint64 (uint32 i2)
-let (|GotoItemIdx|) (i64:GotoItemIndex) =
-    (i64.KernelIndex, i64.SymbolIndex) //int32 ((i64 >>> 32) &&& 0xFFFFFFFFUL), int32 (i64 &&& 0xFFFFFFFFUL)
+      SymbolIndex : SymbolIndex }
 
 /// Create a work list and loop until it is exhausted, calling a worker function for
 /// each element. Pass a function to queue additional work on the work list 
@@ -522,17 +516,16 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     /// A cached version of the "goto" computation on LR(0) kernels 
     let gotoKernel = 
-        Memoize (fun (GotoItemIdx(kernelIdx,sym)) -> 
-            let gset = ComputeGotosOfKernel (kernelTab.Kernel kernelIdx) sym
+        Memoize (fun (gotoItemIndex : GotoItemIndex) -> 
+            let gset = ComputeGotosOfKernel (kernelTab.Kernel gotoItemIndex.KernelIndex) gotoItemIndex.SymbolIndex
             if gset.IsEmpty then None else Some (kernelTab.Index gset))
 
     /// Iterate (iset,sym) pairs such that (gotoKernel kernelIdx sym) is not empty
     let IterateGotosOfKernel kernelIdx f =
         for sym in RelevantSymbolsOfKernel (kernelTab.Kernel kernelIdx) do 
-            match gotoKernel (GotoItemIdx(kernelIdx,sym)) with 
+            match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = sym } with 
             | None -> ()
             | Some k -> f sym k
-    
 
     // This is used to compute the closure of an LALR(1) kernel 
     //
@@ -600,7 +593,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                     match rsym_of_item0 closureItem0 with 
                     | None -> ()
                     | Some rsym ->
-                         match gotoKernel (GotoItemIdx(kernelIdx,rsym)) with 
+                         match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = rsym } with 
                          | None -> ()
                          | Some gotoKernelIdx ->
                               let gotoItem = advance_of_item0 closureItem0
@@ -751,7 +744,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                 match rsym_of_item0 item0 with 
                 | Some (TerminalIndex termIdx) -> 
                     let action =
-                      match gotoKernel (GotoItemIdx(kernelIdx, TerminalIndex termIdx)) with 
+                      match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = TerminalIndex termIdx } with 
                       | None -> failwith "action on terminal should have found a non-empty goto state"
                       | Some gkernelItemIdx -> Shift gkernelItemIdx
                     let prec = snd terminals.[termIdx]
@@ -812,7 +805,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     reportTime(); printf  "building goto table..."; stdout.Flush();
     let gotoTable = 
-         let gotos kernelIdx = Array.init nonTerminals.Length (fun nt ->  gotoKernel (GotoItemIdx(kernelIdx, NonTerminalIndex nt)))
+         let gotos kernelIdx = Array.init nonTerminals.Length (fun nt ->  gotoKernel ({ KernelIndex = kernelIdx; SymbolIndex = NonTerminalIndex nt }))
          Array.ofList (List.map gotos kernelTab.Indexes)
 
     reportTime(); printfn  "returning tables."; stdout.Flush();
