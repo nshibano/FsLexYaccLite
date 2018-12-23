@@ -118,25 +118,19 @@ let outputPrecInfo os p =
     | Some (assoc,n) -> fprintf os "explicit %s %d" (stringOfAssoc assoc) n
     | None  -> fprintf os "noprec"
 
-/// LR(0) kernels
-type Kernel = Set<Item>
-
-/// Indexes of LR(0) kernels in the KernelTable
-type KernelIndex = int
-
-/// Indexes in the TerminalTable and NonTerminalTable
 type TerminalIndex = int
 type NonTerminalIndex = int
 
-/// Representation of Symbols
 type SymbolIndex =
     | TerminalIndex of int : TerminalIndex
     | NonTerminalIndex of int : NonTerminalIndex
 
-type KernelItemIndex = { KernelIndex : int; Item : Item }
+type KernelItemIndex =
+    { KernelIndex : int
+      Item : Item }
 
 type GotoItemIndex =
-    { KernelIndex : KernelIndex
+    { KernelIndex : int
       SymbolIndex : SymbolIndex }
 
 /// Create a work list and loop until it is exhausted, calling a worker function for
