@@ -94,11 +94,13 @@ let processParserSpecAst (spec : ParserSpec) =
 // Process LALR(1) grammars to tables
 
 /// Represent (ProductionIndex,ProdictionDotIndex) as one integer 
-type Item0 = uint32  
+type Item0 = //uint32
+    { ProductionIndex : int
+      DotIndex : int }
 
-let mkItem0 (prodIdx, dotIdx) : Item0 = (uint32 prodIdx <<< 16) ||| uint32 dotIdx
-let prodIdx_of_item0 (item0 : Item0) = int32 (item0 >>> 16)
-let dotIdx_of_item0 (item0 : Item0) = int32 (item0 &&& 0xFFFFu)
+let mkItem0 (prodIdx, dotIdx) : Item0 = { ProductionIndex = prodIdx; DotIndex = dotIdx } //(uint32 prodIdx <<< 16) ||| uint32 dotIdx
+let prodIdx_of_item0 (item0 : Item0) = item0.ProductionIndex //int32 (item0 >>> 16)
+let dotIdx_of_item0 (item0 : Item0) = item0.DotIndex //int32 (item0 &&& 0xFFFFu)
 
 /// Part of the output of CompilerLalrParserSpec
 type Action = 
@@ -149,8 +151,8 @@ let (|PTerminal|PNonTerminal|) (i : SymbolIndex) =
 /// Logically:
 ///
 ///   type KernelItemIndex = KernelItemIdx of KernelIdx * Item0
-type KernelItemIndex = int64
-let KernelItemIdx (i1,i2) = ((int64 i1) <<< 32) ||| int64 i2
+type KernelItemIndex = { KernelIndex : int; Item0 : Item0 }
+let KernelItemIdx (i1,i2) = { KernelIndex = i1; Item0 = i2 }
 
 /// Indexes into the memoizing table for the Goto computations
 /// Embed in a single integer, since these are faster
