@@ -136,13 +136,7 @@ type NonTerminalIndex = int
 /// Representation of Symbols
 type SymbolIndex =
     | NonTerminalIndex of int
-    | TerminalIndex of int // int
-let PNonTerminal (i : NonTerminalIndex) : SymbolIndex = NonTerminalIndex i
-let PTerminal (i : TerminalIndex) : SymbolIndex = TerminalIndex i
-let (|PTerminal|PNonTerminal|) (i : SymbolIndex) =
-    match i with
-    | NonTerminalIndex i -> PNonTerminal i
-    | TerminalIndex i -> PTerminal i
+    | TerminalIndex of int
 
 /// Indexes in the LookaheadTable, SpontaneousTable, PropagateTable
 /// Embed in a single integer, since these are faster
@@ -315,11 +309,11 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         
         // For terminals, add itself (Some term) to its first-set.
         for term = 0 to terminals.Length - 1 do
-            firstSets <- Map.add (PTerminal term) (Set.singleton (Some term)) firstSets
+            firstSets <- Map.add (TerminalIndex term) (Set.singleton (Some term)) firstSets
 
         // For non-terminals, start with empty set.
         for nonTerm = 0 to nonTerminals.Length - 1 do
-            firstSets <- Map.add (PNonTerminal nonTerm) Set.empty firstSets
+            firstSets <- Map.add (NonTerminalIndex nonTerm) Set.empty firstSets
         
         let add symbolIndex firstSetItem = 
             let set = firstSets.[symbolIndex]
@@ -335,7 +329,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                     // add first symbols of production body to the first-set of this production head 
                     for firstSetItem in firstSets.[body.[pos]] do
                         if firstSetItem.IsSome then
-                            add (PNonTerminal head) firstSetItem
+                            add (NonTerminalIndex head) firstSetItem
                     if firstSets.[body.[pos]].Contains None then
                         // the symbol at pos can be empty, therefore go through the following symbols
                         pos <- pos + 1
@@ -346,7 +340,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                     // the scan for production body symbols were gone through the end of the body
                     // therefore all symbols in production body can be empty
                     // therefore this production is nullable
-                    add (PNonTerminal head) None
+                    add (NonTerminalIndex head) None
                 
         let mutable cont = true
         while cont do
@@ -409,7 +403,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let IsStartItem item0 = fakeStartNonTerminalsSet.Contains(ntIdx_of_item0 item0)
     let IsKernelItem item0 = (IsStartItem item0 || dotIdx_of_item0 item0 <> 0)
 
-    let StringOfSym sym = match sym with PTerminal s -> "'" + fst terminals.[s] + "'" | PNonTerminal s -> nonTerminals.[s]
+    let StringOfSym sym = match sym with TerminalIndex s -> "'" + fst terminals.[s] + "'" | NonTerminalIndex s -> nonTerminals.[s]
 
     let OutputSym os sym = fprintf os "%s" (StringOfSym sym)
 
@@ -475,14 +469,14 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                 (fun item0 -> 
                    match rsym_of_item0 item0 with
                    | None -> []
-                   | Some(PNonTerminal ntB) ->  List.ofArray (Array.map prodIdx_to_item0 productionsOfNonTerminal.[ntB])
-                   | Some(PTerminal _) -> [])
+                   | Some(NonTerminalIndex ntB) ->  List.ofArray (Array.map prodIdx_to_item0 productionsOfNonTerminal.[ntB])
+                   | Some(TerminalIndex _) -> [])
                 seed)
 
     // Close a symbol under epsilon moves
     let ComputeClosure0Symbol rsym acc = 
         match rsym with
-        | Some (PNonTerminal nt) -> Set.union (ComputeClosure0NonTerminal nt) acc
+        | Some (NonTerminalIndex nt) -> Set.union (ComputeClosure0NonTerminal nt) acc
         | _ -> acc
 
     // Close a set under epsilon moves
@@ -564,11 +558,11 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                     let rsyms = rsyms_of_item0 item0 
                     if rsyms.Length > 0 then 
                         match rsyms.[0] with 
-                        | (PNonTerminal ntB) -> 
+                        | (NonTerminalIndex ntB) -> 
                              let firstSet = ComputeFirstSetOfTokenList (Array.toList rsyms.[1..],pretoken)
                              for prodIdx in productionsOfNonTerminal.[ntB] do
                                  addToWorkList (prodIdx_to_item0 prodIdx,firstSet)
-                        | PTerminal _ -> ()))
+                        | TerminalIndex _ -> ()))
         acc
 
     // Compute the "spontaneous" and "propagate" maps for each LR(0) kernelItem 
@@ -762,9 +756,9 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
                 let nonTermA = ntIdx_of_item0 item0
                 match rsym_of_item0 item0 with 
-                | Some (PTerminal termIdx) -> 
+                | Some (TerminalIndex termIdx) -> 
                     let action =
-                      match gotoKernel (GotoItemIdx(kernelIdx,PTerminal termIdx)) with 
+                      match gotoKernel (GotoItemIdx(kernelIdx, TerminalIndex termIdx)) with 
                       | None -> failwith "action on terminal should have found a non-empty goto state"
                       | Some gkernelItemIdx -> Shift gkernelItemIdx
                     let prec = snd terminals.[termIdx]
@@ -825,7 +819,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     reportTime(); printf  "building goto table..."; stdout.Flush();
     let gotoTable = 
-         let gotos kernelIdx = Array.init nonTerminals.Length (fun nt ->  gotoKernel (GotoItemIdx(kernelIdx,PNonTerminal nt)))
+         let gotos kernelIdx = Array.init nonTerminals.Length (fun nt ->  gotoKernel (GotoItemIdx(kernelIdx, NonTerminalIndex nt)))
          Array.ofList (List.map gotos kernelTab.Indexes)
 
     reportTime(); printfn  "returning tables."; stdout.Flush();
