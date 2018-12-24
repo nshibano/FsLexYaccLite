@@ -250,22 +250,6 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         printfn "time: %d(ms)" stopWatch.ElapsedMilliseconds
         stopWatch.Restart()
 
-    //// Augment the grammar 
-    //let fakeStartNonTerminals = Array.map (fun nt -> "_start" + nt) spec.StartSymbols
-    //let nonTerminals = Array.append fakeStartNonTerminals spec.NonTerminals
-    //let endOfInputTerminal = "$"
-    //let dummyLookahead = "#"
-    //let terminals = Array.append spec.Terminals [| (dummyLookahead, None); (endOfInputTerminal, None) |]
-    //let productions =
-    //    Array.append
-    //        (Array.map2
-    //            (fun fakeStartNonTerminal startSymbol ->
-    //                { Head = fakeStartNonTerminal; PrecedenceInfo = None; Body = [| NonTerminal startSymbol |]; Code = None })
-    //            fakeStartNonTerminals
-    //            spec.StartSymbols)
-    //        spec.Productions
-    //let startNonTerminalIdx_to_prodIdx (i : int) = i
-
     // Build indexed tables
 
     let indexOfNonTerminal =
@@ -304,29 +288,19 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let computedFirstTable =
         let firstSets = Dictionary<SymbolIndex, HashSet<TerminalIndex option>>(HashIdentity.Structural)
 
-        //let mutable firstSets = Map.empty<SymbolIndex, Set<TerminalIndex option>>
-        
         // For terminals, add itself (Some term) to its first-set.
         for term = 0 to spec.Terminals.Length - 1 do
             let set = HashSet(HashIdentity.Structural)
             set.Add(Some term) |> ignore
             firstSets.Add(TerminalIndex term, set)
 
-            //firstSets <- Map.add (TerminalIndex term) (Set.singleton (Some term)) firstSets
-
         // For non-terminals, start with empty set.
         for nonTerm = 0 to spec.NonTerminals.Length - 1 do
             firstSets.Add(NonTerminalIndex nonTerm, HashSet(HashIdentity.Structural))
-            //firstSets <- Map.add (NonTerminalIndex nonTerm) Set.empty firstSets
         
         let mutable added = false
         let add symbolIndex firstSetItem =
-            //let set = firstSets.[symbolIndex]
-            //if not (Set.contains firstSetItem set) then 
-            //    firstSets <- Map.add symbolIndex (Set.add firstSetItem set) firstSets
-            
             added <- firstSets.[symbolIndex].Add(firstSetItem)
-
 
         let scan() =
             for prodIdx = 0 to spec.Productions.Length - 1 do
@@ -350,18 +324,11 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                     // therefore this production is nullable
                     add (NonTerminalIndex head) None
                 
-        //let mutable cont = true
         scan()
         while added do
             added <- false
             scan()
 
-        //while cont do
-        //    let atStart = firstSets
-        //    scan()
-        //    if LanguagePrimitives.PhysicalEquality firstSets atStart then
-        //        cont <- false
-        
         firstSets
 
     /// Compute the first set of the given sequence of non-terminals. If any of the non-terminals
