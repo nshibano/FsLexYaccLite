@@ -112,10 +112,6 @@ let processParserSpecAst (spec : ParserSpec) =
 //-------------------------------------------------
 // Process LALR(1) grammars to tables
 
-type Item =
-    { ProductionIndex : int
-      DotIndex : int }
-
 /// Part of the output of CompilerLalrParserSpec
 type Action = 
   | Shift of stateIndex : int
@@ -139,10 +135,15 @@ let outputPrecInfo os p =
 
 type TerminalIndex = int
 type NonTerminalIndex = int
+type ProductionIndex = int
 
 type SymbolIndex =
     | TerminalIndex of int : TerminalIndex
     | NonTerminalIndex of int : NonTerminalIndex
+
+type Item =
+    { ProductionIndex : ProductionIndex
+      DotIndex : int }
 
 type KernelItemIndex =
     { KernelIndex : int
@@ -269,7 +270,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     // Build indexed tables
 
     let indexOfNonTerminal =
-        let d = Dictionary<string, int>()
+        let d = Dictionary<string, NonTerminalIndex>()
         for i = 0 to spec.NonTerminals.Length - 1 do
             d.Add(spec.NonTerminals.[i], i)
         d
@@ -288,7 +289,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let productionsHeads = Array.map (fun p -> indexOfNonTerminal.[p.Head]) spec.Productions
     let productionBodies = Array.map (fun p -> Array.map indexOfSymbol p.Body) spec.Productions
     let productionPrecedences = Array.map (fun p -> p.PrecedenceInfo) spec.Productions
-    let productionsOfNonTerminal =
+    let productionsOfNonTerminal : ProductionIndex[][] =
         let table = Array.init spec.NonTerminals.Length (fun i -> ResizeArray<int>())
         for i = 0 to spec.Productions.Length - 1 do
             table.[productionsHeads.[i]].Add(i)
