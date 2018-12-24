@@ -169,10 +169,16 @@ let processWorkList (start : 'a list) (f : ('a -> unit) -> 'a -> unit) =
     loop()
 
 /// A standard utility to compute a least fixed point of a set under a generative computation
-let LeastFixedPoint f set = 
+let leastFixedPoint f set = 
     let acc = ref set
-    processWorkList (Set.toList set) (fun queueWork item ->
-          f(item) |> List.iter (fun i2 -> if not (Set.contains i2 !acc) then (acc := Set.add i2 !acc; queueWork i2)) )
+    processWorkList
+        (Set.toList set)
+        (fun queueWork item ->
+            let newItems = f item
+            List.iter (fun newItem ->
+                if not (Set.contains newItem !acc) then
+                    acc := Set.add newItem !acc
+                    queueWork newItem) newItems)
     !acc
 
 let memoize1 f = 
@@ -188,16 +194,16 @@ let memoize1 f =
 let memoize2 f = 
     let d = Dictionary(HashIdentity.Structural)
     fun x y ->
-        match d.TryGetValue(struct (x, y)) with
+        match d.TryGetValue((x, y)) with
         | true, z -> z
         | false, _ ->
             let z = f x y
-            d.[struct (x, y)] <- z
+            d.[(x, y)] <- z
             z
 
 /// A mutable table maping kernels to sets of lookahead tokens
 type LookaheadTable() = 
-    let t = new Dictionary<KernelItemIndex,Set<TerminalIndex>>()
+    let t = new Dictionary<KernelItemIndex, Set<TerminalIndex>>()
     member table.Add(x,y) = 
         let prev = if t.ContainsKey(x) then t.[x] else Set.empty 
         t.[x] <- prev.Add(y)
@@ -448,7 +454,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let ComputeClosure0NonTerminal = 
         memoize1 (fun nt -> 
             let seed = (Array.foldBack (createItem >> Set.add) productionsOfNonTerminal.[nt] Set.empty)
-            LeastFixedPoint 
+            leastFixedPoint 
                 (fun item -> 
                    match rsym_of_item item with
                    | None -> []
