@@ -169,19 +169,6 @@ let processWorkList (start : 'a list) (f : ('a -> unit) -> 'a -> unit) =
             loop()
     loop()
 
-/// A standard utility to compute a least fixed point of a set under a generative computation
-let leastFixedPoint f set = 
-    let acc = ref set
-    processWorkList
-        (Set.toList set)
-        (fun queueWork item ->
-            let newItems = f item
-            List.iter (fun newItem ->
-                if not (Set.contains newItem !acc) then
-                    acc := Set.add newItem !acc
-                    queueWork newItem) newItems)
-    !acc
-
 let memoize1 f =
     let d = Dictionary(HashIdentity.Structural)
     fun x ->
@@ -453,28 +440,35 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     // Closure of LR(0) nonTerminals, items etc 
     let computeClosure0NonTerminal (ni : NonTerminalIndex) =
-        let seed = Set.ofArray (Array.map createItem productionsOfNonTerminal.[ni])
-        leastFixedPoint 
-            (fun item ->
+        let init = Array.map createItem productionsOfNonTerminal.[ni]
+        let mutable accu = Set.ofArray init
+        let queue = Queue<Item>(init)
+        while queue.Count > 0 do
+            let item = queue.Dequeue()
+            let newItems =
                 let body = productionBodies.[item.ProductionIndex]
                 if item.DotIndex < body.Length then
                     match body.[item.DotIndex] with
-                    | NonTerminalIndex ni -> List.ofArray (Array.map createItem productionsOfNonTerminal.[ni])
-                    | _ -> []
-                else [])
-            seed
-    
+                    | NonTerminalIndex ni -> Array.map createItem productionsOfNonTerminal.[ni]
+                    | _ -> [||]
+                else [||]
+            for newItem in newItems do
+                if not (Set.contains newItem accu) then
+                    accu <- Set.add newItem accu
+                    queue.Enqueue newItem
+        accu
+
     let computeClosure0NonTerminal = memoize1 computeClosure0NonTerminal
     
-    // Close a symbol under epsilon moves
-    let ComputeClosure0Symbol rsym acc = 
-        match rsym with
-        | Some (NonTerminalIndex nt) -> Set.union (computeClosure0NonTerminal nt) acc
-        | _ -> acc
-
     // Close a set under epsilon moves
     let ComputeClosure0 iset = 
-        Set.fold (fun acc x -> ComputeClosure0Symbol (rsym_of_item x) acc) iset iset 
+        Set.fold
+            (fun accu x ->
+                match rsym_of_item x with
+                | Some (NonTerminalIndex nt) -> Set.union accu (computeClosure0NonTerminal nt)
+                | _ -> accu)
+            iset
+            iset
 
     // Right symbols after closing under epsilon moves
     let RelevantSymbolsOfKernel kernel =
