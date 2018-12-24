@@ -6,7 +6,7 @@ open System.Collections.Generic
 open Printf
 open Microsoft.FSharp.Collections
 open Microsoft.FSharp.Text.Lexing
-open System.Net.Http.Headers
+open System.Diagnostics
 
 type Identifier = string
 type Code = string * Position
@@ -466,14 +466,14 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     // Goto set of a kernel of LR(0) nonTerminals, items etc 
     // Input is kernel, output is kernel
-    let ComputeGotosOfKernel iset sym = 
-        let isetClosure = computeClosure iset
-        let acc = new System.Collections.Generic.List<_>(10)
-        isetClosure |> Set.iter (fun item -> 
-              match rsym_of_item item with 
-              | Some sym2 when sym = sym2 -> acc.Add(advanceOfItem item) 
-              | _ -> ()) 
-        Set.ofSeq acc
+    let computeGotosOfKernel iset sym = 
+        let iset = computeClosure iset
+        let accu = List()
+        for item in iset do
+            match rsym_of_item item with 
+            | Some sym2 when sym = sym2 -> accu.Add(advanceOfItem item) 
+            | _ -> ()
+        Set.ofSeq accu
     
     // Build the full set of LR(0) kernels 
     reportTime(); printf "building kernels..."; stdout.Flush();
@@ -488,7 +488,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             if not ((!acc).Contains(kernel)) then
                 acc := (!acc).Add(kernel);
                 for csym in relevantSymbolsOfKernel kernel do 
-                    let gotoKernel = ComputeGotosOfKernel kernel csym 
+                    let gotoKernel = computeGotosOfKernel kernel csym 
                     assert (gotoKernel.Count > 0)
                     addToWorkList gotoKernel )
                     
@@ -505,7 +505,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     /// A cached version of the "goto" computation on LR(0) kernels 
     let gotoKernel (gotoItemIndex : GotoItemIndex) = 
-            let gset = ComputeGotosOfKernel (kernelTab.Kernel gotoItemIndex.KernelIndex) gotoItemIndex.SymbolIndex
+            let gset = computeGotosOfKernel (kernelTab.Kernel gotoItemIndex.KernelIndex) gotoItemIndex.SymbolIndex
             if gset.IsEmpty then None else Some (kernelTab.Index gset)
 
     let gotoKernel = memoize1 gotoKernel
