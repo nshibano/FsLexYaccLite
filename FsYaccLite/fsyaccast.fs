@@ -438,47 +438,34 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         fprintfn os "startStates = %s" (String.Join(";", (Array.map string startStates)));
         fprintfn os "------------------------"
 
-    // Closure of LR(0) nonTerminals, items etc 
-    let computeClosure0NonTerminal (ni : NonTerminalIndex) =
-        let init = Array.map createItem productionsOfNonTerminal.[ni]
-        let mutable accu = Set.ofArray init
-        let queue = Queue<Item>(init)
+    let computeClosure (itemSet : Set<Item>) =
+        let mutable accu = itemSet
+        let queue = Queue<Item>(itemSet)
         while queue.Count > 0 do
             let item = queue.Dequeue()
-            let newItems =
-                let body = productionBodies.[item.ProductionIndex]
-                if item.DotIndex < body.Length then
-                    match body.[item.DotIndex] with
-                    | NonTerminalIndex ni -> Array.map createItem productionsOfNonTerminal.[ni]
-                    | _ -> [||]
-                else [||]
-            for newItem in newItems do
-                if not (Set.contains newItem accu) then
-                    accu <- Set.add newItem accu
-                    queue.Enqueue newItem
+            let body = productionBodies.[item.ProductionIndex]
+            if item.DotIndex < body.Length then
+                match body.[item.DotIndex] with
+                | NonTerminalIndex ni ->
+                    for prod in productionsOfNonTerminal.[ni] do
+                        let newItem = createItem prod
+                        if not (Set.contains newItem accu) then
+                            accu <- Set.add newItem accu
+                            queue.Enqueue newItem
+                | _ -> ()
         accu
 
-    let computeClosure0NonTerminal = memoize1 computeClosure0NonTerminal
+    let computeClosure = memoize1 computeClosure
     
-    // Close a set under epsilon moves
-    let ComputeClosure0 iset = 
-        Set.fold
-            (fun accu x ->
-                match rsym_of_item x with
-                | Some (NonTerminalIndex nt) -> Set.union accu (computeClosure0NonTerminal nt)
-                | _ -> accu)
-            iset
-            iset
-
     // Right symbols after closing under epsilon moves
     let RelevantSymbolsOfKernel kernel =
-        let kernelClosure0 = ComputeClosure0 kernel
+        let kernelClosure0 = computeClosure kernel
         Set.fold (fun acc x -> Option.fold (fun acc x -> Set.add x acc) acc (rsym_of_item x)) Set.empty kernelClosure0 
 
     // Goto set of a kernel of LR(0) nonTerminals, items etc 
     // Input is kernel, output is kernel
     let ComputeGotosOfKernel iset sym = 
-        let isetClosure = ComputeClosure0 iset
+        let isetClosure = computeClosure iset
         let acc = new System.Collections.Generic.List<_>(10)
         isetClosure |> Set.iter (fun item -> 
               match rsym_of_item item with 
@@ -767,7 +754,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             // If there is a single item A -> B C . and no Shift or Accept actions (i.e. only Error or Reduce, so the choice of terminal 
             // cannot affect what we do) then we emit an immediate reduce action for the rule corresponding to that item 
             // Also do the same for Accept rules. 
-            let closure = (ComputeClosure0 kernel)
+            let closure = (computeClosure kernel)
 
             let immediateAction =
                 match Set.toList closure with
@@ -785,7 +772,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
             // A -> B C . rules give rise to reductions in favour of errors 
             if not <| norec then
-                for item in ComputeClosure0 kernel do
+                for item in computeClosure kernel do
                     let prec = precedenceOfItem item
                     match rsym_of_item item with 
                     | None ->
