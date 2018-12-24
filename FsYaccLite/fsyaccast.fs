@@ -374,12 +374,10 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             None
         else failwith "unreachable"
 
-    let advance_of_item (item : Item) = { item with DotIndex = item.DotIndex + 1 }
-
-    let fakeStartNonTerminalsSet = Set.ofArray (Array.map (fun s -> indexOfNonTerminal.[s]) spec.StartSymbols)
-
-    let IsStartItem (item : Item) = fakeStartNonTerminalsSet.Contains(headOfItem item)
-    let IsKernelItem (item : Item) = (IsStartItem item || item.DotIndex <> 0)
+    let advanceOfItem (item : Item) = { item with DotIndex = item.DotIndex + 1 }
+    let startNonTerminalsSet = Set.ofArray (Array.map (fun s -> indexOfNonTerminal.[s]) spec.StartSymbols)
+    let isStartItem (item : Item) = startNonTerminalsSet.Contains(headOfItem item)
+    let isKernelItem (item : Item) = (isStartItem item || item.DotIndex <> 0)
 
     let StringOfSym sym = match sym with TerminalIndex s -> "'" + fst spec.Terminals.[s] + "'" | NonTerminalIndex s -> spec.NonTerminals.[s]
 
@@ -458,9 +456,13 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let computeClosure = memoize1 computeClosure
     
     // Right symbols after closing under epsilon moves
-    let RelevantSymbolsOfKernel kernel =
-        let kernelClosure0 = computeClosure kernel
-        Set.fold (fun acc x -> Option.fold (fun acc x -> Set.add x acc) acc (rsym_of_item x)) Set.empty kernelClosure0 
+    let relevantSymbolsOfKernel kernel =
+        let mutable symbols = Set.empty
+        for item in computeClosure kernel do
+            let body = productionBodies.[item.ProductionIndex]
+            if item.DotIndex < body.Length then
+                symbols <- Set.add body.[item.DotIndex] symbols
+        symbols
 
     // Goto set of a kernel of LR(0) nonTerminals, items etc 
     // Input is kernel, output is kernel
@@ -469,7 +471,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         let acc = new System.Collections.Generic.List<_>(10)
         isetClosure |> Set.iter (fun item -> 
               match rsym_of_item item with 
-              | Some sym2 when sym = sym2 -> acc.Add(advance_of_item item) 
+              | Some sym2 when sym = sym2 -> acc.Add(advanceOfItem item) 
               | _ -> ()) 
         Set.ofSeq acc
     
@@ -485,12 +487,12 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         processWorkList (List.ofArray startKernels) (fun addToWorkList kernel -> 
             if not ((!acc).Contains(kernel)) then
                 acc := (!acc).Add(kernel);
-                for csym in RelevantSymbolsOfKernel kernel do 
+                for csym in relevantSymbolsOfKernel kernel do 
                     let gotoKernel = ComputeGotosOfKernel kernel csym 
                     assert (gotoKernel.Count > 0)
                     addToWorkList gotoKernel )
                     
-        !acc |> Seq.toList |> List.map (Set.filter IsKernelItem)
+        !acc |> Seq.toList |> List.map (Set.filter isKernelItem)
     
     reportTime(); printf "building kernel table..."; stdout.Flush();
     // Give an index to each LR(0) kernel, and from now on refer to them only by index 
@@ -510,7 +512,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     /// Iterate (iset,sym) pairs such that (gotoKernel kernelIdx sym) is not empty
     let IterateGotosOfKernel kernelIdx f =
-        for sym in RelevantSymbolsOfKernel (kernelTab.Kernel kernelIdx) do 
+        for sym in relevantSymbolsOfKernel (kernelTab.Kernel kernelIdx) do 
             match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = sym } with 
             | None -> ()
             | Some k -> f sym k
@@ -584,7 +586,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                          match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = rsym } with 
                          | None -> ()
                          | Some gotoKernelIdx ->
-                              let gotoItem = advance_of_item closureItem
+                              let gotoItem = advanceOfItem closureItem
                               let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = gotoItem }
                               for lookaheadToken in lookaheadTokens do
                                   if lookaheadToken = dummyLookaheadIdx 
@@ -739,7 +741,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                     addResolvingPrecedence arr kernelIdx termIdx (prec, action) 
                 | None ->
                     for lookahead in lookaheads do
-                        if not (IsStartItem(item)) then
+                        if not (isStartItem(item)) then
                             let prodIdx = item.ProductionIndex
                             let prec = precedenceOfItem item
                             let action = (prec, Reduce prodIdx)
@@ -779,7 +781,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                         for terminalIdx = 0 to spec.Terminals.Length - 1 do
                             if snd(arr.[terminalIdx]) = Error then 
                                 let prodIdx = item.ProductionIndex
-                                let action = (prec, (if IsStartItem(item) then Accept else Reduce prodIdx))
+                                let action = (prec, (if isStartItem(item) then Accept else Reduce prodIdx))
                                 addResolvingPrecedence arr kernelIdx terminalIdx action
                     | _  -> ()
 
