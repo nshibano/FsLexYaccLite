@@ -510,13 +510,13 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let startKernelIdxs = Array.map kernelTab.Index startKernels
     let startKernelItemIdxs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
 
-    let outputKernelItemIdx os (kernelIdx, item)  =
-        fprintf os "kernel %d, item %a" kernelIdx OutputItem item
+    //let outputKernelItemIdx os (kernelIdx, item)  =
+    //    fprintf os "kernel %d, item %a" kernelIdx OutputItem item
 
     /// A cached version of the "goto" computation on LR(0) kernels 
     let gotoKernel (gotoItemIndex : GotoItemIndex) = 
-            let gset = computeGotoOfKernel (kernelTab.Kernel gotoItemIndex.KernelIndex) gotoItemIndex.SymbolIndex
-            if gset.IsEmpty then None else Some (kernelTab.Index gset)
+        let gset = computeGotoOfKernel (kernelTab.Kernel gotoItemIndex.KernelIndex) gotoItemIndex.SymbolIndex
+        if gset.IsEmpty then None else Some (kernelTab.Index gset)
 
     let gotoKernel = memoize1 gotoKernel
 
