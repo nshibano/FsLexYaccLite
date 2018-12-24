@@ -467,12 +467,11 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     // Goto set of a kernel of LR(0) nonTerminals, items etc 
     // Input is kernel, output is kernel
     let computeGotosOfKernel iset sym = 
-        let iset = computeClosure iset
         let accu = List()
-        for item in iset do
-            match rsym_of_item item with 
-            | Some sym2 when sym = sym2 -> accu.Add(advanceOfItem item) 
-            | _ -> ()
+        for item in computeClosure iset do
+            let body = productionBodies.[item.ProductionIndex]
+            if item.DotIndex < body.Length && body.[item.DotIndex] = sym then
+                accu.Add(advanceOfItem item) 
         Set.ofSeq accu
     
     // Build the full set of LR(0) kernels 
