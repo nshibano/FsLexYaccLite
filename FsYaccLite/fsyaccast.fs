@@ -476,26 +476,22 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     
     // Build the full set of LR(0) kernels 
     reportTime(); printf "building kernels..."; stdout.Flush();
-    let startItems = Array.init spec.StartSymbols.Length createItem
+    let startItems = Array.map (fun startSymbol -> createItem productionsOfNonTerminal.[indexOfNonTerminal.[startSymbol]].[0]) spec.StartSymbols
     let startKernels = Array.map Set.singleton startItems
     let kernels = 
-
-        /// We use a set-of-sets here. F# sets support structural comparison but at the time of writing
-        /// did not structural hashing. 
-        let acc = ref Set.empty
+        let mutable accu = Set.empty
         processWorkList (List.ofArray startKernels) (fun addToWorkList kernel -> 
-            if not ((!acc).Contains(kernel)) then
-                acc := (!acc).Add(kernel);
+            if not (accu.Contains(kernel)) then
+                accu <- accu.Add(kernel)
                 for csym in relevantSymbolsOfKernel kernel do 
                     let gotoKernel = computeGotosOfKernel kernel csym 
-                    assert (gotoKernel.Count > 0)
-                    addToWorkList gotoKernel )
+                    addToWorkList gotoKernel)
                     
-        !acc |> Seq.toList |> List.map (Set.filter isKernelItem)
+        Array.map (Set.filter isKernelItem) (Array.ofSeq accu)
     
     reportTime(); printf "building kernel table..."; stdout.Flush();
     // Give an index to each LR(0) kernel, and from now on refer to them only by index 
-    let kernelTab = new KernelTable(kernels)
+    let kernelTab = new KernelTable(List.ofArray kernels)
     let startKernelIdxs = Array.map kernelTab.Index startKernels
     let startKernelItemIdxs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
 
@@ -803,14 +799,14 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     if !shiftReduceConflicts > 0 || !reduceReduceConflicts > 0 then printfn  "consider setting precedences explicitly using %%left %%right and %%nonassoc on terminals and/or setting explicit precedence on rules using %%prec"
 
     /// The final results
-    let states = kernels |> Array.ofList 
+    let states = kernels
     let prods = Array.map (fun (prod : Production) -> (prod.Head, indexOfNonTerminal.[prod.Head], prod.Body, prod.Code)) spec.Productions
 
     logf (fun logStream -> 
         printf  "writing tables to log\n"; stdout.Flush();
         OutputLalrTables logStream     (prods, states, startKernelIdxs, actionTable, immediateActionTable, gotoTable, (indexOfTerminal.[endOfInputTerminal]), errorTerminalIdx));
 
-    let states = states |> Array.map (Set.toList >> List.map (fun (item : Item) -> item.ProductionIndex))
+    let states = Array.map (Set.toList >> List.map (fun (item : Item) -> item.ProductionIndex)) states
     (prods, states, startKernelIdxs, 
      actionTable, immediateActionTable, gotoTable, 
      (indexOfTerminal.[endOfInputTerminal]), 
