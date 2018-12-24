@@ -175,7 +175,7 @@ let LeastFixedPoint f set =
           f(item) |> List.iter (fun i2 -> if not (Set.contains i2 !acc) then (acc := Set.add i2 !acc; queueWork i2)) )
     !acc
 
-let memoize f = 
+let memoize1 f = 
     let d = Dictionary(HashIdentity.Structural)
     fun x ->
         match d.TryGetValue(x) with
@@ -184,6 +184,16 @@ let memoize f =
             let y = f x
             d.[x] <- y
             y
+
+let memoize2 f = 
+    let d = Dictionary(HashIdentity.Structural)
+    fun x y ->
+        match d.TryGetValue(struct (x, y)) with
+        | true, z -> z
+        | false, _ ->
+            let z = f x y
+            d.[struct (x, y)] <- z
+            z
 
 /// A mutable table maping kernels to sets of lookahead tokens
 type LookaheadTable() = 
@@ -285,7 +295,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     // Compute the FIRST function
     printf  "computing first function..."; stdout.Flush();
 
-    let computedFirstTable =
+    let firstSetOfSymbol =
         let firstSets = Dictionary<SymbolIndex, HashSet<TerminalIndex option>>(HashIdentity.Structural)
 
         // For terminals, add itself (Some term) to its first-set.
@@ -300,7 +310,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         
         let mutable added = false
         let add symbolIndex firstSetItem =
-            added <- firstSets.[symbolIndex].Add(firstSetItem)
+            added <- firstSets.[symbolIndex].Add(firstSetItem) || added
 
         let scan() =
             for prodIdx = 0 to spec.Productions.Length - 1 do
@@ -331,16 +341,14 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
         firstSets
 
-    /// Compute the first set of the given sequence of non-terminals. If any of the non-terminals
-    /// have an empty token in the first set then we have to iterate through those. 
-    let ComputeFirstSetOfTokenList =
-        memoize (fun (str : SymbolIndex list, term : TerminalIndex) ->
+    let firstSetOfSymbolString =
+        memoize2 (fun (str : SymbolIndex list) (term : TerminalIndex) ->
             let acc = List<TerminalIndex>()
             let rec add l = 
                 match l with 
                 | [] -> acc.Add(term)
                 | sym :: moreSyms -> 
-                    let firstSetOfSym = computedFirstTable.[sym]
+                    let firstSetOfSym = firstSetOfSymbol.[sym]
                     Seq.iter (function Some v -> acc.Add(v) | None -> ()) firstSetOfSym
                     if firstSetOfSym.Contains(None) then
                         add moreSyms 
@@ -438,7 +446,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     // Closure of LR(0) nonTerminals, items etc 
     let ComputeClosure0NonTerminal = 
-        memoize (fun nt -> 
+        memoize1 (fun nt -> 
             let seed = (Array.foldBack (createItem >> Set.add) productionsOfNonTerminal.[nt] Set.empty)
             LeastFixedPoint 
                 (fun item -> 
@@ -504,7 +512,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     /// A cached version of the "goto" computation on LR(0) kernels 
     let gotoKernel = 
-        memoize (fun (gotoItemIndex : GotoItemIndex) -> 
+        memoize1 (fun (gotoItemIndex : GotoItemIndex) -> 
             let gset = ComputeGotosOfKernel (kernelTab.Kernel gotoItemIndex.KernelIndex) gotoItemIndex.SymbolIndex
             if gset.IsEmpty then None else Some (kernelTab.Index gset))
 
@@ -533,7 +541,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                     if rsyms.Length > 0 then 
                         match rsyms.[0] with 
                         | (NonTerminalIndex ntB) -> 
-                             let firstSet = ComputeFirstSetOfTokenList (Array.toList rsyms.[1..],pretoken)
+                             let firstSet = firstSetOfSymbolString (Array.toList rsyms.[1..]) pretoken
                              for prodIdx in productionsOfNonTerminal.[ntB] do
                                  addToWorkList (createItem prodIdx,firstSet)
                         | TerminalIndex _ -> ()))
@@ -562,7 +570,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         
     let spontaneous, propagate  =
         let closure1OfItemWithDummy = 
-            memoize (fun item -> ComputeClosure1 [(item, Set.ofList [dummyLookaheadIdx])])
+            memoize1 (fun item -> ComputeClosure1 [(item, Set.ofList [dummyLookaheadIdx])])
 
         let spontaneous = new SpontaneousTable()
         let propagate = new PropagateTable()
