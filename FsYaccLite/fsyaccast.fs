@@ -181,7 +181,7 @@ let leastFixedPoint f set =
                     queueWork newItem) newItems)
     !acc
 
-let memoize1 f = 
+let memoize1 f =
     let d = Dictionary(HashIdentity.Structural)
     fun x ->
         match d.TryGetValue(x) with
@@ -191,7 +191,7 @@ let memoize1 f =
             d.[x] <- y
             y
 
-let memoize2 f = 
+let memoize2 f =
     let d = Dictionary(HashIdentity.Structural)
     fun x y ->
         match d.TryGetValue((x, y)) with
@@ -347,19 +347,20 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
         firstSets
 
-    let firstSetOfSymbolString =
-        memoize2 (fun (str : SymbolIndex list) (term : TerminalIndex) ->
-            let acc = List<TerminalIndex>()
-            let rec add l = 
-                match l with 
-                | [] -> acc.Add(term)
-                | sym :: moreSyms -> 
-                    let firstSetOfSym = firstSetOfSymbol.[sym]
-                    Seq.iter (function Some v -> acc.Add(v) | None -> ()) firstSetOfSym
-                    if firstSetOfSym.Contains(None) then
-                        add moreSyms 
-            add str
-            Set.ofSeq acc)
+    let firstSetOfSymbolString (str : SymbolIndex list) (term : TerminalIndex) =
+        let acc = List<TerminalIndex>()
+        let rec add l = 
+            match l with 
+            | [] -> acc.Add(term)
+            | sym :: moreSyms -> 
+                let firstSetOfSym = firstSetOfSymbol.[sym]
+                Seq.iter (function Some v -> acc.Add(v) | None -> ()) firstSetOfSym
+                if firstSetOfSym.Contains(None) then
+                    add moreSyms 
+        add str
+        Set.ofSeq acc
+    
+    let firstSetOfSymbolString = memoize2 firstSetOfSymbolString
     
     let createItem productionIndex = { ProductionIndex = productionIndex; DotIndex = 0 }
     let precedenceOfItem (item : Item) = productionPrecedences.[item.ProductionIndex]
@@ -451,8 +452,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
 
     // Closure of LR(0) nonTerminals, items etc 
-    let ComputeClosure0NonTerminal = 
-        memoize1 (fun nt -> 
+    let computeClosure0NonTerminal nt = 
             let seed = (Array.foldBack (createItem >> Set.add) productionsOfNonTerminal.[nt] Set.empty)
             leastFixedPoint 
                 (fun item -> 
@@ -460,12 +460,14 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                    | None -> []
                    | Some(NonTerminalIndex ntB) ->  List.ofArray (Array.map createItem productionsOfNonTerminal.[ntB])
                    | Some(TerminalIndex _) -> [])
-                seed)
-
+                seed
+    
+    let computeClosure0NonTerminal = memoize1 computeClosure0NonTerminal
+    
     // Close a symbol under epsilon moves
     let ComputeClosure0Symbol rsym acc = 
         match rsym with
-        | Some (NonTerminalIndex nt) -> Set.union (ComputeClosure0NonTerminal nt) acc
+        | Some (NonTerminalIndex nt) -> Set.union (computeClosure0NonTerminal nt) acc
         | _ -> acc
 
     // Close a set under epsilon moves
@@ -517,10 +519,11 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         fprintf os "kernel %d, item %a" kernelIdx OutputItem item
 
     /// A cached version of the "goto" computation on LR(0) kernels 
-    let gotoKernel = 
-        memoize1 (fun (gotoItemIndex : GotoItemIndex) -> 
+    let gotoKernel (gotoItemIndex : GotoItemIndex) = 
             let gset = ComputeGotosOfKernel (kernelTab.Kernel gotoItemIndex.KernelIndex) gotoItemIndex.SymbolIndex
-            if gset.IsEmpty then None else Some (kernelTab.Index gset))
+            if gset.IsEmpty then None else Some (kernelTab.Index gset)
+
+    let gotoKernel = memoize1 gotoKernel
 
     /// Iterate (iset,sym) pairs such that (gotoKernel kernelIdx sym) is not empty
     let IterateGotosOfKernel kernelIdx f =
@@ -575,8 +578,8 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
         
     let spontaneous, propagate  =
-        let closure1OfItemWithDummy = 
-            memoize1 (fun item -> ComputeClosure1 [(item, Set.ofList [dummyLookaheadIdx])])
+        let closure1OfItemWithDummy item = ComputeClosure1 [(item, Set.ofList [dummyLookaheadIdx])] 
+        let closure1OfItemWithDummy = memoize1 closure1OfItemWithDummy
 
         let spontaneous = new SpontaneousTable()
         let propagate = new PropagateTable()
