@@ -451,17 +451,18 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         fprintfn os "startStates = %s" (String.Join(";", (Array.map string startStates)));
         fprintfn os "------------------------"
 
-
     // Closure of LR(0) nonTerminals, items etc 
-    let computeClosure0NonTerminal nt = 
-            let seed = (Array.foldBack (createItem >> Set.add) productionsOfNonTerminal.[nt] Set.empty)
-            leastFixedPoint 
-                (fun item -> 
-                   match rsym_of_item item with
-                   | None -> []
-                   | Some(NonTerminalIndex ntB) ->  List.ofArray (Array.map createItem productionsOfNonTerminal.[ntB])
-                   | Some(TerminalIndex _) -> [])
-                seed
+    let computeClosure0NonTerminal (ni : NonTerminalIndex) =
+        let seed = Set.ofArray (Array.map createItem productionsOfNonTerminal.[ni])
+        leastFixedPoint 
+            (fun item ->
+                let body = productionBodies.[item.ProductionIndex]
+                if item.DotIndex < body.Length then
+                    match body.[item.DotIndex] with
+                    | NonTerminalIndex ni -> List.ofArray (Array.map createItem productionsOfNonTerminal.[ni])
+                    | _ -> []
+                else [])
+            seed
     
     let computeClosure0NonTerminal = memoize1 computeClosure0NonTerminal
     
