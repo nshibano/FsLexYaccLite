@@ -29,15 +29,15 @@ type Symbol = Terminal of string | NonTerminal of string
 
 type Production =
     { Head : string
-      Body : Symbol list
+      Body : Symbol array
       PrecedenceInfo : PrecedenceInfo
       Code : Code option }
 
 type ProcessedParserSpec = 
-    { Terminals: (string * PrecedenceInfo) list
-      NonTerminals: string list
-      Productions: Production list
-      StartSymbols: string list }
+    { Terminals: (string * PrecedenceInfo) array
+      NonTerminals: string array
+      Productions: Production array
+      StartSymbols: string array }
 
 let processParserSpecAst (spec : ParserSpec) =
     
@@ -51,10 +51,10 @@ let processParserSpecAst (spec : ParserSpec) =
         failwithf "%s is given two associativities" key
     
     let explicitPrecInfo = Map.ofList explicitPrecInfo
-    let terminals = List.map fst spec.Tokens @ ["error"]
-    let terminalSet = Set.ofList terminals
+    let terminals = Array.append (Array.map fst (Array.ofList spec.Tokens)) [| "error" |]
+    let terminalSet = Set.ofArray terminals
        
-    let prods =  
+    let productions =  
         spec.Rules |> List.mapi (fun i (nonterm,rules) -> 
             rules |> List.mapi (fun j (Rule(syms,precsym,code)) -> 
                 let precInfo = 
@@ -62,17 +62,18 @@ let processParserSpecAst (spec : ParserSpec) =
                     match precsym with 
                     | Some sym -> if explicitPrecInfo.ContainsKey(sym) then Some explicitPrecInfo.[sym] else None
                     | None -> None
-                { Head = nonterm; PrecedenceInfo = precInfo; Body = List.map (fun s -> if terminalSet.Contains s then Terminal s else NonTerminal s) syms; Code = code }))
+                { Head = nonterm; PrecedenceInfo = precInfo; Body = Array.map (fun s -> if terminalSet.Contains s then Terminal s else NonTerminal s) (Array.ofList syms); Code = code }))
          |> List.concat
+         |> Array.ofList
 
-    let nonTerminals = List.map fst spec.Rules
-    let nonTerminalSet = Set.ofList nonTerminals
+    let nonTerminals = Array.map fst (Array.ofList spec.Rules)
+    let nonTerminalSet = Set.ofArray nonTerminals
 
     let checkNonTerminal nt =  
         if nt <> "error" && not (nonTerminalSet.Contains(nt)) then 
             failwith (sprintf "NonTerminal '%s' has no productions" nt)
 
-    for prod in prods do
+    for prod in productions do
         for sym in prod.Body do 
            match sym with 
            | NonTerminal nt -> checkNonTerminal nt 
@@ -83,12 +84,13 @@ let processParserSpecAst (spec : ParserSpec) =
     for nt,_ in spec.Types do 
         checkNonTerminal nt
 
-    let terminals = List.map (fun t -> (t, explicitPrecInfo.TryFind t)) terminals
+    let terminals = Array.map (fun t -> (t, explicitPrecInfo.TryFind t)) terminals
 
+    let startSymbols = Array.ofList spec.StartSymbols
     { Terminals = terminals
       NonTerminals = nonTerminals
-      Productions = prods
-      StartSymbols = spec.StartSymbols }
+      Productions = productions
+      StartSymbols = startSymbols }
 
 //-------------------------------------------------
 // Process LALR(1) grammars to tables
@@ -136,7 +138,7 @@ type GotoItemIndex =
 /// Create a work list and loop until it is exhausted, calling a worker function for
 /// each element. Pass a function to queue additional work on the work list 
 /// to the worker function
-let ProcessWorkList<'a> (start : 'a list) (f : ('a -> unit) -> 'a -> unit) =
+let processWorkList (start : 'a list) (f : ('a -> unit) -> 'a -> unit) =
     let work = ref start
     let queueWork x =
         work := x :: !work
@@ -152,7 +154,7 @@ let ProcessWorkList<'a> (start : 'a list) (f : ('a -> unit) -> 'a -> unit) =
 /// A standard utility to compute a least fixed point of a set under a generative computation
 let LeastFixedPoint f set = 
     let acc = ref set
-    ProcessWorkList (Set.toList set) (fun queueWork item ->
+    processWorkList (Set.toList set) (fun queueWork item ->
           f(item) |> List.iter (fun i2 -> if not (Set.contains i2 !acc) then (acc := Set.add i2 !acc; queueWork i2)) )
     !acc
 
@@ -232,12 +234,19 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         stopWatch.Restart()
 
     // Augment the grammar 
-    let fakeStartNonTerminals = List.map (fun nt -> "_start" + nt) spec.StartSymbols
-    let nonTerminals = Array.ofList (fakeStartNonTerminals @ spec.NonTerminals)
-    let endOfInputTerminal = "$$"
+    let fakeStartNonTerminals = Array.map (fun nt -> "_start" + nt) spec.StartSymbols
+    let nonTerminals = Array.append fakeStartNonTerminals spec.NonTerminals
+    let endOfInputTerminal = "$"
     let dummyLookahead = "#"
-    let terminals = Array.ofList (spec.Terminals @ [(dummyLookahead, None); (endOfInputTerminal, None)])
-    let productions = Array.ofList (List.map2 (fun fakeStartNonTerminal startSymbol -> { Head = fakeStartNonTerminal; PrecedenceInfo = None; Body = [NonTerminal startSymbol]; Code = None }) fakeStartNonTerminals spec.StartSymbols @ spec.Productions)
+    let terminals = Array.append spec.Terminals [| (dummyLookahead, None); (endOfInputTerminal, None) |]
+    let productions =
+        Array.append
+            (Array.map2
+                (fun fakeStartNonTerminal startSymbol ->
+                    { Head = fakeStartNonTerminal; PrecedenceInfo = None; Body = [| NonTerminal startSymbol |]; Code = None })
+                fakeStartNonTerminals
+                spec.StartSymbols)
+            spec.Productions
     let startNonTerminalIdx_to_prodIdx (i : int) = i
 
     // Build indexed tables
@@ -260,7 +269,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         | NonTerminal s -> NonTerminalIndex (indexOfNonTerminal.[s])
 
     let productionsHeads = Array.map (fun p -> indexOfNonTerminal.[p.Head]) productions
-    let productionBodies = Array.map (fun p -> Array.map indexOfSymbol (Array.ofList p.Body)) productions
+    let productionBodies = Array.map (fun p -> Array.map indexOfSymbol p.Body) productions
     let productionPrecedences = Array.map (fun p -> p.PrecedenceInfo) productions
     let productionsOfNonTerminal =
         let table = Array.init nonTerminals.Length (fun i -> ResizeArray<int>())
@@ -365,7 +374,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     let advance_of_item (item : Item) = { item with DotIndex = item.DotIndex + 1 }
 
-    let fakeStartNonTerminalsSet = Set.ofList (fakeStartNonTerminals |> List.map (fun s -> indexOfNonTerminal.[s]))
+    let fakeStartNonTerminalsSet = Set.ofArray (fakeStartNonTerminals |> Array.map (fun s -> indexOfNonTerminal.[s]))
 
     let IsStartItem (item : Item) = fakeStartNonTerminalsSet.Contains(headOfItem item)
     let IsKernelItem (item : Item) = (IsStartItem item || item.DotIndex <> 0)
@@ -424,7 +433,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         fprintfn os "states = ";
         fprintfn os "";
         fprintfn os "%a" OutputCombined combined;
-        fprintfn os "startStates = %s" (String.Join(";",Array.ofList (List.map string startStates)));
+        fprintfn os "startStates = %s" (String.Join(";", (Array.map string startStates)));
         fprintfn os "------------------------"
 
 
@@ -468,14 +477,14 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     
     // Build the full set of LR(0) kernels 
     reportTime(); printf "building kernels..."; stdout.Flush();
-    let startItems = List.mapi (fun i _ -> createItem (startNonTerminalIdx_to_prodIdx i)) fakeStartNonTerminals
-    let startKernels = List.map Set.singleton startItems
+    let startItems = Array.mapi (fun i _ -> createItem (startNonTerminalIdx_to_prodIdx i)) fakeStartNonTerminals
+    let startKernels = Array.map Set.singleton startItems
     let kernels = 
 
         /// We use a set-of-sets here. F# sets support structural comparison but at the time of writing
         /// did not structural hashing. 
         let acc = ref Set.empty
-        ProcessWorkList startKernels (fun addToWorkList kernel -> 
+        processWorkList (List.ofArray startKernels) (fun addToWorkList kernel -> 
             if not ((!acc).Contains(kernel)) then
                 acc := (!acc).Add(kernel);
                 for csym in RelevantSymbolsOfKernel kernel do 
@@ -488,8 +497,8 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     reportTime(); printf "building kernel table..."; stdout.Flush();
     // Give an index to each LR(0) kernel, and from now on refer to them only by index 
     let kernelTab = new KernelTable(kernels)
-    let startKernelIdxs = List.map kernelTab.Index startKernels
-    let startKernelItemIdxs = List.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
+    let startKernelIdxs = Array.map kernelTab.Index startKernels
+    let startKernelItemIdxs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
 
     let outputKernelItemIdx os (kernelIdx, item)  =
         fprintf os "kernel %d, item %a" kernelIdx OutputItem item
@@ -517,7 +526,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     
     let ComputeClosure1 iset = 
         let acc = new Closure1Table()
-        ProcessWorkList iset (fun addToWorkList (item, pretokens:Set<TerminalIndex>) ->
+        processWorkList iset (fun addToWorkList (item, pretokens:Set<TerminalIndex>) ->
             pretokens |> Set.iter (fun pretoken -> 
                 if not (acc.Contains(item, pretoken)) then
                     acc.Add(item, pretoken) |> ignore
@@ -606,10 +615,10 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
         let acc = new LookaheadTable()
         // Compute the closure
-        ProcessWorkList 
+        processWorkList 
             initialWork
             (fun queueWork (kernelItemIdx,lookahead) ->
-                acc.Add(kernelItemIdx,lookahead)
+                acc.Add(kernelItemIdx, lookahead)
                 for gotoKernelIdx in propagate.[kernelItemIdx] do
                     if not (acc.Contains(gotoKernelIdx,lookahead)) then 
                         queueWork(gotoKernelIdx,lookahead))

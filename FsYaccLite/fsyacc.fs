@@ -425,7 +425,7 @@ let main() =
   begin 
       cprintf cos "let _fsyacc_reductionSymbolCounts = [|" ;
       for nt,ntIdx,syms,code in prods do 
-          cprintf cos "%a" outputCodedUInt16 (List.length syms);
+          cprintf cos "%a" outputCodedUInt16 syms.Length;
       cprintfn cos "|]" ;
   end;
   begin 
@@ -452,7 +452,7 @@ let main() =
           cprintfn cos "        (fun (parseState : %s.IParseState) ->"  parslib
           if !compat then 
               cprintfn cos "            Parsing.set_parse_state parseState;"
-          syms |> List.iteri (fun i sym -> 
+          syms |> Array.iteri (fun i sym -> 
               let tyopt = 
                   match sym with
                   | Terminal t -> 
@@ -516,7 +516,7 @@ let main() =
   cprintfn cos "    productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }"
   cprintfn cos "let engine lexer lexbuf startState = (tables ()).Interpret(lexer, lexbuf, startState)"                                                                                                         
 
-  for (id,startState) in List.zip spec.StartSymbols startStates do
+  for (id,startState) in Seq.zip spec.StartSymbols startStates do
         if not (types.ContainsKey id) then 
           failwith ("a %type declaration is required for for start token "+id);
         let ty = types.[id] in 
