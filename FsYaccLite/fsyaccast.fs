@@ -375,9 +375,13 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         else failwith "unreachable"
 
     let advanceOfItem (item : Item) = { item with DotIndex = item.DotIndex + 1 }
-    let startNonTerminalsSet = Set.ofArray (Array.map (fun s -> indexOfNonTerminal.[s]) spec.StartSymbols)
-    let isStartItem (item : Item) = startNonTerminalsSet.Contains(headOfItem item)
-    let isKernelItem (item : Item) = (isStartItem item || item.DotIndex <> 0)
+    //let startNonTerminalsSet = Set.ofArray (Array.map (fun s -> indexOfNonTerminal.[s]) spec.StartSymbols)
+    let isStartItem (item : Item) = Array.contains (spec.NonTerminals.[productionsHeads.[item.ProductionIndex]]) spec.StartSymbols
+        //startNonTerminalsSet.Contains(headOfItem item)
+    //let isKernelItem (item : Item) =
+    //    let ans = isStartItem item || item.DotIndex <> 0
+    //    if not ans then failwith "unreachable"
+    //    ans
 
     let StringOfSym sym = match sym with TerminalIndex s -> "'" + fst spec.Terminals.[s] + "'" | NonTerminalIndex s -> spec.NonTerminals.[s]
 
@@ -455,39 +459,50 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     let computeClosure = memoize1 computeClosure
     
-    // Right symbols after closing under epsilon moves
-    let relevantSymbolsOfKernel kernel =
-        let mutable symbols = Set.empty
-        for item in computeClosure kernel do
-            let body = productionBodies.[item.ProductionIndex]
-            if item.DotIndex < body.Length then
-                symbols <- Set.add body.[item.DotIndex] symbols
-        symbols
+    //// Right symbols after closing under epsilon moves
+    //let relevantSymbolsOfKernel kernel =
+    //    let mutable symbols = Set.empty
+    //    for item in computeClosure kernel do
+    //        let body = productionBodies.[item.ProductionIndex]
+    //        if item.DotIndex < body.Length then
+    //            symbols <- Set.add body.[item.DotIndex] symbols
+    //    symbols
 
     // Goto set of a kernel of LR(0) nonTerminals, items etc 
     // Input is kernel, output is kernel
-    let computeGotosOfKernel iset sym = 
+    let computeGotoOfKernel kernel sym = 
         let accu = List()
-        for item in computeClosure iset do
+        for item in computeClosure kernel do
             let body = productionBodies.[item.ProductionIndex]
             if item.DotIndex < body.Length && body.[item.DotIndex] = sym then
                 accu.Add(advanceOfItem item) 
         Set.ofSeq accu
-    
+
+    let computeGotosOfKernel kernel = 
+        let accu = Dictionary<SymbolIndex, HashSet<Item>>(HashIdentity.Structural)
+        for item in computeClosure kernel do
+            let body = productionBodies.[item.ProductionIndex]
+            if item.DotIndex < body.Length then
+                let sym = body.[item.DotIndex]
+                if not (accu.ContainsKey(sym)) then
+                    accu.[sym] <- HashSet(HashIdentity.Structural)
+                accu.[sym].Add(advanceOfItem item) |> ignore
+        Array.map Set.ofSeq (Array.ofSeq accu.Values)
+
     // Build the full set of LR(0) kernels 
     reportTime(); printf "building kernels..."; stdout.Flush();
     let startItems = Array.map (fun startSymbol -> createItem productionsOfNonTerminal.[indexOfNonTerminal.[startSymbol]].[0]) spec.StartSymbols
     let startKernels = Array.map Set.singleton startItems
     let kernels = 
         let mutable accu = Set.empty
-        processWorkList (List.ofArray startKernels) (fun addToWorkList kernel -> 
+        let queue = Queue(startKernels)
+        while queue.Count > 0 do
+            let kernel = queue.Dequeue()
             if not (accu.Contains(kernel)) then
                 accu <- accu.Add(kernel)
-                for csym in relevantSymbolsOfKernel kernel do 
-                    let gotoKernel = computeGotosOfKernel kernel csym 
-                    addToWorkList gotoKernel)
-                    
-        Array.map (Set.filter isKernelItem) (Array.ofSeq accu)
+                for goto in computeGotosOfKernel kernel do
+                    queue.Enqueue(goto)
+        Array.ofSeq accu
     
     reportTime(); printf "building kernel table..."; stdout.Flush();
     // Give an index to each LR(0) kernel, and from now on refer to them only by index 
@@ -500,17 +515,17 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     /// A cached version of the "goto" computation on LR(0) kernels 
     let gotoKernel (gotoItemIndex : GotoItemIndex) = 
-            let gset = computeGotosOfKernel (kernelTab.Kernel gotoItemIndex.KernelIndex) gotoItemIndex.SymbolIndex
+            let gset = computeGotoOfKernel (kernelTab.Kernel gotoItemIndex.KernelIndex) gotoItemIndex.SymbolIndex
             if gset.IsEmpty then None else Some (kernelTab.Index gset)
 
     let gotoKernel = memoize1 gotoKernel
 
-    /// Iterate (iset,sym) pairs such that (gotoKernel kernelIdx sym) is not empty
-    let IterateGotosOfKernel kernelIdx f =
-        for sym in relevantSymbolsOfKernel (kernelTab.Kernel kernelIdx) do 
-            match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = sym } with 
-            | None -> ()
-            | Some k -> f sym k
+    ///// Iterate (iset,sym) pairs such that (gotoKernel kernelIdx sym) is not empty
+    //let IterateGotosOfKernel kernelIdx f =
+    //    for sym in relevantSymbolsOfKernel (kernelTab.Kernel kernelIdx) do 
+    //        match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = sym } with 
+    //        | None -> ()
+    //        | Some k -> f sym k
 
     // This is used to compute the closure of an LALR(1) kernel 
     //
