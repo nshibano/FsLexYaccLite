@@ -535,20 +535,22 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     //        such that [B --> .g, b] is not in I do
     //            add [B --> .g, b] to I
     
-    let ComputeClosure1 iset = 
+    let ComputeClosure1 (iset : (Item * Set<TerminalIndex>) list) = 
         let acc = new Closure1Table()
-        processWorkList iset (fun addToWorkList (item, pretokens:Set<TerminalIndex>) ->
-            pretokens |> Set.iter (fun pretoken -> 
+        let queue = Queue(iset)
+        while queue.Count > 0 do
+            let item, pretokens = queue.Dequeue()
+            for pretoken in pretokens do
                 if not (acc.Contains(item, pretoken)) then
                     acc.Add(item, pretoken) |> ignore
-                    let rsyms = rsyms_of_item item
-                    if rsyms.Length > 0 then 
-                        match rsyms.[0] with 
-                        | (NonTerminalIndex ntB) -> 
-                             let firstSet = firstSetOfSymbolString (Array.toList rsyms.[1..]) pretoken
+                    let body = productionBodies.[item.ProductionIndex]
+                    if item.DotIndex < body.Length then
+                        match body.[item.DotIndex] with
+                        | NonTerminalIndex ntB -> 
+                             let firstSet = firstSetOfSymbolString (Array.toList body.[(item.DotIndex + 1)..]) pretoken
                              for prodIdx in productionsOfNonTerminal.[ntB] do
-                                 addToWorkList (createItem prodIdx,firstSet)
-                        | TerminalIndex _ -> ()))
+                                 queue.Enqueue (createItem prodIdx, firstSet)
+                        | TerminalIndex _ -> ()
         acc
 
     // Compute the "spontaneous" and "propagate" maps for each LR(0) kernelItem 
@@ -573,12 +575,11 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
         
     let spontaneous, propagate  =
-        let closure1OfItemWithDummy item = ComputeClosure1 [(item, Set.ofList [dummyLookaheadIdx])] 
+        let closure1OfItemWithDummy item = ComputeClosure1 [(item, Set.singleton dummyLookaheadIdx)] 
         let closure1OfItemWithDummy = memoize1 closure1OfItemWithDummy
 
         let spontaneous = new SpontaneousTable()
         let propagate = new PropagateTable()
-        let count = ref 0 
 
         for kernelIdx in kernelTab.Indexes do
             printf  "."; stdout.Flush();
@@ -589,7 +590,6 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                 let jset = closure1OfItemWithDummy item
                 //printf  "#jset = %d\n" jset.Count; stdout.Flush();
                 for (KeyValue(closureItem, lookaheadTokens)) in jset.IEnumerable do
-                    incr count
                     match rsym_of_item closureItem with 
                     | None -> ()
                     | Some rsym ->
@@ -605,8 +605,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
 
         //printfn "#kernelIdxs = %d, count = %d" kernelTab.Indexes.Length !count
-        spontaneous,
-        propagate
+        spontaneous, propagate
    
     //printfn "#spontaneous = %d, #propagate = %d" spontaneous.Count propagate.Count; stdout.Flush();
    
