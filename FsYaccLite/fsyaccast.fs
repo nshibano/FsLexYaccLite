@@ -185,18 +185,6 @@ type LookaheadTable() =
         if ok then v else Set.empty
     member table.Count = t |> Seq.fold(fun acc (KeyValue(_,v)) -> v.Count+acc) 0
 
-/// A mutable table giving an index to each LR(0) kernel. Kernels are referred to only by index.
-type KernelTable(kernels) =
-    // Give an index to each LR(0) kernel, and from now on refer to them only by index 
-    // Also develop "kernelItemIdx" to refer to individual items within a kernel 
-    let kernelsAndIdxs = List.mapi (fun i x -> (i,x)) kernels
-    let kernelIdxs = List.map fst kernelsAndIdxs
-    let toIdxMap = Map.ofList [ for i,x in kernelsAndIdxs -> x,i ]
-    let ofIdxMap = Array.ofList kernels
-    member t.Indexes = kernelIdxs
-    member t.Index(kernel) = toIdxMap.[kernel]
-    member t.Kernel(i) = ofIdxMap.[i]
-
 /// Hold the results of cpmuting the LALR(1) closure of an LR(0) kernel
 type Closure1Table() = 
     let t = new Dictionary<Item,HashSet<TerminalIndex>>()
@@ -489,9 +477,15 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         Array.ofSeq accu
     
     reportTime(); printf "building kernel table..."; stdout.Flush();
-    // Give an index to each LR(0) kernel, and from now on refer to them only by index 
-    let kernelTab = new KernelTable(List.ofArray kernels)
-    let startKernelIdxs = Array.map kernelTab.Index startKernels
+
+    // Give an index to each LR(0) kernel, and from now on refer to them only by index
+    let indexOfKernel =
+        let d = Dictionary(HashIdentity.Structural)
+        for i = 0 to kernels.Length - 1 do
+            d.Add(kernels.[i], i)
+        d
+    
+    let startKernelIdxs = Array.map (fun kernel -> indexOfKernel.[kernel]) startKernels
     let startKernelItemIdxs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
 
     //let outputKernelItemIdx os (kernelIdx, item)  =
@@ -499,8 +493,8 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
     /// A cached version of the "goto" computation on LR(0) kernels 
     let gotoKernel (gotoItemIndex : GotoItemIndex) = 
-        let gset = computeGotoOfKernel (kernelTab.Kernel gotoItemIndex.KernelIndex) gotoItemIndex.SymbolIndex
-        if gset.IsEmpty then None else Some (kernelTab.Index gset)
+        let gset = computeGotoOfKernel (kernels.[gotoItemIndex.KernelIndex]) gotoItemIndex.SymbolIndex
+        if gset.IsEmpty then None else Some (indexOfKernel.[gset])
 
     let gotoKernel = memoize1 gotoKernel
 
@@ -565,10 +559,10 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         let spontaneous = new SpontaneousTable()
         let propagate = new PropagateTable()
 
-        for kernelIdx in kernelTab.Indexes do
+        for kernelIdx = 0 to kernels.Length - 1 do
             printf  "."; stdout.Flush();
             //printf  "kernelIdx = %d\n" kernelIdx; stdout.Flush();
-            let kernel = kernelTab.Kernel(kernelIdx)
+            let kernel = kernels.[kernelIdx]
             for item in kernel do  
                 let itemIdx = { KernelIndex = kernelIdx; Item = item }
                 let jset = closure1OfItemWithDummy item
@@ -708,7 +702,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
           
         // This build the action table for one state. 
         let ComputeActions kernelIdx = 
-            let kernel = kernelTab.Kernel kernelIdx
+            let kernel = kernels.[kernelIdx]
             let arr = Array.create spec.Terminals.Length (None, Error)
 
             //printf  "building lookahead table LR(1) items for kernelIdx %d\n" kernelIdx; stdout.Flush();
@@ -780,16 +774,15 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
             arr,immediateAction
 
-        let actionInfo = List.map ComputeActions kernelTab.Indexes
-        Array.ofList (List.map fst actionInfo),
-        Array.ofList (List.map snd actionInfo)
+        let actionInfo = Array.init kernels.Length ComputeActions
+        Array.unzip actionInfo
 
     // The goto table is much simpler - it is based on LR(0) kernels alone. 
 
     reportTime(); printf  "building goto table..."; stdout.Flush();
     let gotoTable = 
          let gotos kernelIdx = Array.init spec.NonTerminals.Length (fun nt ->  gotoKernel ({ KernelIndex = kernelIdx; SymbolIndex = NonTerminalIndex nt }))
-         Array.ofList (List.map gotos kernelTab.Indexes)
+         Array.init kernels.Length gotos
 
     reportTime(); printfn  "returning tables."; stdout.Flush();
     if !shiftReduceConflicts > 0 then printfn  "%d shift/reduce conflicts" !shiftReduceConflicts; stdout.Flush();
