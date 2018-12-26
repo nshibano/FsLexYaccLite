@@ -153,22 +153,6 @@ type GotoItemIndex =
     { KernelIndex : int
       SymbolIndex : SymbolIndex }
 
-/// Create a work list and loop until it is exhausted, calling a worker function for
-/// each element. Pass a function to queue additional work on the work list 
-/// to the worker function
-let processWorkList (start : 'a list) (f : ('a -> unit) -> 'a -> unit) =
-    let work = ref start
-    let queueWork x =
-        work := x :: !work
-    let rec loop() =
-        match !work with 
-        | [] -> ()
-        | x :: t -> 
-            work := t
-            f queueWork x
-            loop()
-    loop()
-
 let memoize1 f =
     let d = Dictionary(HashIdentity.Structural)
     fun x ->
@@ -625,13 +609,13 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
         let acc = new LookaheadTable()
         // Compute the closure
-        processWorkList 
-            initialWork
-            (fun queueWork (kernelItemIdx,lookahead) ->
-                acc.Add(kernelItemIdx, lookahead)
-                for gotoKernelIdx in propagate.[kernelItemIdx] do
-                    if not (acc.Contains(gotoKernelIdx,lookahead)) then 
-                        queueWork(gotoKernelIdx,lookahead))
+        let queue = Queue(initialWork)
+        while queue.Count > 0 do
+            let kernelItemIdx, lookahead = queue.Dequeue()
+            acc.Add(kernelItemIdx, lookahead)
+            for gotoKernelIdx in propagate.[kernelItemIdx] do
+                if not (acc.Contains(gotoKernelIdx, lookahead)) then 
+                    queue.Enqueue(gotoKernelIdx, lookahead)
         acc
 
     //printf  "built lookahead table, #lookaheads = %d\n" lookaheadTable.Count; stdout.Flush();
