@@ -173,18 +173,6 @@ let memoize2 f =
             d.[(x, y)] <- z
             z
 
-/// A mutable table maping kernels to sets of lookahead tokens
-type LookaheadTable() = 
-    let t = new Dictionary<KernelItemIndex, Set<TerminalIndex>>()
-    member table.Add(x,y) = 
-        let prev = if t.ContainsKey(x) then t.[x] else Set.empty 
-        t.[x] <- prev.Add(y)
-    member table.Contains(x,y) = t.ContainsKey(x) && t.[x].Contains(y)
-    member table.GetLookaheads(idx:KernelItemIndex) = 
-        let ok,v = t.TryGetValue(idx)  
-        if ok then v else Set.empty
-    member table.Count = t |> Seq.fold(fun acc (KeyValue(_,v)) -> v.Count+acc) 0
-
 /// Hold the results of cpmuting the LALR(1) closure of an LR(0) kernel
 type Closure1Table() = 
     let t = new Dictionary<Item,HashSet<TerminalIndex>>()
@@ -592,23 +580,38 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     // of lookaheads for each LR(0) kernelItem.   
     reportTime(); printf  "building lookahead table..."; stdout.Flush();
     let lookaheadTable = 
+        let queue = Queue()
 
         // Seed the table with the startKernelItems and the spontaneous info
-        let initialWork =
-            [ for idx in startKernelItemIdxs do
-                  yield (idx,endOfInputTerminalIdx)
-              for (KeyValue(kernelItemIdx,lookaheads)) in spontaneous.IEnumerable do
-                  for lookahead in lookaheads do
-                      yield (kernelItemIdx,lookahead) ]
+        for idx in startKernelItemIdxs do
+            queue.Enqueue (idx,endOfInputTerminalIdx)
+        for KeyValue(kernelItemIdx,lookaheads) in spontaneous.IEnumerable do
+            for lookahead in lookaheads do
+                queue.Enqueue (kernelItemIdx,lookahead) 
 
-        let acc = new LookaheadTable()
+        let acc = Dictionary<KernelItemIndex, HashSet<TerminalIndex>>(HashIdentity.Structural)
+
+        let contains kernelItemIndex lookahead =
+            match acc.TryGetValue(kernelItemIndex) with
+            | true, s -> s.Contains(lookahead)
+            | false, _ -> false
+
+        let add kernelItemIndex lookahead =
+            let s =
+                match acc.TryGetValue(kernelItemIndex) with
+                | true, s -> s
+                | false, _ ->
+                    let s = HashSet(HashIdentity.Structural)
+                    acc.Add(kernelItemIndex, s)
+                    s
+            s.Add(lookahead) |> ignore
+
         // Compute the closure
-        let queue = Queue(initialWork)
         while queue.Count > 0 do
             let kernelItemIdx, lookahead = queue.Dequeue()
-            acc.Add(kernelItemIdx, lookahead)
+            add kernelItemIdx lookahead
             for gotoKernelIdx in propagate.[kernelItemIdx] do
-                if not (acc.Contains(gotoKernelIdx, lookahead)) then 
+                if not (contains gotoKernelIdx lookahead) then 
                     queue.Enqueue(gotoKernelIdx, lookahead)
         acc
 
@@ -711,7 +714,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             let items = 
                  [ for item in kernel do
                      let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
-                     let lookaheads = lookaheadTable.GetLookaheads(kernelItemIdx)
+                     let lookaheads = Set.ofSeq (lookaheadTable.[kernelItemIdx])
                      yield (item, lookaheads) ]
                  |> ComputeClosure1
 
