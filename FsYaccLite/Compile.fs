@@ -104,13 +104,13 @@ type PropagateTable() =
 type CompiledTable =
     {
         Productions : (string * NonTerminalIndex * Symbol array * Code option) []
-        States : ProductionIndex list [] 
+        States : ProductionIndex [] [] 
         StartStates : int []
         ActionTable : ((Associativity * int) option * Action) [] []
         ImmediateActionTable : Action option [] 
         GotoTable : int option [] [] 
         EndOfInputTerminalIndex : int
-        ErrorTerminalIndex : int 
+        ErrorTerminalIndex : int
     }
 
 /// Compile a pre-processed LALR parser spec to tables following the Dragon book algorithm
@@ -699,7 +699,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         fprintfn f "startStates = %s" (String.Join(";", (Array.map string startKernelIdxs)));
         fprintfn f "------------------------") logf
 
-    let states = Array.map (Set.toList >> List.map (fun (item : LR0Item) -> item.ProductionIndex)) states
+    let states = Array.map (fun state -> Array.map (fun (item : LR0Item) -> item.ProductionIndex) (Set.toArray state)) states
 
     {
         Productions = prods
