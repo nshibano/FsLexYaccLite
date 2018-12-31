@@ -10,13 +10,13 @@
     <Compile Include="Lexing.fs" />
     <Compile Include="Parsing.fsi" />
     <Compile Include="Parsing.fs" />
-    <Compile Include="fsyaccast.fs" />
-    <Compile Include="fsyaccpars.fsi" />
-    <Compile Include="fsyaccpars.fs" />
-    <Compile Include="fsyacclex.fs" />
-    <Compile Include="fsyacc.fs" />
-    <None Include="fsyacclex.fsl" />
-    <None Include="fsyaccpars.fsy" />
+    <Compile Include="Syntax.fs" />
+    <Compile Include="Parser.fsi" />
+    <Compile Include="Parser.fs" />
+    <Compile Include="Lexer.fs" />
+    <Compile Include="Yacc.fs" />
+    <None Include="Lexer.fsl" />
+    <None Include="Parser.fsy" />
     <Content Include="FsYaccLite.cmd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
