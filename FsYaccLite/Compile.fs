@@ -633,7 +633,8 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     reportTime(); printf  "building goto table..."; stdout.Flush();
     let gotoTable = 
          let gotos kernelIdx = Array.init spec.NonTerminals.Length (fun nt ->  gotoKernel ({ KernelIndex = kernelIdx; SymbolIndex = NonTerminalIndex nt }))
-         Array.init kernels.Length gotos
+         Array.init kernels.Length (fun kernelIndex ->
+            Array.init spec.NonTerminals.Length (fun nonTerminalIndex ->  gotoKernel ({ KernelIndex = kernelIndex; SymbolIndex = NonTerminalIndex nonTerminalIndex }))         )
 
     reportTime(); printfn  "returning tables."; stdout.Flush();
     if !shiftReduceConflicts > 0 then printfn  "%d shift/reduce conflicts" !shiftReduceConflicts; stdout.Flush();
