@@ -7,8 +7,6 @@ open System
 open System.Collections.Generic
 open Printf
 open Microsoft.FSharp.Collections
-open Microsoft.FSharp.Text.Lexing
-open System.Diagnostics
 
 //-------------------------------------------------
 // Process LALR(1) grammars to tables
