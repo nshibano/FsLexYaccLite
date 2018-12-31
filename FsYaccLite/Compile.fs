@@ -237,63 +237,6 @@ let compile logf (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
     //    if not ans then failwith "unreachable"
     //    ans
 
-    let StringOfSym sym = match sym with TerminalIndex s -> "'" + fst spec.Terminals.[s] + "'" | NonTerminalIndex s -> spec.NonTerminals.[s]
-
-    let OutputSym os sym = fprintf os "%s" (StringOfSym sym)
-
-    let OutputSyms os syms =
-        fprintf os "%s" (String.Join(" ",Array.map StringOfSym syms))
-
-    // Print items and other stuff 
-    let OutputItem os item =
-        fprintf os "    %s -&gt; %a . %a" (spec.NonTerminals.[(headOfItem item)]) (* outputPrecInfo precInfo *) OutputSyms (lsyms_of_item item) OutputSyms (rsyms_of_item item) 
-        
-    let OutputItemSet os s = 
-        Set.iter (fun item -> fprintf os "%a\n" OutputItem item) s
-
-    let OutputFirstSet os m = 
-        Set.iter (function None ->  fprintf os "&lt;empty&gt;" | Some x -> fprintf os "  term %s\n" x) m
-
-    let OutputFirstMap os m = 
-        Map.iter (fun x y -> fprintf os "first '%a' = \n%a\n" OutputSym x OutputFirstSet y) m
-
-    let OutputAction os m = 
-        match m with 
-        | Shift n -> fprintf os "  shift <a href=\"#s%d\">%d</a>" n n 
-        | Reduce prodIdx ->  fprintf os "  reduce %s --&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) OutputSyms (productionBodies.[prodIdx])
-        | Error ->  fprintf os "  error"
-        | Accept -> fprintf os "  accept" 
-    
-    let OutputActions os (m : (PrecedenceInfo * Action) array) =
-        for i = m.Length - 1 downto 0 do
-            let prec, action = m.[i]
-            let term = fst spec.Terminals.[i]
-            fprintf os "    action '%s' (%a): %a\n" term outputPrecInfo prec OutputAction action
-
-    let OutputActionTable os m = 
-        Array.iteri (fun i n -> fprintf os "state %d:\n%a\n" i OutputActions n) m
-
-    let OutputImmediateActions os m = 
-        match m with 
-        | None -> fprintf os "  &lt;none&gt;"
-        | Some a -> OutputAction os a
-    
-    let OutputGotos os m = 
-        Array.iteri (fun ntIdx s -> let nonterm = spec.NonTerminals.[ntIdx] in match s with Some st -> fprintf os "    goto %s: <a href=\"#s%d\">%d</a>\n" nonterm st st | None -> ()) m
-    
-    let OutputCombined os m = 
-        Array.iteri (fun i (a,b,c,d) ->
-            fprintf os "<div id=\"s%d\">state %d:</div>\n  items:\n%a\n  actions:\n%a\n  immediate action: %a\n  gotos:\n%a\n" i i OutputItemSet a OutputActions b OutputImmediateActions c OutputGotos d) m
-    
-    let OutputLalrTables os (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx) = 
-        let combined = Array.ofList (List.map2 (fun x (y,(z,w)) -> x,y,z,w) (Array.toList states) (List.zip (Array.toList actionTable) (List.zip (Array.toList immediateActionTable) (Array.toList gotoTable))))
-        fprintfn os "------------------------";
-        fprintfn os "states = ";
-        fprintfn os "";
-        fprintfn os "%a" OutputCombined combined;
-        fprintfn os "startStates = %s" (String.Join(";", (Array.map string startStates)));
-        fprintfn os "------------------------"
-
     let computeClosure (itemSet : Set<LR0Item>) =
         let mutable accu = itemSet
         let queue = Queue<LR0Item>(itemSet)
@@ -510,6 +453,10 @@ let compile logf (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
         acc
 
     //printf  "built lookahead table, #lookaheads = %d\n" lookaheadTable.Count; stdout.Flush();
+    let stringOfSym (symbolIndex : SymbolIndex) =
+        match symbolIndex with
+        | TerminalIndex s -> "'" + fst spec.Terminals.[s] + "'"
+        | NonTerminalIndex s -> spec.NonTerminals.[s]
 
     reportTime(); printf "building action table..."; stdout.Flush();
     let shiftReduceConflicts = ref 0
@@ -537,7 +484,7 @@ let compile logf (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
                             | Reduce x ->
                                 let nt = productionHeads.[x]
                                 "reduce", productionBodies.[x]
-                                |> Array.map StringOfSym
+                                |> Array.map stringOfSym
                                 |> String.concat " "
                                 |> sprintf "reduce(%s:%s)" (spec.NonTerminals.[nt])
                             | _ -> "", ""
@@ -690,9 +637,58 @@ let compile logf (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
     let states = kernels
     let prods = Array.map (fun (prod : Production) -> (prod.Head, indexOfNonTerminal.[prod.Head], prod.Body, prod.Code)) spec.Productions
 
-    logf (fun logStream -> 
-        printf  "writing tables to log\n"; stdout.Flush();
-        OutputLalrTables logStream     (prods, states, startKernelIdxs, actionTable, immediateActionTable, gotoTable, (indexOfTerminal.[endOfInputTerminal]), errorTerminalIdx));
+    let OutputSym os sym = fprintf os "%s" (stringOfSym sym)
+
+    let OutputSyms os syms =
+        fprintf os "%s" (String.Join(" ",Array.map stringOfSym syms))
+
+    // Print items and other stuff 
+    let OutputItem os item =
+        fprintf os "    %s -&gt; %a . %a" (spec.NonTerminals.[(headOfItem item)]) (* outputPrecInfo precInfo *) OutputSyms (lsyms_of_item item) OutputSyms (rsyms_of_item item) 
+        
+    let OutputItemSet os s = 
+        Set.iter (fun item -> fprintf os "%a\n" OutputItem item) s
+
+    let OutputFirstSet os m = 
+        Set.iter (function None ->  fprintf os "&lt;empty&gt;" | Some x -> fprintf os "  term %s\n" x) m
+
+    let OutputFirstMap os m = 
+        Map.iter (fun x y -> fprintf os "first '%a' = \n%a\n" OutputSym x OutputFirstSet y) m
+
+    let OutputAction os m = 
+        match m with 
+        | Shift n -> fprintf os "  shift <a href=\"#s%d\">%d</a>" n n 
+        | Reduce prodIdx ->  fprintf os "  reduce %s --&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) OutputSyms (productionBodies.[prodIdx])
+        | Error ->  fprintf os "  error"
+        | Accept -> fprintf os "  accept" 
+    
+    let OutputActions os (m : (PrecedenceInfo * Action) array) =
+        for i = m.Length - 1 downto 0 do
+            let prec, action = m.[i]
+            let term = fst spec.Terminals.[i]
+            fprintf os "    action '%s' (%a): %a\n" term outputPrecInfo prec OutputAction action
+
+    let OutputActionTable os m = 
+        Array.iteri (fun i n -> fprintf os "state %d:\n%a\n" i OutputActions n) m
+
+    let OutputImmediateActions os m = 
+        match m with 
+        | None -> fprintf os "  &lt;none&gt;"
+        | Some a -> OutputAction os a
+    
+    let OutputGotos os m = 
+        Array.iteri (fun ntIdx s -> let nonterm = spec.NonTerminals.[ntIdx] in match s with Some st -> fprintf os "    goto %s: <a href=\"#s%d\">%d</a>\n" nonterm st st | None -> ()) m
+    
+    logf (fun os -> 
+        printf  "writing tables to log\n"
+        stdout.Flush()        
+        fprintfn os "------------------------";
+        fprintfn os "states = ";
+        fprintfn os "";
+        for i = 0 to states.Length - 1 do
+            fprintf os "<div id=\"s%d\">state %d:</div>\n  items:\n%a\n  actions:\n%a\n  immediate action: %a\n  gotos:\n%a\n" i i OutputItemSet states.[i] OutputActions actionTable.[i] OutputImmediateActions immediateActionTable.[i] OutputGotos gotoTable.[i]
+        fprintfn os "startStates = %s" (String.Join(";", (Array.map string startKernelIdxs)));
+        fprintfn os "------------------------")
 
     let states = Array.map (Set.toList >> List.map (fun (item : LR0Item) -> item.ProductionIndex)) states
     (prods, states, startKernelIdxs, 
