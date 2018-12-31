@@ -7,6 +7,7 @@ open System
 open System.Collections.Generic
 open Printf
 open Microsoft.FSharp.Collections
+open System.Diagnostics
 
 //-------------------------------------------------
 // Process LALR(1) grammars to tables
@@ -40,13 +41,13 @@ type SymbolIndex =
     | TerminalIndex of int : TerminalIndex
     | NonTerminalIndex of int : NonTerminalIndex
 
-type Item =
+type LR0Item =
     { ProductionIndex : ProductionIndex
       DotIndex : int }
 
 type KernelItemIndex =
     { KernelIndex : int
-      Item : Item }
+      Item : LR0Item }
 
 type GotoItemIndex =
     { KernelIndex : int
@@ -74,7 +75,7 @@ let memoize2 f =
 
 /// Hold the results of cpmuting the LALR(1) closure of an LR(0) kernel
 type Closure1Table() = 
-    let t = new Dictionary<Item,HashSet<TerminalIndex>>()
+    let t = new Dictionary<LR0Item,HashSet<TerminalIndex>>()
     member table.Add(a,b) = 
         if not (t.ContainsKey(a)) then t.[a] <- new HashSet<_>(HashIdentity.Structural)
         t.[a].Add(b)
@@ -105,10 +106,9 @@ type PropagateTable() =
         if ok then v :> seq<_> else Seq.empty
     member table.Count  = t.Count
 
-
 /// Compile a pre-processed LALR parser spec to tables following the Dragon book algorithm
-let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
-    let stopWatch = System.Diagnostics.Stopwatch.StartNew()
+let compile logf (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
+    let stopWatch = Stopwatch.StartNew()
     let reportTime() =
         printfn "time: %d(ms)" stopWatch.ElapsedMilliseconds
         stopWatch.Restart()
@@ -127,18 +127,18 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
             d.Add(fst spec.Terminals.[i], i)
         d
 
-    let indexOfSymbol (sym : Symbol) =
-        match sym with
+    let indexOfSymbol (symbol : Symbol) =
+        match symbol with
         | Terminal s -> TerminalIndex (indexOfTerminal.[s])
         | NonTerminal s -> NonTerminalIndex (indexOfNonTerminal.[s])
 
-    let productionsHeads = Array.map (fun p -> indexOfNonTerminal.[p.Head]) spec.Productions
+    let productionHeads = Array.map (fun p -> indexOfNonTerminal.[p.Head]) spec.Productions
     let productionBodies = Array.map (fun p -> Array.map indexOfSymbol p.Body) spec.Productions
     let productionPrecedences = Array.map (fun p -> p.PrecedenceInfo) spec.Productions
     let productionsOfNonTerminal : ProductionIndex[][] =
-        let table = Array.init spec.NonTerminals.Length (fun i -> ResizeArray<int>())
+        let table = Array.init spec.NonTerminals.Length (fun _ -> ResizeArray<int>())
         for i = 0 to spec.Productions.Length - 1 do
-            table.[productionsHeads.[i]].Add(i)
+            table.[productionHeads.[i]].Add(i)
         Array.map (fun (l : ResizeArray<int>) -> l.ToArray()) table
 
     let dummyLookaheadIdx = indexOfTerminal.[dummyLookahead]
@@ -167,7 +167,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
 
         let scan() =
             for prodIdx = 0 to spec.Productions.Length - 1 do
-                let head = productionsHeads.[prodIdx]
+                let head = productionHeads.[prodIdx]
                 let body = productionBodies.[prodIdx]
                 let mutable pos = 0
                 while pos < body.Length do
@@ -210,32 +210,27 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let firstSetOfSymbolString = memoize2 firstSetOfSymbolString
     
     let createItem productionIndex = { ProductionIndex = productionIndex; DotIndex = 0 }
-    let precedenceOfItem (item : Item) = productionPrecedences.[item.ProductionIndex]
-    let headOfItem (item : Item) = productionsHeads.[item.ProductionIndex]
+    let precedenceOfItem (item : LR0Item) = productionPrecedences.[item.ProductionIndex]
+    let headOfItem (item : LR0Item) = productionHeads.[item.ProductionIndex]
 
-    let lsyms_of_item (item : Item) = 
-        let syms = productionBodies.[item.ProductionIndex]
-        let dotIdx = item.DotIndex
-        if dotIdx <= 0 then [||] else syms.[..dotIdx-1]
+    let lsyms_of_item (item : LR0Item) = 
+        if item.DotIndex = 0 then [||]
+        else productionBodies.[item.ProductionIndex].[..(item.DotIndex-1)]
 
-    let rsyms_of_item (item : Item) = 
-        let syms = productionBodies.[item.ProductionIndex]
-        let dotIdx = item.DotIndex
-        syms.[dotIdx..]
+    let rsyms_of_item (item : LR0Item) = 
+        productionBodies.[item.ProductionIndex].[item.DotIndex..]
 
-    let rsym_of_item (item : Item) = 
-        let prodIdx = item.ProductionIndex
-        let dotIdx = item.DotIndex
-        let body = productionBodies.[prodIdx]
-        if dotIdx < body.Length then
-            Some body.[dotIdx]
-        elif dotIdx = body.Length then
+    let rsym_of_item (item : LR0Item) = 
+        let body = productionBodies.[item.ProductionIndex]
+        if item.DotIndex < body.Length then
+            Some body.[item.DotIndex]
+        elif item.DotIndex = body.Length then
             None
         else failwith "unreachable"
 
-    let advanceOfItem (item : Item) = { item with DotIndex = item.DotIndex + 1 }
+    let advanceOfItem (item : LR0Item) = { item with DotIndex = item.DotIndex + 1 }
     //let startNonTerminalsSet = Set.ofArray (Array.map (fun s -> indexOfNonTerminal.[s]) spec.StartSymbols)
-    let isStartItem (item : Item) = Array.contains (spec.NonTerminals.[productionsHeads.[item.ProductionIndex]]) spec.StartSymbols
+    let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.ProductionIndex]]) spec.StartSymbols
         //startNonTerminalsSet.Contains(headOfItem item)
     //let isKernelItem (item : Item) =
     //    let ans = isStartItem item || item.DotIndex <> 0
@@ -265,7 +260,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     let OutputAction os m = 
         match m with 
         | Shift n -> fprintf os "  shift <a href=\"#s%d\">%d</a>" n n 
-        | Reduce prodIdx ->  fprintf os "  reduce %s --&gt; %a" (spec.NonTerminals.[productionsHeads.[prodIdx]]) OutputSyms (productionBodies.[prodIdx])
+        | Reduce prodIdx ->  fprintf os "  reduce %s --&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) OutputSyms (productionBodies.[prodIdx])
         | Error ->  fprintf os "  error"
         | Accept -> fprintf os "  accept" 
     
@@ -299,9 +294,9 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         fprintfn os "startStates = %s" (String.Join(";", (Array.map string startStates)));
         fprintfn os "------------------------"
 
-    let computeClosure (itemSet : Set<Item>) =
+    let computeClosure (itemSet : Set<LR0Item>) =
         let mutable accu = itemSet
-        let queue = Queue<Item>(itemSet)
+        let queue = Queue<LR0Item>(itemSet)
         while queue.Count > 0 do
             let item = queue.Dequeue()
             let body = productionBodies.[item.ProductionIndex]
@@ -338,7 +333,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         Set.ofSeq accu
 
     let computeGotosOfKernel kernel = 
-        let accu = Dictionary<SymbolIndex, HashSet<Item>>(HashIdentity.Structural)
+        let accu = Dictionary<SymbolIndex, HashSet<LR0Item>>(HashIdentity.Structural)
         for item in computeClosure kernel do
             let body = productionBodies.[item.ProductionIndex]
             if item.DotIndex < body.Length then
@@ -400,7 +395,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
     //        such that [B --> .g, b] is not in I do
     //            add [B --> .g, b] to I
     
-    let ComputeClosure1 (iset : (Item * Set<TerminalIndex>) list) = 
+    let ComputeClosure1 (iset : (LR0Item * Set<TerminalIndex>) list) = 
         let acc = new Closure1Table()
         let queue = Queue(iset)
         while queue.Count > 0 do
@@ -540,7 +535,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
                             match a with
                             | Shift x -> "shift", sprintf "shift(%d)" x
                             | Reduce x ->
-                                let nt = productionsHeads.[x]
+                                let nt = productionHeads.[x]
                                 "reduce", productionBodies.[x]
                                 |> Array.map StringOfSym
                                 |> String.concat " "
@@ -699,7 +694,7 @@ let CompilerLalrParserSpec logf (newprec:bool) (norec:bool) (spec : ProcessedPar
         printf  "writing tables to log\n"; stdout.Flush();
         OutputLalrTables logStream     (prods, states, startKernelIdxs, actionTable, immediateActionTable, gotoTable, (indexOfTerminal.[endOfInputTerminal]), errorTerminalIdx));
 
-    let states = Array.map (Set.toList >> List.map (fun (item : Item) -> item.ProductionIndex)) states
+    let states = Array.map (Set.toList >> List.map (fun (item : LR0Item) -> item.ProductionIndex)) states
     (prods, states, startKernelIdxs, 
      actionTable, immediateActionTable, gotoTable, 
      (indexOfTerminal.[endOfInputTerminal]), 

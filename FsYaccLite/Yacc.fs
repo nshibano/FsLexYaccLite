@@ -155,7 +155,7 @@ let main() =
   printfn "building tables"; 
   let spec1 = processParserSpecAst spec 
   let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
-      CompilerLalrParserSpec logf !newprec !norec spec1 
+      compile logf !newprec !norec spec1 
   logf (fun oso -> fprintfn oso "</pre>");
 
   let (code,pos) = spec.Header 
