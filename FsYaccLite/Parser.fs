@@ -10,7 +10,7 @@ open Microsoft.FSharp.Text.Parsing.ParseHelpers
 // FsLexYacc.FsYacc.Parser
 
 open FsLexYacc.FsYacc
-open FsLexYacc.FsYacc.AST
+open FsLexYacc.FsYacc.Syntax
 
 #nowarn "62" // This construct is for ML compatibility
 
@@ -33,8 +33,8 @@ type token =
   | SEMI
   | EOF
   | ERROR
-  | HEADER of (AST.Code)
-  | CODE of (AST.Code)
+  | HEADER of (Syntax.Code)
+  | CODE of (Syntax.Code)
   | IDENT of (string)
 // This type is used to give symbolic names to token indexes, useful for error messages
 type tokenId = 
@@ -215,7 +215,7 @@ let _fsyacc_immediateActions = [|65535us; 49152us; 65535us; 65535us; 65535us; 16
 let _fsyacc_reductions ()  =    [| 
 # 216 "fsyaccpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : AST.ParserSpec)) in
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.ParserSpec)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
@@ -234,10 +234,10 @@ let _fsyacc_reductions ()  =    [|
                            List.foldBack (fun f x -> f x) _2 { Header=_1;Tokens=[];Types=[];Associativities=[];StartSymbols=[];Rules=_4 } 
                    )
 # 25 "fsyaccpars.fsy"
-                 : AST.ParserSpec));
+                 : Syntax.ParserSpec));
 # 238 "fsyaccpars.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : AST.Code)) in
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.Code)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
@@ -472,7 +472,7 @@ let _fsyacc_reductions ()  =    [|
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'syms)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'optprec)) in
-            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : AST.Code)) in
+            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.Code)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
@@ -558,5 +558,5 @@ let tables () : Microsoft.FSharp.Text.Parsing.Tables<_> =
     numTerminals = 21;
     productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }
 let engine lexer lexbuf startState = (tables ()).Interpret(lexer, lexbuf, startState)
-let spec lexer lexbuf : AST.ParserSpec =
+let spec lexer lexbuf : Syntax.ParserSpec =
     Microsoft.FSharp.Core.Operators.unbox ((tables ()).Interpret(lexer, lexbuf, 0))

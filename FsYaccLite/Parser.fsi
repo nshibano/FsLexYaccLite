@@ -16,8 +16,8 @@ type token =
   | SEMI
   | EOF
   | ERROR
-  | HEADER of (AST.Code)
-  | CODE of (AST.Code)
+  | HEADER of (Syntax.Code)
+  | CODE of (Syntax.Code)
   | IDENT of (string)
 type tokenId = 
     | TOKEN_TOKEN
@@ -66,4 +66,4 @@ val prodIdxToNonTerminal: int -> nonTerminalId
 
 /// This function gets the name of a token as a string
 val token_to_string: token -> string
-val spec : (Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> token) -> Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> (AST.ParserSpec) 
+val spec : (Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> token) -> Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> (Syntax.ParserSpec) 

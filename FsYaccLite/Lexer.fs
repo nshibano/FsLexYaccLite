@@ -4,7 +4,7 @@
 
 module internal FsLexYacc.FsYacc.Lexer
   
-open FsLexYacc.FsYacc.AST
+open FsLexYacc.FsYacc.Syntax
 open FsLexYacc.FsYacc.Parser
 open System.Text
 //open Internal.Utilities.Text.Lexing

@@ -7,9 +7,10 @@ open System.Collections.Generic
 open Printf
 open Microsoft.FSharp.Text.Lexing
 
-open FsLexYacc.FsYacc
-open FsLexYacc.FsYacc.AST
 open FsLexYaccLite.Common.Arg
+open Syntax
+open Preprocess
+open Compile
 
 //------------------------------------------------------------------
 // This code is duplicated from Microsoft.FSharp.Compiler.UnicodeLexing

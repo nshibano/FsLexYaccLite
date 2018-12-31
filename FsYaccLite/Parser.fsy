@@ -4,15 +4,15 @@
 // FsLexYacc.FsYacc.Parser
 
 open FsLexYacc.FsYacc
-open FsLexYacc.FsYacc.AST
+open FsLexYacc.FsYacc.Syntax
 
 #nowarn "62" // This construct is for ML compatibility
 
 %} 
 
-%type <AST.ParserSpec> spec
+%type <Syntax.ParserSpec> spec
 %token <string>  IDENT 
-%token <AST.Code> HEADER CODE 
+%token <Syntax.Code> HEADER CODE 
 %token BAR PERCENT_PERCENT  START LEFT RIGHT NONASSOC LESS GREATER COLON PREC SEMI EOF ERROR
 %token <string> TYPE
 %token <string option> TOKEN
