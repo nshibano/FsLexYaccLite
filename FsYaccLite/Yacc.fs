@@ -143,20 +143,14 @@ let main() =
   let cprintf (os:TextWriter,lineCount) fmt = Printf.fprintf os fmt
   let cprintfn (os:TextWriter,lineCount) fmt = Printf.kfprintf (fun () -> incr lineCount; os.WriteLine()) os fmt
 
-  let logf = 
-      match outputo with 
-      | None -> (fun f -> ())
-      | Some filename -> 
-          let oso = (File.CreateText filename :> TextWriter) 
-          (fun f -> f oso) 
-
-  logf (fun oso -> fprintfn oso "<pre>\nOutput file describing compiled parser placed in %s and %s" output outputi);
+  let logf = Option.map (fun path -> File.CreateText path :> TextWriter) outputo
+  Option.iter (fun f -> fprintfn f "<pre>\nOutput file describing compiled parser placed in %s and %s" output outputi) logf
 
   printfn "building tables"; 
   let spec1 = processParserSpecAst spec 
   let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
       compile logf !newprec !norec spec1 
-  logf (fun oso -> fprintfn oso "</pre>");
+  Option.iter (fun f -> fprintfn f "</pre>") logf
 
   let (code,pos) = spec.Header 
   printfn "%d states" states.Length; 
@@ -530,7 +524,7 @@ let main() =
       //let ty = types.[id] in 
       //cprintfn cosi "val %s : (%s.LexBuffer -> token) -> %s.LexBuffer -> (%s) " id lexlib lexlib ty;
 
-  logf (fun oso -> oso.Close())
+  Option.iter (fun (f : TextWriter) -> f.Close()) logf
 
 let _ = 
     try main()

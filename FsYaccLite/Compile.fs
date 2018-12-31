@@ -107,7 +107,7 @@ type PropagateTable() =
     member table.Count  = t.Count
 
 /// Compile a pre-processed LALR parser spec to tables following the Dragon book algorithm
-let compile logf (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
+let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
     let stopWatch = Stopwatch.StartNew()
     let reportTime() =
         printfn "time: %d(ms)" stopWatch.ElapsedMilliseconds
@@ -679,16 +679,17 @@ let compile logf (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
     let OutputGotos os m = 
         Array.iteri (fun ntIdx s -> let nonterm = spec.NonTerminals.[ntIdx] in match s with Some st -> fprintf os "    goto %s: <a href=\"#s%d\">%d</a>\n" nonterm st st | None -> ()) m
     
-    logf (fun os -> 
+    Option.iter (fun f -> 
         printf  "writing tables to log\n"
-        stdout.Flush()        
-        fprintfn os "------------------------";
-        fprintfn os "states = ";
-        fprintfn os "";
+        stdout.Flush()
+        
+        fprintfn f "------------------------";
+        fprintfn f "states = ";
+        fprintfn f "";
         for i = 0 to states.Length - 1 do
-            fprintf os "<div id=\"s%d\">state %d:</div>\n  items:\n%a\n  actions:\n%a\n  immediate action: %a\n  gotos:\n%a\n" i i OutputItemSet states.[i] OutputActions actionTable.[i] OutputImmediateActions immediateActionTable.[i] OutputGotos gotoTable.[i]
-        fprintfn os "startStates = %s" (String.Join(";", (Array.map string startKernelIdxs)));
-        fprintfn os "------------------------")
+            fprintf f "<div id=\"s%d\">state %d:</div>\n  items:\n%a\n  actions:\n%a\n  immediate action: %a\n  gotos:\n%a\n" i i OutputItemSet states.[i] OutputActions actionTable.[i] OutputImmediateActions immediateActionTable.[i] OutputGotos gotoTable.[i]
+        fprintfn f "startStates = %s" (String.Join(";", (Array.map string startKernelIdxs)));
+        fprintfn f "------------------------") logf
 
     let states = Array.map (Set.toList >> List.map (fun (item : LR0Item) -> item.ProductionIndex)) states
     (prods, states, startKernelIdxs, 
