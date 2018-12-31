@@ -106,6 +106,27 @@ type PropagateTable() =
         if ok then v :> seq<_> else Seq.empty
     member table.Count  = t.Count
 
+type Result =
+    (string * NonTerminalIndex * Symbol array * Code option) [] *
+    ProductionIndex list [] *
+    int [] *
+    ((Associativity * int) option * Action) [] [] *
+    Action option [] * int option [] [] *
+    int * int * string array
+
+type CompiledTable =
+    {
+        Productions : (string * NonTerminalIndex * Symbol array * Code option) []
+        States : ProductionIndex list [] 
+        StartStates : int []
+        ActionTable : ((Associativity * int) option * Action) [] []
+        ImmediateActionTable : Action option [] 
+        GotoTable : int option [] [] 
+        EndOfInputTerminalIndex : int
+        ErrorTerminalIndex : int 
+        NonTerminals : string array
+    }
+
 /// Compile a pre-processed LALR parser spec to tables following the Dragon book algorithm
 let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
     let stopWatch = Stopwatch.StartNew()
@@ -637,62 +658,66 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let states = kernels
     let prods = Array.map (fun (prod : Production) -> (prod.Head, indexOfNonTerminal.[prod.Head], prod.Body, prod.Code)) spec.Productions
 
-    let OutputSym os sym = fprintf os "%s" (stringOfSym sym)
-
-    let OutputSyms os syms =
-        fprintf os "%s" (String.Join(" ",Array.map stringOfSym syms))
-
-    // Print items and other stuff 
-    let OutputItem os item =
-        fprintf os "    %s -&gt; %a . %a" (spec.NonTerminals.[(headOfItem item)]) (* outputPrecInfo precInfo *) OutputSyms (lsyms_of_item item) OutputSyms (rsyms_of_item item) 
-        
-    let OutputItemSet os s = 
-        Set.iter (fun item -> fprintf os "%a\n" OutputItem item) s
-
-    let OutputFirstSet os m = 
-        Set.iter (function None ->  fprintf os "&lt;empty&gt;" | Some x -> fprintf os "  term %s\n" x) m
-
-    let OutputFirstMap os m = 
-        Map.iter (fun x y -> fprintf os "first '%a' = \n%a\n" OutputSym x OutputFirstSet y) m
-
-    let OutputAction os m = 
+    let outputSym os sym = fprintf os "%s" (stringOfSym sym)
+    let outputSyms os syms = fprintf os "%s" (String.Join(" ",Array.map stringOfSym syms))
+    let outputItem os item = fprintf os "    %s -&gt; %a . %a" (spec.NonTerminals.[(headOfItem item)]) (* outputPrecInfo precInfo *) outputSyms (lsyms_of_item item) outputSyms (rsyms_of_item item) 
+    let outputItemSet os s = Set.iter (fun item -> fprintf os "%a\n" outputItem item) s
+    let outputFirstSet os m = Set.iter (function None ->  fprintf os "&lt;empty&gt;" | Some x -> fprintf os "  term %s\n" x) m
+    let outputFirstMap os m = Map.iter (fun x y -> fprintf os "first '%a' = \n%a\n" outputSym x outputFirstSet y) m
+    
+    let outputAction os m = 
         match m with 
         | Shift n -> fprintf os "  shift <a href=\"#s%d\">%d</a>" n n 
-        | Reduce prodIdx ->  fprintf os "  reduce %s --&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) OutputSyms (productionBodies.[prodIdx])
+        | Reduce prodIdx ->  fprintf os "  reduce %s --&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) outputSyms (productionBodies.[prodIdx])
         | Error ->  fprintf os "  error"
         | Accept -> fprintf os "  accept" 
     
-    let OutputActions os (m : (PrecedenceInfo * Action) array) =
+    let outputActions os (m : (PrecedenceInfo * Action) array) =
         for i = m.Length - 1 downto 0 do
             let prec, action = m.[i]
             let term = fst spec.Terminals.[i]
-            fprintf os "    action '%s' (%a): %a\n" term outputPrecInfo prec OutputAction action
+            fprintf os "    action '%s' (%a): %a\n" term outputPrecInfo prec outputAction action
 
-    let OutputActionTable os m = 
-        Array.iteri (fun i n -> fprintf os "state %d:\n%a\n" i OutputActions n) m
+    let outputActionTable os m = Array.iteri (fun i n -> fprintf os "state %d:\n%a\n" i outputActions n) m
 
-    let OutputImmediateActions os m = 
+    let outputImmediateActions os m = 
         match m with 
         | None -> fprintf os "  &lt;none&gt;"
-        | Some a -> OutputAction os a
+        | Some a -> outputAction os a
     
-    let OutputGotos os m = 
-        Array.iteri (fun ntIdx s -> let nonterm = spec.NonTerminals.[ntIdx] in match s with Some st -> fprintf os "    goto %s: <a href=\"#s%d\">%d</a>\n" nonterm st st | None -> ()) m
+    let outputGotos os m = Array.iteri (fun ntIdx s -> let nonterm = spec.NonTerminals.[ntIdx] in match s with Some st -> fprintf os "    goto %s: <a href=\"#s%d\">%d</a>\n" nonterm st st | None -> ()) m
     
     Option.iter (fun f -> 
-        printf  "writing tables to log\n"
+        printfn  "writing tables to log"
         stdout.Flush()
         
         fprintfn f "------------------------";
         fprintfn f "states = ";
         fprintfn f "";
         for i = 0 to states.Length - 1 do
-            fprintf f "<div id=\"s%d\">state %d:</div>\n  items:\n%a\n  actions:\n%a\n  immediate action: %a\n  gotos:\n%a\n" i i OutputItemSet states.[i] OutputActions actionTable.[i] OutputImmediateActions immediateActionTable.[i] OutputGotos gotoTable.[i]
+            fprintfn f "<div id=\"s%d\">state %d:</div>" i i
+            fprintfn f "items:"
+            for item in states.[i] do
+                fprintf f "%a\n" outputItem item
+
+            fprintf f "  actions:\n"
+            fprintf f "%a\n" outputActions actionTable.[i]
+            fprintf f "  immediate action: %a\n" outputImmediateActions immediateActionTable.[i]
+            fprintf f "  gotos:\n"
+            fprintf f "%a\n"     outputGotos gotoTable.[i]
         fprintfn f "startStates = %s" (String.Join(";", (Array.map string startKernelIdxs)));
         fprintfn f "------------------------") logf
 
     let states = Array.map (Set.toList >> List.map (fun (item : LR0Item) -> item.ProductionIndex)) states
-    (prods, states, startKernelIdxs, 
-     actionTable, immediateActionTable, gotoTable, 
-     (indexOfTerminal.[endOfInputTerminal]), 
-     errorTerminalIdx, spec.NonTerminals)
+
+    {
+        Productions = prods
+        States = states
+        StartStates = startKernelIdxs
+        ActionTable = actionTable
+        ImmediateActionTable = immediateActionTable
+        GotoTable = gotoTable
+        EndOfInputTerminalIndex = indexOfTerminal.[endOfInputTerminal]
+        ErrorTerminalIndex = errorTerminalIdx 
+        NonTerminals = spec.NonTerminals
+    }

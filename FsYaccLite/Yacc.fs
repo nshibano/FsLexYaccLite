@@ -147,17 +147,19 @@ let main() =
   Option.iter (fun f -> fprintfn f "<pre>\nOutput file describing compiled parser placed in %s and %s" output outputi) logf
 
   printfn "building tables"; 
-  let spec1 = processParserSpecAst spec 
-  let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
-      compile logf !newprec !norec spec1 
+  let spec1 = processParserSpecAst spec
+  let compiled = compile logf !newprec !norec spec1 
+
+  //let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
+  //    compile logf !newprec !norec spec1 
   Option.iter (fun f -> fprintfn f "</pre>") logf
 
   let (code,pos) = spec.Header 
-  printfn "%d states" states.Length; 
-  printfn "%d nonterminals" gotoTable.[0].Length; 
-  printfn "%d terminals" actionTable.[0].Length; 
-  printfn "%d productions" prods.Length; 
-  printfn "#rows in action table: %d" actionTable.Length; 
+  printfn "%d states" compiled.States.Length; 
+  printfn "%d nonterminals" compiled.GotoTable.[0].Length; 
+  printfn "%d terminals" compiled.ActionTable.[0].Length; 
+  printfn "%d productions" compiled.Productions.Length; 
+  printfn "#rows in action table: %d" compiled.ActionTable.Length; 
 (*
   printfn "#unique rows in action table: %d" (List.length (Array.foldBack (fun row acc -> insert (Array.to_list row) acc) actionTable [])); 
   printfn "maximum #different actions per state: %d" (Array.foldBack (fun row acc ->max (List.length (List.foldBack insert (Array.to_list row) [])) acc) actionTable 0); 
@@ -219,7 +221,7 @@ let main() =
   cprintfn cos "// This type is used to give symbolic names to token indexes, useful for error messages";
   for out in [cos] do
       cprintfn out "type nonTerminalId = ";
-      for nt in nonTerminals do 
+      for nt in compiled.NonTerminals do 
           cprintfn out "    | NONTERM_%s" nt;
 
   cprintfn cos "";
@@ -237,8 +239,8 @@ let main() =
   cprintfn cos "  match tokenIdx with";
   spec.Tokens |> List.iteri (fun i (id,typ) -> 
       cprintfn cos "  | %d -> TOKEN_%s " i id)
-  cprintfn cos "  | %d -> TOKEN_end_of_input" endOfInputTerminalIdx;
-  cprintfn cos "  | %d -> TOKEN_error" errorTerminalIdx;
+  cprintfn cos "  | %d -> TOKEN_end_of_input" compiled.EndOfInputTerminalIndex
+  cprintfn cos "  | %d -> TOKEN_error" compiled.ErrorTerminalIndex
   cprintfn cos "  | _ -> failwith \"tokenTagToTokenId: bad token\""
 
   //cprintfn cosi "";
@@ -249,7 +251,7 @@ let main() =
   cprintfn cos "/// This function maps production indexes returned in syntax errors to strings representing the non terminal that would be produced by that production";
   cprintfn cos "let prodIdxToNonTerminal (prodIdx:int) = ";
   cprintfn cos "  match prodIdx with";
-  prods |> Array.iteri (fun i (nt,ntIdx,syms,code) -> 
+  compiled.Productions |> Array.iteri (fun i (nt,ntIdx,syms,code) -> 
       cprintfn cos "    | %d -> NONTERM_%s " i nt);
   cprintfn cos "    | _ -> failwith \"prodIdxToNonTerminal: bad production index\""
 
@@ -258,8 +260,8 @@ let main() =
   //cprintfn cosi "val prodIdxToNonTerminal: int -> nonTerminalId";
 
   cprintfn cos "";
-  cprintfn cos "let _fsyacc_endOfInputTag = %d " endOfInputTerminalIdx;
-  cprintfn cos "let _fsyacc_tagOfErrorTerminal = %d" errorTerminalIdx;
+  cprintfn cos "let _fsyacc_endOfInputTag = %d " compiled.EndOfInputTerminalIndex;
+  cprintfn cos "let _fsyacc_tagOfErrorTerminal = %d" compiled.ErrorTerminalIndex;
   cprintfn cos "";
   cprintfn cos "// This function gets the name of a token as a string";
   cprintfn cos "let token_to_string (t:token) = ";
@@ -293,10 +295,10 @@ let main() =
   let types = Map.ofList spec.Types 
   let tokens = Map.ofList spec.Tokens 
   
-  let nStates = states.Length 
+  let nStates = compiled.States.Length 
   begin 
       cprintf cos "let _fsyacc_gotos = [| " ;
-      let numGotoNonTerminals = gotoTable.[0].Length 
+      let numGotoNonTerminals = compiled.GotoTable.[0].Length 
       let gotoIndexes = Array.create numGotoNonTerminals 0 
       let gotoTableCurrIndex = ref 0 in 
       for j = 0 to numGotoNonTerminals-1 do  
@@ -305,7 +307,7 @@ let main() =
           (* Count the number of entries in the association table. *)
           let count = ref 0 in 
           for i = 0 to nStates - 1 do 
-            let goto = gotoTable.[i].[j] 
+            let goto = compiled.GotoTable.[i].[j] 
             match goto with 
             | None -> ()
             | Some _ -> incr count
@@ -318,7 +320,7 @@ let main() =
           (* Write the pairs of entries in incremental order by key *)
           (* This lets us implement the lookup by a binary chop. *)
           for i = 0 to nStates - 1 do 
-            let goto = gotoTable.[i].[j] 
+            let goto = compiled.GotoTable.[i].[j] 
             match goto with 
             | None -> ()
             | Some n -> 
@@ -335,15 +337,15 @@ let main() =
 
   begin 
       cprintf cos "let _fsyacc_stateToProdIdxsTableElements = [| " ;
-      let indexes = Array.create states.Length 0 
+      let indexes = Array.create compiled.States.Length 0 
       let currIndex = ref 0 
-      for j = 0 to states.Length - 1 do
-          let state = states.[j]
+      for j = 0 to compiled.States.Length - 1 do
+          let state = compiled.States.[j]
           indexes.[j] <- !currIndex;
 
           (* Write the head of the table (i.e. the number of entries) *)
-          outputCodedUInt16 os state.Length;
-          currIndex := !currIndex + state.Length + 1;
+          outputCodedUInt16 os compiled.States.Length;
+          currIndex := !currIndex + compiled.States.Length + 1;
           
           (* Write the pairs of entries in incremental order by key *)
           (* This lets us implement the lookup by a binary chop. *)
@@ -358,8 +360,8 @@ let main() =
   end;
 
   begin 
-    let numActionRows = (Array.length actionTable) 
-    let maxActionColumns = Array.length actionTable.[0] 
+    let numActionRows = (Array.length compiled.ActionTable) 
+    let maxActionColumns = Array.length compiled.ActionTable.[0] 
     cprintfn cos "let _fsyacc_action_rows = %d" numActionRows;
     cprintf cos "let _fsyacc_actionTableElements = [|" ;
     let actionIndexes = Array.create numActionRows 0 
@@ -367,7 +369,7 @@ let main() =
     let actionTableCurrIndex = ref 0 
     for i = 0 to nStates-1 do 
         actionIndexes.[i] <- !actionTableCurrIndex;
-        let actions = actionTable.[i] 
+        let actions = compiled.ActionTable.[i] 
         let terminalsByAction = new Dictionary<_,int list>(10) 
         let countPerAction = new Dictionary<_,_>(10) 
         for terminal = 0 to actions.Length - 1 do  
@@ -419,19 +421,19 @@ let main() =
   end;
   begin 
       cprintf cos "let _fsyacc_reductionSymbolCounts = [|" ;
-      for nt,ntIdx,syms,code in prods do 
+      for nt,ntIdx,syms,code in compiled.Productions do 
           cprintf cos "%a" outputCodedUInt16 syms.Length;
       cprintfn cos "|]" ;
   end;
   begin 
       cprintf cos "let _fsyacc_productionToNonTerminalTable = [|" ;
-      for nt,ntIdx,syms,code in prods do 
+      for nt,ntIdx,syms,code in compiled.Productions do 
           cprintf cos "%a" outputCodedUInt16 ntIdx;
       cprintfn cos "|]" ;
   end;
   begin 
       cprintf cos "let _fsyacc_immediateActions = [|" ;
-      for prodIdx in immediateActionTable do 
+      for prodIdx in compiled.ImmediateActionTable do 
           match prodIdx with
             | None     -> cprintf cos "%a" outputCodedUInt16 anyMarker (* NONE REP *)
             | Some act -> cprintf cos "%a" outputCodedUInt16 (actionCoding act)
@@ -442,7 +444,7 @@ let main() =
   begin 
       cprintf cos "let _fsyacc_reductions ()  =" ;
       cprintfn cos "    [| " ;
-      for nt,ntIdx,syms,code in prods do 
+      for nt,ntIdx,syms,code in compiled.Productions do 
           //cprintfn cos "# %d \"%s\"" !lineCountOutput output;
           cprintfn cos "        (fun (parseState : %s.IParseState) ->"  parslib
           if !compat then 
@@ -507,11 +509,11 @@ let main() =
   cprintfn cos "                              | Some f -> f ctxt"
   cprintfn cos "                              | None -> parse_error ctxt.Message);"
   
-  cprintfn cos "    numTerminals = %d;" (Array.length actionTable.[0]);
+  cprintfn cos "    numTerminals = %d;" (Array.length compiled.ActionTable.[0]);
   cprintfn cos "    productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }"
   cprintfn cos "let engine lexer lexbuf startState = (tables ()).Interpret(lexer, lexbuf, startState)"                                                                                                         
 
-  for (id,startState) in Seq.zip spec.StartSymbols startStates do
+  for (id,startState) in Seq.zip spec.StartSymbols compiled.StartStates do
         if not (types.ContainsKey id) then 
           failwith ("a %type declaration is required for for start token "+id);
         let ty = types.[id] in 
