@@ -28,11 +28,6 @@ let stringOfAssoc (assoc : Associativity) =
     | RightAssoc -> "right"
     | NonAssoc -> "nonassoc"
     
-let outputPrecInfo os p = 
-    match p with 
-    | Some (assoc,n) -> fprintf os "explicit %s %d" (stringOfAssoc assoc) n
-    | None  -> fprintf os "noprec"
-
 type TerminalIndex = int
 type NonTerminalIndex = int
 type ProductionIndex = int
@@ -124,7 +119,6 @@ type CompiledTable =
         GotoTable : int option [] [] 
         EndOfInputTerminalIndex : int
         ErrorTerminalIndex : int 
-        NonTerminals : string array
     }
 
 /// Compile a pre-processed LALR parser spec to tables following the Dragon book algorithm
@@ -670,7 +664,12 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         | Shift n -> fprintf os "  shift <a href=\"#s%d\">%d</a>" n n 
         | Reduce prodIdx ->  fprintf os "  reduce %s --&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) outputSyms (productionBodies.[prodIdx])
         | Error ->  fprintf os "  error"
-        | Accept -> fprintf os "  accept" 
+        | Accept -> fprintf os "  accept"
+
+    let outputPrecInfo os p = 
+        match p with 
+        | Some (assoc,n) -> fprintf os "explicit %s %d" (stringOfAssoc assoc) n
+        | None  -> fprintf os "noprec"
     
     let outputActions os (m : (PrecedenceInfo * Action) array) =
         for i = m.Length - 1 downto 0 do
@@ -719,5 +718,4 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         GotoTable = gotoTable
         EndOfInputTerminalIndex = indexOfTerminal.[endOfInputTerminal]
         ErrorTerminalIndex = errorTerminalIdx 
-        NonTerminals = spec.NonTerminals
     }

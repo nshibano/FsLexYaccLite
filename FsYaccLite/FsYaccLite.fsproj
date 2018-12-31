@@ -11,11 +11,11 @@
     <Compile Include="Parsing.fsi" />
     <Compile Include="Parsing.fs" />
     <Compile Include="Syntax.fs" />
-    <Compile Include="Preprocess.fs" />
-    <Compile Include="Compile.fs" />
     <Compile Include="Parser.fsi" />
     <Compile Include="Parser.fs" />
     <Compile Include="Lexer.fs" />
+    <Compile Include="Preprocess.fs" />
+    <Compile Include="Compile.fs" />
     <Compile Include="Yacc.fs" />
     <None Include="Lexer.fsl" />
     <None Include="Parser.fsy" />

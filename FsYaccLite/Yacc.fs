@@ -147,8 +147,8 @@ let main() =
   Option.iter (fun f -> fprintfn f "<pre>\nOutput file describing compiled parser placed in %s and %s" output outputi) logf
 
   printfn "building tables"; 
-  let spec1 = processParserSpecAst spec
-  let compiled = compile logf !newprec !norec spec1 
+  let preprocessed = processParserSpecAst spec
+  let compiled = compile logf !newprec !norec preprocessed 
 
   //let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
   //    compile logf !newprec !norec spec1 
@@ -221,7 +221,7 @@ let main() =
   cprintfn cos "// This type is used to give symbolic names to token indexes, useful for error messages";
   for out in [cos] do
       cprintfn out "type nonTerminalId = ";
-      for nt in compiled.NonTerminals do 
+      for nt in preprocessed.NonTerminals do 
           cprintfn out "    | NONTERM_%s" nt;
 
   cprintfn cos "";
