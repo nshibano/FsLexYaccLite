@@ -101,14 +101,6 @@ type PropagateTable() =
         if ok then v :> seq<_> else Seq.empty
     member table.Count  = t.Count
 
-type Result =
-    (string * NonTerminalIndex * Symbol array * Code option) [] *
-    ProductionIndex list [] *
-    int [] *
-    ((Associativity * int) option * Action) [] [] *
-    Action option [] * int option [] [] *
-    int * int * string array
-
 type CompiledTable =
     {
         Productions : (string * NonTerminalIndex * Symbol array * Code option) []
