@@ -632,9 +632,9 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     reportTime(); printf  "building goto table..."; stdout.Flush();
     let gotoTable = 
-         let gotos kernelIdx = Array.init spec.NonTerminals.Length (fun nt ->  gotoKernel ({ KernelIndex = kernelIdx; SymbolIndex = NonTerminalIndex nt }))
          Array.init kernels.Length (fun kernelIndex ->
-            Array.init spec.NonTerminals.Length (fun nonTerminalIndex ->  gotoKernel ({ KernelIndex = kernelIndex; SymbolIndex = NonTerminalIndex nonTerminalIndex }))         )
+            Array.init spec.NonTerminals.Length (fun nonTerminalIndex ->
+                gotoKernel ({ KernelIndex = kernelIndex; SymbolIndex = NonTerminalIndex nonTerminalIndex }))         )
 
     reportTime(); printfn  "returning tables."; stdout.Flush();
     if !shiftReduceConflicts > 0 then printfn  "%d shift/reduce conflicts" !shiftReduceConflicts; stdout.Flush();
@@ -652,12 +652,12 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let outputFirstSet os m = Set.iter (function None ->  fprintf os "&lt;empty&gt;" | Some x -> fprintf os "  term %s\n" x) m
     let outputFirstMap os m = Map.iter (fun x y -> fprintf os "first '%a' = \n%a\n" outputSym x outputFirstSet y) m
     
-    let outputAction os m = 
-        match m with 
-        | Shift n -> fprintf os "  shift <a href=\"#s%d\">%d</a>" n n 
-        | Reduce prodIdx ->  fprintf os "  reduce %s --&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) outputSyms (productionBodies.[prodIdx])
-        | Error ->  fprintf os "  error"
-        | Accept -> fprintf os "  accept"
+    let outputAction f a = 
+        match a with 
+        | Shift n -> fprintf f "  shift <a href=\"#s%d\">%d</a>" n n 
+        | Reduce prodIdx ->  fprintf f "  reduce %s --&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) outputSyms (productionBodies.[prodIdx])
+        | Error ->  fprintf f "  error"
+        | Accept -> fprintf f "  accept"
 
     let outputPrecInfo os p = 
         match p with 
@@ -688,13 +688,21 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         fprintfn f "";
         for i = 0 to states.Length - 1 do
             fprintfn f "<div id=\"s%d\">state %d:</div>" i i
-            fprintfn f "items:"
+            
+            fprintfn f "  items:"
             for item in states.[i] do
-                fprintf f "%a\n" outputItem item
+                fprintfn f "%a" outputItem item
+            fprintfn f ""
 
-            fprintf f "  actions:\n"
-            fprintf f "%a\n" outputActions actionTable.[i]
-            fprintf f "  immediate action: %a\n" outputImmediateActions immediateActionTable.[i]
+            fprintfn f "  actions:"
+            fprintfn f "%a" outputActions actionTable.[i]
+
+            fprintfn f "  immediate action:"
+            match immediateActionTable.[i] with 
+            | None -> fprintfn f "    &lt;none&gt;"
+            | Some a -> fprintf f "  "; outputAction f a
+            fprintfn f ""
+
             fprintf f "  gotos:\n"
             fprintf f "%a\n"     outputGotos gotoTable.[i]
         fprintfn f "startStates = %s" (String.Join(";", (Array.map string startKernelIdxs)));
