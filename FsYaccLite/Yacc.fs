@@ -116,6 +116,8 @@ let main() =
       with e -> 
          eprintf "%s(%d,%d): error: %s" filename lexbuf.StartPos.Line lexbuf.StartPos.Column e.Message;
          exit 1  in
+  
+  let spec = { spec with Tokens = List.rev spec.Tokens }
 
   let has_extension (s:string) = 
     (s.Length >= 1 && s.[s.Length - 1] = '.') 

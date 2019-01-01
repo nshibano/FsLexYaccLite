@@ -584,24 +584,11 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     /// The final results
     let states = kernels
     let prods = Array.map (fun (prod : Production) -> (prod.Head, indexOfNonTerminal.[prod.Head], prod.Body, prod.Code)) spec.Productions
-    
-    let outputAction f a = 
-        match a with 
-        | Shift n -> fprintf f "shift <a href=\"#s%d\">%d</a>" n n 
-        | Reduce prodIdx ->  fprintf f "reduce %s -&gt; %s" (spec.NonTerminals.[productionHeads.[prodIdx]]) (stringOfSyms productionBodies.[prodIdx])
-        | Error ->  fprintf f "error"
-        | Accept -> fprintf f "accept"
 
-    let outputPrecInfo os p = 
+    let outputPrecInfo f p = 
         match p with 
-        | Some (assoc,n) -> fprintf os "explicit %s %d" (stringOfAssoc assoc) n
-        | None  -> fprintf os "noprec"
-    
-    let outputActions os (m : (PrecedenceInfo * Action) array) =
-        for i = m.Length - 1 downto 0 do
-            let prec, action = m.[i]
-            let term = fst spec.Terminals.[i]
-            fprintf os "    %s (%a): %a\n" term outputPrecInfo prec outputAction action
+        | Some (assoc,n) -> fprintf f "explicit %s %d" (stringOfAssoc assoc) n
+        | None  -> fprintf f "noprec"
 
     Option.iter (fun f -> 
         printfn  "writing tables to log"
@@ -622,7 +609,16 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             fprintfn f ""
 
             fprintfn f "  actions:"
-            fprintfn f "%a" outputActions actionTable.[i]
+            for j = 0 to actionTable.[i].Length - 1 do
+                let prec, action = actionTable.[i].[j]
+                let term, _ = spec.Terminals.[j]
+                fprintf f "    %s (%a): " term outputPrecInfo prec
+                match action with 
+                | Shift n -> fprintfn f "shift <a href=\"#s%d\">%d</a>" n n 
+                | Reduce prodIdx ->  fprintfn f "reduce %s -&gt; %s" (spec.NonTerminals.[productionHeads.[prodIdx]]) (stringOfSyms productionBodies.[prodIdx])
+                | Error ->  fprintfn f "error"
+                | Accept -> fprintfn f "accept"
+            fprintfn f ""
 
             fprintfn f "  gotos:"
             for j = 0 to gotoTable.[i].Length - 1 do
