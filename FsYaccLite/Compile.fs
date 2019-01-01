@@ -4,6 +4,7 @@ open Syntax
 open Preprocess
 
 open System
+open System.IO
 open System.Collections.Generic
 open Printf
 open Microsoft.FSharp.Collections
@@ -462,8 +463,8 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     //printf  "built lookahead table, #lookaheads = %d\n" lookaheadTable.Count; stdout.Flush();
     let stringOfSym (symbolIndex : SymbolIndex) =
         match symbolIndex with
-        | TerminalIndex s -> "'" + fst spec.Terminals.[s] + "'"
-        | NonTerminalIndex s -> spec.NonTerminals.[s]
+        | TerminalIndex i -> fst spec.Terminals.[i]
+        | NonTerminalIndex i -> spec.NonTerminals.[i]
 
     reportTime(); printf "building action table..."; stdout.Flush();
     let shiftReduceConflicts = ref 0
@@ -502,7 +503,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                         an, "{" + pstr + " " + astr + "}"
                     let a1n, astr1 = reportAction x1
                     let a2n, astr2 = reportAction x2
-                    printf "%s/%s error at state %d on terminal %s between %s and %s - assuming the former because %s\n" a1n a2n kernelIdx (fst spec.Terminals.[termIdx]) astr1 astr2 reason
+                    printfn "%s/%s error at state %d on terminal %s between %s and %s - assuming the former because %s" a1n a2n kernelIdx (fst spec.Terminals.[termIdx]) astr1 astr2 reason
                 match itemSoFar,itemNew with 
                 | (_,Shift s1),(_, Shift s2) -> 
                    if actionSoFar <> actionNew then 
@@ -648,14 +649,14 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let outputSym os sym = fprintf os "%s" (stringOfSym sym)
     let outputSyms os syms = fprintf os "%s" (String.Join(" ",Array.map stringOfSym syms))
     let outputItem os item = fprintf os "    %s -&gt; %a . %a" (spec.NonTerminals.[(headOfItem item)]) (* outputPrecInfo precInfo *) outputSyms (lsyms_of_item item) outputSyms (rsyms_of_item item) 
-    let outputItemSet os s = Set.iter (fun item -> fprintf os "%a\n" outputItem item) s
+    let outputItemSet os s = Set.iter (fun item -> fprintfn os "%a" outputItem item) s
     let outputFirstSet os m = Set.iter (function None ->  fprintf os "&lt;empty&gt;" | Some x -> fprintf os "  term %s\n" x) m
     let outputFirstMap os m = Map.iter (fun x y -> fprintf os "first '%a' = \n%a\n" outputSym x outputFirstSet y) m
     
     let outputAction f a = 
         match a with 
         | Shift n -> fprintf f "shift <a href=\"#s%d\">%d</a>" n n 
-        | Reduce prodIdx ->  fprintf f "reduce %s --&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) outputSyms (productionBodies.[prodIdx])
+        | Reduce prodIdx ->  fprintf f "reduce %s -&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) outputSyms (productionBodies.[prodIdx])
         | Error ->  fprintf f "error"
         | Accept -> fprintf f "accept"
 
@@ -668,7 +669,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         for i = m.Length - 1 downto 0 do
             let prec, action = m.[i]
             let term = fst spec.Terminals.[i]
-            fprintf os "    action '%s' (%a): %a\n" term outputPrecInfo prec outputAction action
+            fprintf os "    %s (%a): %a\n" term outputPrecInfo prec outputAction action
 
     let outputActionTable os m = Array.iteri (fun i n -> fprintf os "state %d:\n%a\n" i outputActions n) m
 
@@ -677,8 +678,12 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         | None -> fprintf os "  &lt;none&gt;"
         | Some a -> fprintf os "    "; outputAction os a
     
-    let outputGotos os m = Array.iteri (fun ntIdx s -> let nonterm = spec.NonTerminals.[ntIdx] in match s with Some st -> fprintf os "    goto %s: <a href=\"#s%d\">%d</a>\n" nonterm st st | None -> ()) m
-    
+    let outputGotos (f : TextWriter) (gotos : int option array) =
+        for i = 0 to gotos.Length - 1 do
+            match gotos.[i] with
+            | Some st -> fprintf f "    %s: <a href=\"#s%d\">%d</a>\n" spec.NonTerminals.[i] st st
+            | None -> ()
+
     Option.iter (fun f -> 
         printfn  "writing tables to log"
         stdout.Flush()
@@ -703,8 +708,13 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             | Some a -> fprintf f "    "; outputAction f a; fprintfn f ""
             fprintfn f ""
 
-            fprintf f "  gotos:\n"
-            fprintf f "%a\n"     outputGotos gotoTable.[i]
+            fprintfn f "  gotos:"
+            for j = 0 to gotoTable.[i].Length - 1 do
+                match gotoTable.[i].[j] with
+                | Some st -> fprintfn f "    %s: <a href=\"#s%d\">%d</a>" spec.NonTerminals.[j] st st
+                | None -> ()
+            fprintfn f ""
+            
         fprintfn f "startStates = %s" (String.Join(";", (Array.map string startKernelIdxs)));
         fprintfn f "------------------------") logf
 
