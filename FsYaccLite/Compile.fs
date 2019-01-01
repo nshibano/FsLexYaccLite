@@ -502,13 +502,12 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
             // Compute the LR(1) items based on lookaheads
             let items =
-                let items = 
-                   [| for item in kernel do
+                let accu = ResizeArray()
+                for item in kernel do
                         let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
                         for  lookahead in lookaheadTable.[kernelItemIdx] do
-                            yield { ProductionIndex = item.ProductionIndex; DotIndex = item.DotIndex; Lookahead = lookahead } |]
-                Array.sortInPlace startItems
-                ComputeClosure1 items
+                            accu.Add({ ProductionIndex = item.ProductionIndex; DotIndex = item.DotIndex; Lookahead = lookahead })
+                ComputeClosure1 (Array.sort (accu.ToArray()))
 
             for item in items do
                 let body = productionBodies.[item.ProductionIndex]
