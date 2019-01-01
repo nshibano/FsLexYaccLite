@@ -316,23 +316,19 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
         for kernelIdx = 0 to kernels.Length - 1 do
             printf  "."; stdout.Flush();
-            let kernel = kernels.[kernelIdx]
-            for item in kernel do  
-                let itemIdx = { KernelIndex = kernelIdx; Item = item }
-                let jset = closure1OfItemWithDummy item
-                for item in jset do
-                    let body = productionBodies.[item.LR0Item.ProductionIndex]
-                    if item.LR0Item.DotIndex < body.Length then
-                        let rsym = body.[item.LR0Item.DotIndex]
-                        match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = rsym } with 
+            for lr0Item in kernels.[kernelIdx] do  
+                for lr1Item in closure1OfItemWithDummy lr0Item do
+                    let body = productionBodies.[lr1Item.LR0Item.ProductionIndex]
+                    if lr1Item.LR0Item.DotIndex < body.Length then
+                        match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = body.[lr1Item.LR0Item.DotIndex] } with 
                         | None -> ()
                         | Some gotoKernelIdx ->
-                            let gotoItem = advanceOfItem item.LR0Item
-                            let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = gotoItem }
-                            let lookaheadToken = item.Lookahead
-                            if lookaheadToken = dummyLookaheadIdx 
-                            then propagate_Add itemIdx gotoItemIdx |> ignore
-                            else spontaneous.Add(gotoItemIdx, lookaheadToken) |> ignore
+                            let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = advanceOfItem lr1Item.LR0Item }
+                            let lookaheadToken = lr1Item.Lookahead
+                            if lookaheadToken = dummyLookaheadIdx then
+                                propagate_Add { KernelIndex = kernelIdx; Item = lr0Item } gotoItemIdx |> ignore
+                            else
+                                spontaneous.Add(gotoItemIdx, lookaheadToken) |> ignore
 
         spontaneous, propagate
    
