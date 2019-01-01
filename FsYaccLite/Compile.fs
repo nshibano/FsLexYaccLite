@@ -62,29 +62,6 @@ let memoize2 f =
             d.[(x, y)] <- z
             z
 
-/// A mutable table giving a lookahead set Set<Terminal> for each kernel. The terminals represent the
-/// "spontaneous" items for the kernel. TODO: document this more w.r.t. the Dragon book.
-type SpontaneousTable() = 
-    let t = new Dictionary<KernelItemIndex,HashSet<TerminalIndex>>()
-    member table.Add(a,b) = 
-        if not (t.ContainsKey(a)) then t.[a] <- new HashSet<_>(HashIdentity.Structural)
-        t.[a].Add(b)
-    member table.Count  = t.Count
-    member table.IEnumerable = (t :> seq<_>)
-
-/// A mutable table giving a Set<KernelItemIndex> for each kernel. The kernels represent the
-/// "propagate" items for the kernel. TODO: document this more w.r.t. the Dragon book.
-type PropagateTable() = 
-    let t = new Dictionary<KernelItemIndex,HashSet<KernelItemIndex>>()
-    member table.Add(a,b) = 
-        if not (t.ContainsKey(a)) then t.[a] <- new HashSet<KernelItemIndex>(HashIdentity.Structural)
-        t.[a].Add(b)
-    member table.Item 
-      with get(a) = 
-        let ok,v = t.TryGetValue(a) 
-        if ok then v :> seq<_> else Seq.empty
-    member table.Count  = t.Count
-
 type CompiledTable =
     {
         Productions : (string * NonTerminalIndex * Symbol array * Code option) []
