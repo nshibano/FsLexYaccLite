@@ -587,8 +587,8 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     let outputPrecInfo f p = 
         match p with 
-        | Some (assoc,n) -> fprintf f "explicit %s %d" (stringOfAssoc assoc) n
-        | None  -> fprintf f "noprec"
+        | Some (assoc,n) -> fprintf f " (%s %d)" (stringOfAssoc assoc) n
+        | None  -> ()
 
     Option.iter (fun f -> 
         printfn  "writing tables to log"
@@ -605,19 +605,20 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                 let syms = ResizeArray(Array.map stringOfSym productionBodies.[item.ProductionIndex])
                 syms.Insert(item.DotIndex, "\u25CF")
                 fprintf f "    %s -&gt; %s" (spec.NonTerminals.[(headOfItem item)]) (String.Join(' ', syms))
-                fprintfn f " (%a)" outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
+                fprintfn f "%a" outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
             fprintfn f ""
 
             fprintfn f "  actions:"
             for j = 0 to actionTable.[i].Length - 1 do
                 let prec, action = actionTable.[i].[j]
                 let term, _ = spec.Terminals.[j]
-                fprintf f "    %s (%a): " term outputPrecInfo prec
-                match action with 
-                | Shift n -> fprintfn f "shift <a href=\"#s%d\">%d</a>" n n 
-                | Reduce prodIdx ->  fprintfn f "reduce %s -&gt; %s" (spec.NonTerminals.[productionHeads.[prodIdx]]) (stringOfSyms productionBodies.[prodIdx])
-                | Error ->  fprintfn f "error"
-                | Accept -> fprintfn f "accept"
+                if action <> Error then
+                    fprintf f "    %s%a: " term outputPrecInfo prec
+                    match action with 
+                    | Shift n -> fprintfn f "shift <a href=\"#s%d\">%d</a>" n n 
+                    | Reduce prodIdx ->  fprintfn f "reduce %s -&gt; %s" (spec.NonTerminals.[productionHeads.[prodIdx]]) (stringOfSyms productionBodies.[prodIdx])
+                    | Error ->  fprintfn f "error"
+                    | Accept -> fprintfn f "accept"
             fprintfn f ""
 
             fprintfn f "  gotos:"
