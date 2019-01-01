@@ -63,16 +63,6 @@ let memoize2 f =
             d.[(x, y)] <- z
             z
 
-/// Hold the results of cpmuting the LALR(1) closure of an LR(0) kernel
-type Closure1Table() = 
-    let t = new Dictionary<LR0Item,HashSet<TerminalIndex>>()
-    member table.Add(a,b) = 
-        if not (t.ContainsKey(a)) then t.[a] <- new HashSet<_>(HashIdentity.Structural)
-        t.[a].Add(b)
-    member table.Count  = t.Count
-    member table.IEnumerable = (t :> seq<_>)
-    member table.Contains(a,b) = t.ContainsKey(a) && t.[a].Contains(b)
-
 /// A mutable table giving a lookahead set Set<Terminal> for each kernel. The terminals represent the
 /// "spontaneous" items for the kernel. TODO: document this more w.r.t. the Dragon book.
 type SpontaneousTable() = 
