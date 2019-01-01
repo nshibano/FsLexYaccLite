@@ -2,6 +2,7 @@
 
 open System
 open System.Collections.Generic
+open System.IO
 open System.Diagnostics
 
 open Printf
@@ -557,8 +558,27 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     let outputPrecInfo f p = 
         match p with 
-        | Some (assoc,n) -> fprintf f " (%s %d)" (stringOfAssoc assoc) n
+        | Some (assoc,n) -> fprintf f " (%d %s)" n (stringOfAssoc assoc)
         | None  -> ()
+
+    let stringOfPrecInfo p = 
+        match p with 
+        | Some (assoc,n) -> sprintf "(%d %s)" n (stringOfAssoc assoc)
+        | None  -> ""
+    
+    let outputTable (f : TextWriter) (indent : int) (rows : (string * int) [] []) =
+        let cols = Array.max (Array.map Array.length rows)
+        let maxWidths = Array.create cols 0
+        for row in rows do
+            for i = 0 to row.Length - 1 do
+                maxWidths.[i] <- max maxWidths.[i] (snd row.[i])
+        for row in rows do
+            f.Write(String(' ', indent))
+            for i = 0 to row.Length - 1 do
+                if i > 0 then f.Write(' ')
+                f.Write(fst row.[i])
+                f.Write(String(' ', maxWidths.[i] - (snd row.[i])))
+            f.WriteLine()
 
     Option.iter (fun f -> 
         printfn  "writing tables to log"
@@ -579,16 +599,25 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             fprintfn f ""
 
             fprintfn f "  actions:"
+            let rows = ResizeArray()
             for j = 0 to actionTable.[i].Length - 1 do
-                let prec, action = actionTable.[i].[j]
-                let term, _ = spec.Terminals.[j]
+                let _, action = actionTable.[i].[j]
                 if action <> Error then
-                    fprintf f "    %s%a: " term outputPrecInfo prec
-                    match action with 
-                    | Shift n -> fprintfn f "shift <a href=\"#s%d\">%d</a>" n n 
-                    | Reduce prodIdx ->  fprintfn f "reduce %s -&gt; %s" (spec.NonTerminals.[productionHeads.[prodIdx]]) (stringOfSyms productionBodies.[prodIdx])
-                    | Error ->  fprintfn f "error"
-                    | Accept -> fprintfn f "accept"
+                    let term, prec = spec.Terminals.[j]
+                    let precText = stringOfPrecInfo prec
+                    let termText = (if precText.Length = 0 then term else term + " " + precText) + ":"
+
+                    let actionText =
+                        match action with 
+                        | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
+                        | Reduce prodIdx ->
+                            let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[productionHeads.[prodIdx]]) (stringOfSyms productionBodies.[prodIdx])
+                            (s, s.Length - 4)
+                        | Error -> ("error", 5)
+                        | Accept -> ("accept", 6)
+                    
+                    rows.Add([| (termText, termText.Length); actionText |])
+            outputTable f 4 (rows.ToArray())
             fprintfn f ""
 
             fprintfn f "  gotos:"
