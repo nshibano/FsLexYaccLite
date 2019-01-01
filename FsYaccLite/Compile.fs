@@ -28,6 +28,8 @@ type LR0Item =
     { ProductionIndex : ProductionIndex
       DotIndex : int }
 
+let createLR0Item productionIndex = { ProductionIndex = productionIndex; DotIndex = 0 }
+
 type KernelItemIndex =
     { KernelIndex : int
       Item : LR0Item }
@@ -35,6 +37,11 @@ type KernelItemIndex =
 type GotoItemIndex =
     { KernelIndex : int
       SymbolIndex : SymbolIndex }
+
+type LR1Item =
+    { ProductionIndex : ProductionIndex
+      DotIndex : int
+      Lookahead : TerminalIndex }
 
 let memoize1 f =
     let d = Dictionary(HashIdentity.Structural)
@@ -200,8 +207,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     
     let firstSetOfSymbolString = memoize2 firstSetOfSymbolString
 
-    let createLR0Item productionIndex = { ProductionIndex = productionIndex; DotIndex = 0 }
-
     let rsym_of_item (item : LR0Item) = 
         let body = productionBodies.[item.ProductionIndex]
         if item.DotIndex < body.Length then
@@ -212,6 +217,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     let advanceOfItem (item : LR0Item) = { item with DotIndex = item.DotIndex + 1 }
     let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.ProductionIndex]]) spec.StartSymbols
+    let isStartItem1 (item : LR1Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.ProductionIndex]]) spec.StartSymbols
 
     let computeClosure (itemSet : Set<LR0Item>) =
         let mutable accu = itemSet
@@ -295,23 +301,25 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     //        such that [B --> .g, b] is not in I do
     //            add [B --> .g, b] to I
     
-    let ComputeClosure1 (iset : (LR0Item * Set<TerminalIndex>) list) = 
-        let acc = new Closure1Table()
+    let ComputeClosure1 (iset : LR1Item []) = 
+        let acc = HashSet<LR1Item>(HashIdentity.Structural)
         let queue = Queue(iset)
         while queue.Count > 0 do
-            let item, pretokens = queue.Dequeue()
-            for pretoken in pretokens do
-                if not (acc.Contains(item, pretoken)) then
-                    acc.Add(item, pretoken) |> ignore
-                    let body = productionBodies.[item.ProductionIndex]
-                    if item.DotIndex < body.Length then
-                        match body.[item.DotIndex] with
-                        | NonTerminalIndex ntB -> 
-                             let firstSet = firstSetOfSymbolString (Array.toList body.[(item.DotIndex + 1)..]) pretoken
-                             for prodIdx in productionsOfNonTerminal.[ntB] do
-                                 queue.Enqueue (createLR0Item prodIdx, firstSet)
-                        | TerminalIndex _ -> ()
-        acc
+            let item = queue.Dequeue()
+            if acc.Add(item) then
+                let body = productionBodies.[item.ProductionIndex]
+                if item.DotIndex < body.Length then
+                    match body.[item.DotIndex] with
+                    | NonTerminalIndex ntB -> 
+                        let firstSet = firstSetOfSymbolString (Array.toList body.[(item.DotIndex + 1)..]) item.Lookahead
+                        for prodIdx in productionsOfNonTerminal.[ntB] do
+                            for first in firstSet do
+                                queue.Enqueue({ ProductionIndex = prodIdx; DotIndex = 0; Lookahead = first})
+                    | TerminalIndex _ -> ()
+        let ary = Array.zeroCreate acc.Count
+        acc.CopyTo(ary)
+        Array.sortInPlace ary
+        ary
 
     // Compute the "spontaneous" and "propagate" maps for each LR(0) kernelItem 
     //
@@ -333,36 +341,33 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     
     reportTime(); printf "computing lookahead relations..."; stdout.Flush();
 
+    let closure1OfItemWithDummy (item : LR0Item) = ComputeClosure1 [| { ProductionIndex = item.ProductionIndex; DotIndex = item.DotIndex; Lookahead = dummyLookaheadIdx } |]
+    let closure1OfItemWithDummy = memoize1 closure1OfItemWithDummy
         
     let spontaneous, propagate  =
-        let closure1OfItemWithDummy item = ComputeClosure1 [(item, Set.singleton dummyLookaheadIdx)] 
-        let closure1OfItemWithDummy = memoize1 closure1OfItemWithDummy
 
         let spontaneous = new SpontaneousTable()
         let propagate = new PropagateTable()
 
         for kernelIdx = 0 to kernels.Length - 1 do
             printf  "."; stdout.Flush();
-            //printf  "kernelIdx = %d\n" kernelIdx; stdout.Flush();
             let kernel = kernels.[kernelIdx]
             for item in kernel do  
                 let itemIdx = { KernelIndex = kernelIdx; Item = item }
                 let jset = closure1OfItemWithDummy item
-                //printf  "#jset = %d\n" jset.Count; stdout.Flush();
-                for (KeyValue(closureItem, lookaheadTokens)) in jset.IEnumerable do
-                    match rsym_of_item closureItem with 
-                    | None -> ()
-                    | Some rsym ->
+                for item in jset do
+                    let body = productionBodies.[item.ProductionIndex]
+                    if item.DotIndex < body.Length then
+                         let rsym = body.[item.DotIndex]
                          match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = rsym } with 
                          | None -> ()
                          | Some gotoKernelIdx ->
-                              let gotoItem = advanceOfItem closureItem
+                              let gotoItem = advanceOfItem { ProductionIndex = item.ProductionIndex; DotIndex = item.DotIndex } // closureItem
                               let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = gotoItem }
-                              for lookaheadToken in lookaheadTokens do
-                                  if lookaheadToken = dummyLookaheadIdx 
-                                  then propagate.Add(itemIdx, gotoItemIdx) |> ignore
-                                  else spontaneous.Add(gotoItemIdx, lookaheadToken) |> ignore
-
+                              let lookaheadToken = item.Lookahead
+                              if lookaheadToken = dummyLookaheadIdx 
+                              then propagate.Add(itemIdx, gotoItemIdx) |> ignore
+                              else spontaneous.Add(gotoItemIdx, lookaheadToken) |> ignore
 
         spontaneous, propagate
    
@@ -506,36 +511,39 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             //printf  "building lookahead table LR(1) items for kernelIdx %d\n" kernelIdx; stdout.Flush();
 
             // Compute the LR(1) items based on lookaheads
-            let items = 
-                 [ for item in kernel do
-                     let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
-                     let lookaheads = Set.ofSeq (lookaheadTable.[kernelItemIdx])
-                     yield (item, lookaheads) ]
-                 |> ComputeClosure1
+            let items =
+                let items = 
+                   [| for item in kernel do
+                        let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
+                        for  lookahead in lookaheadTable.[kernelItemIdx] do
+                            yield { ProductionIndex = item.ProductionIndex; DotIndex = item.DotIndex; Lookahead = lookahead } |]
+                Array.sortInPlace startItems
+                ComputeClosure1 items
 
-            for (KeyValue(item, lookaheads)) in items.IEnumerable do
-
-                match rsym_of_item item with 
-                | Some (TerminalIndex termIdx) -> 
-                    let action =
-                      match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = TerminalIndex termIdx } with 
-                      | None -> failwith "action on terminal should have found a non-empty goto state"
-                      | Some gkernelItemIdx -> Shift gkernelItemIdx
-                    let prec = snd spec.Terminals.[termIdx]
-                    addResolvingPrecedence arr kernelIdx termIdx (prec, action) 
-                | None ->
-                    for lookahead in lookaheads do
-                        if not (isStartItem(item)) then
-                            let prodIdx = item.ProductionIndex
-                            let prec = productionPrecedences.[item.ProductionIndex]
-                            let action = (prec, Reduce prodIdx)
-                            addResolvingPrecedence arr kernelIdx lookahead action 
-                        elif lookahead = endOfInputTerminalIdx then
-                            let prec = productionPrecedences.[item.ProductionIndex]
-                            let action = (prec,Accept)
-                            addResolvingPrecedence arr kernelIdx lookahead action 
-                        else ()
-                | _ -> ()
+            for item in items do
+                let body = productionBodies.[item.ProductionIndex]
+                if item.DotIndex < body.Length then
+                    match body.[item.DotIndex] with
+                    | TerminalIndex termIdx ->
+                        let action =
+                          match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = TerminalIndex termIdx } with 
+                          | None -> failwith "action on terminal should have found a non-empty goto state"
+                          | Some gkernelItemIdx -> Shift gkernelItemIdx
+                        let prec = snd spec.Terminals.[termIdx]
+                        addResolvingPrecedence arr kernelIdx termIdx (prec, action)
+                    | _ -> ()
+                else
+                    let lookahead = item.Lookahead
+                    if not (isStartItem1 item) then
+                        let prodIdx = item.ProductionIndex
+                        let prec = productionPrecedences.[item.ProductionIndex]
+                        let action = (prec, Reduce prodIdx)
+                        addResolvingPrecedence arr kernelIdx lookahead action 
+                    elif lookahead = endOfInputTerminalIdx then
+                        let prec = productionPrecedences.[item.ProductionIndex]
+                        let action = (prec,Accept)
+                        addResolvingPrecedence arr kernelIdx lookahead action 
+                    else ()
 
             // If there is a single item A -> B C . and no Shift or Accept actions (i.e. only Error or Reduce, so the choice of terminal 
             // cannot affect what we do) then we emit an immediate reduce action for the rule corresponding to that item 
