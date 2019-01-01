@@ -196,14 +196,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     
     let firstSetOfSymbolString = memoize2 firstSetOfSymbolString
 
-    let rsym_of_item (item : LR0Item) = 
-        let body = productionBodies.[item.ProductionIndex]
-        if item.DotIndex < body.Length then
-            Some body.[item.DotIndex]
-        elif item.DotIndex = body.Length then
-            None
-        else failwith "unreachable"
-
     let advanceOfItem (item : LR0Item) = { item with DotIndex = item.DotIndex + 1 }
     let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.ProductionIndex]]) spec.StartSymbols
     let isStartItem1 (item : LR1Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.LR0Item.ProductionIndex]]) spec.StartSymbols
@@ -538,14 +530,13 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             // A -> B C . rules give rise to reductions in favour of errors 
             if not <| norec then
                 for item in computeClosure kernel do
-                    match rsym_of_item item with 
-                    | None ->
+                    let body = productionBodies.[item.ProductionIndex]
+                    if item.DotIndex = body.Length then
                         for terminalIdx = 0 to spec.Terminals.Length - 1 do
                             if snd(arr.[terminalIdx]) = Error then 
                                 let prodIdx = item.ProductionIndex
                                 let action = (productionPrecedences.[item.ProductionIndex], (if isStartItem(item) then Accept else Reduce prodIdx))
                                 addResolvingPrecedence arr kernelIdx terminalIdx action
-                    | _  -> ()
 
             arr
 
