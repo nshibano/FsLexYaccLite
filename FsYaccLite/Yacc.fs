@@ -431,14 +431,6 @@ let main() =
           cprintf cos "%a" outputCodedUInt16 ntIdx;
       cprintfn cos "|]" ;
   end;
-  begin 
-      cprintf cos "let _fsyacc_immediateActions = [|" ;
-      for prodIdx in compiled.ImmediateActionTable do 
-          match prodIdx with
-            | None     -> cprintf cos "%a" outputCodedUInt16 anyMarker (* NONE REP *)
-            | Some act -> cprintf cos "%a" outputCodedUInt16 (actionCoding act)
-      cprintfn cos "|]" ;
-  end;
   
   let getType nt = if types.ContainsKey nt then  types.[nt] else "'"+nt 
   begin 
@@ -500,7 +492,6 @@ let main() =
   cprintfn cos "    stateToProdIdxsTableElements = _fsyacc_stateToProdIdxsTableElements;"
   cprintfn cos "    stateToProdIdxsTableRowOffsets = _fsyacc_stateToProdIdxsTableRowOffsets;"
   cprintfn cos "    reductionSymbolCounts = _fsyacc_reductionSymbolCounts;"
-  cprintfn cos "    immediateActions = _fsyacc_immediateActions;"
   cprintfn cos "    gotos = _fsyacc_gotos;"
   cprintfn cos "    sparseGotoTableRowOffsets = _fsyacc_sparseGotoTableRowOffsets;"
   cprintfn cos "    tagOfErrorTerminal = _fsyacc_tagOfErrorTerminal;"

@@ -74,8 +74,6 @@ type Tables<'tok> =
       actionTableRowOffsets: uint16[];
       /// The number of symbols for each reduction
       reductionSymbolCounts: uint16[];
-      /// The immediate action table
-      immediateActions: uint16[];
       /// The sparse goto table
       gotos: uint16[];
       /// The sparse goto table row offsets
@@ -264,34 +262,27 @@ module Implementation =
             else
                 let state = stateStack.Peek()
                 let action = 
-                    let immediateAction = int tables.immediateActions.[state]
-                    if not (immediateAction = anyMarker) then
-                        // Action has been pre-determined, no need to lookahead 
-                        // Expecting it to be a Reduce action on a non-fakeStartNonTerminal ? 
-                        immediateAction
-                    else
-                        // Lookahead required to determine action 
-                        if not haveLookahead then 
-                            if lexbuf.IsPastEndOfStream then 
-                                // When the input runs out, keep supplying the last token for eofCountDown times
-                                if eofCountDown>0 then
-                                    haveLookahead <- true
-                                    eofCountDown <- eofCountDown - 1
-                                    inEofCountDown <- true
-                                else 
-                                    haveLookahead <- false
+                    if not haveLookahead then 
+                        if lexbuf.IsPastEndOfStream then 
+                            // When the input runs out, keep supplying the last token for eofCountDown times
+                            if eofCountDown>0 then
+                                haveLookahead <- true
+                                eofCountDown <- eofCountDown - 1
+                                inEofCountDown <- true
                             else 
-                                lookaheadToken <- lexer lexbuf
-                                lookaheadStartPos <- lexbuf.StartPos
-                                lookaheadEndPos <- lexbuf.EndPos
-                                haveLookahead <- true;
+                                haveLookahead <- false
+                        else 
+                            lookaheadToken <- lexer lexbuf
+                            lookaheadStartPos <- lexbuf.StartPos
+                            lookaheadEndPos <- lexbuf.EndPos
+                            haveLookahead <- true;
 
-                        let tag = 
-                            if haveLookahead then tables.tagOfToken lookaheadToken 
-                            else tables.endOfInputTag   
+                    let tag = 
+                        if haveLookahead then tables.tagOfToken lookaheadToken 
+                        else tables.endOfInputTag   
                                     
-                        // Printf.printf "state %d\n" state  
-                        actionTable.Read(state,tag)
+                    // Printf.printf "state %d\n" state  
+                    actionTable.Read(state,tag)
                         
                 let kind = actionKind action 
                 if kind = shiftFlag then

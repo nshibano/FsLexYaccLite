@@ -108,7 +108,6 @@ type CompiledTable =
         States : ProductionIndex [] [] 
         StartStates : int []
         ActionTable : ((Associativity * int) option * Action) [] []
-        ImmediateActionTable : Action option [] 
         GotoTable : int option [] [] 
         EndOfInputTerminalIndex : int
         ErrorTerminalIndex : int
@@ -469,7 +468,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     reportTime(); printf "building action table..."; stdout.Flush();
     let shiftReduceConflicts = ref 0
     let reduceReduceConflicts = ref 0
-    let actionTable, immediateActionTable = 
+    let actionTable = 
 
         // Now build the action tables. First a utility to merge the given action  
         // into the table, taking into account precedences etc. and reporting errors. 
@@ -597,20 +596,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             // Also do the same for Accept rules. 
             let closure = (computeClosure kernel)
 
-            let immediateAction =
-                match Set.toList closure with
-                | [item] ->
-                    let pItem = item.ProductionIndex
-                    match (rsym_of_item item) with 
-                    | None when (List.init spec.Terminals.Length id |> List.forall(fun terminalIdx -> arr.[terminalIdx] |> function (_, Reduce pItem) -> true | (_, Error) when not <| norec -> true | _ -> false))
-                        -> Some (Reduce pItem)
-
-                    | None when (List.init spec.Terminals.Length id |> List.forall(fun terminalIdx -> arr.[terminalIdx] |> function (_, Accept) -> true | (_, Error) when not <| norec -> true | _ -> false))
-                        -> Some Accept
-
-                    | _ -> None
-                | _ -> None
-
             // A -> B C . rules give rise to reductions in favour of errors 
             if not <| norec then
                 for item in computeClosure kernel do
@@ -624,10 +609,9 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                                 addResolvingPrecedence arr kernelIdx terminalIdx action
                     | _  -> ()
 
-            arr,immediateAction
+            arr
 
-        let actionInfo = Array.init kernels.Length ComputeActions
-        Array.unzip actionInfo
+        Array.init kernels.Length ComputeActions
 
     // The goto table is much simpler - it is based on LR(0) kernels alone. 
 
@@ -648,7 +632,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     let outputSym os sym = fprintf os "%s" (stringOfSym sym)
     let outputSyms os syms = fprintf os "%s" (String.Join(" ",Array.map stringOfSym syms))
-    let outputItem os item = fprintf os "    %s -&gt; %a . %a" (spec.NonTerminals.[(headOfItem item)]) (* outputPrecInfo precInfo *) outputSyms (lsyms_of_item item) outputSyms (rsyms_of_item item) 
+    let outputItem os item = fprintf os "    %s -&gt; %a . %a" (spec.NonTerminals.[(headOfItem item)]) outputSyms (lsyms_of_item item) outputSyms (rsyms_of_item item) 
     let outputItemSet os s = Set.iter (fun item -> fprintfn os "%a" outputItem item) s
     let outputFirstSet os m = Set.iter (function None ->  fprintf os "&lt;empty&gt;" | Some x -> fprintf os "  term %s\n" x) m
     let outputFirstMap os m = Map.iter (fun x y -> fprintf os "first '%a' = \n%a\n" outputSym x outputFirstSet y) m
@@ -696,17 +680,11 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             
             fprintfn f "  items:"
             for item in states.[i] do
-                fprintfn f "%a" outputItem item
+                fprintfn f "%a (%a)" outputItem item outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
             fprintfn f ""
 
             fprintfn f "  actions:"
             fprintfn f "%a" outputActions actionTable.[i]
-
-            fprintfn f "  immediate action:"
-            match immediateActionTable.[i] with 
-            | None -> fprintfn f "    &lt;none&gt;"
-            | Some a -> fprintf f "    "; outputAction f a; fprintfn f ""
-            fprintfn f ""
 
             fprintfn f "  gotos:"
             for j = 0 to gotoTable.[i].Length - 1 do
@@ -725,7 +703,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         States = states
         StartStates = startKernelIdxs
         ActionTable = actionTable
-        ImmediateActionTable = immediateActionTable
         GotoTable = gotoTable
         EndOfInputTerminalIndex = indexOfTerminal.[endOfInputTerminal]
         ErrorTerminalIndex = errorTerminalIdx 
