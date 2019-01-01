@@ -22,7 +22,7 @@ type IParseState =
     // Dynamically typed, non-lexically scoped local store
     abstract ParserLocalStore : IDictionary<string,obj>
     /// Raise an error in this parse context
-    abstract RaiseError<'b> : unit -> 'b 
+    abstract RaiseError<'b> : unit -> 'b
 
 //-------------------------------------------------------------------------
 // This context is passed to the error reporter when a syntax error occurs

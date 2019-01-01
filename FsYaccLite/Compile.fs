@@ -10,24 +10,11 @@ open Printf
 open Microsoft.FSharp.Collections
 open System.Diagnostics
 
-//-------------------------------------------------
-// Process LALR(1) grammars to tables
-
-/// Part of the output of CompilerLalrParserSpec
 type Action = 
   | Shift of stateIndex : int
   | Reduce of productionIndex : int
   | Accept
   | Error
-
-//---------------------------------------------------------------------
-// Output Raw Parser Spec AST
-
-let stringOfAssoc (assoc : Associativity) =
-    match assoc with
-    | LeftAssoc -> "left"
-    | RightAssoc -> "right"
-    | NonAssoc -> "nonassoc"
     
 type TerminalIndex = int
 type NonTerminalIndex = int
@@ -113,14 +100,11 @@ type CompiledTable =
         ErrorTerminalIndex : int
     }
 
-/// Compile a pre-processed LALR parser spec to tables following the Dragon book algorithm
 let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
     let stopWatch = Stopwatch.StartNew()
     let reportTime() =
         printfn "time: %d(ms)" stopWatch.ElapsedMilliseconds
         stopWatch.Restart()
-
-    // Build indexed tables
 
     let indexOfNonTerminal =
         let d = Dictionary<string, NonTerminalIndex>()
@@ -220,13 +204,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let precedenceOfItem (item : LR0Item) = productionPrecedences.[item.ProductionIndex]
     let headOfItem (item : LR0Item) = productionHeads.[item.ProductionIndex]
 
-    let lsyms_of_item (item : LR0Item) = 
-        if item.DotIndex = 0 then [||]
-        else productionBodies.[item.ProductionIndex].[..(item.DotIndex-1)]
-
-    let rsyms_of_item (item : LR0Item) = 
-        productionBodies.[item.ProductionIndex].[item.DotIndex..]
-
     let rsym_of_item (item : LR0Item) = 
         let body = productionBodies.[item.ProductionIndex]
         if item.DotIndex < body.Length then
@@ -262,15 +239,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         accu
 
     let computeClosure = memoize1 computeClosure
-    
-    //// Right symbols after closing under epsilon moves
-    //let relevantSymbolsOfKernel kernel =
-    //    let mutable symbols = Set.empty
-    //    for item in computeClosure kernel do
-    //        let body = productionBodies.[item.ProductionIndex]
-    //        if item.DotIndex < body.Length then
-    //            symbols <- Set.add body.[item.DotIndex] symbols
-    //    symbols
 
     // Goto set of a kernel of LR(0) nonTerminals, items etc 
     // Input is kernel, output is kernel
@@ -320,22 +288,12 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let startKernelIdxs = Array.map (fun kernel -> indexOfKernel.[kernel]) startKernels
     let startKernelItemIdxs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
 
-    //let outputKernelItemIdx os (kernelIdx, item)  =
-    //    fprintf os "kernel %d, item %a" kernelIdx OutputItem item
-
     /// A cached version of the "goto" computation on LR(0) kernels 
     let gotoKernel (gotoItemIndex : GotoItemIndex) = 
         let gset = computeGotoOfKernel (kernels.[gotoItemIndex.KernelIndex]) gotoItemIndex.SymbolIndex
         if gset.IsEmpty then None else Some (indexOfKernel.[gset])
 
     let gotoKernel = memoize1 gotoKernel
-
-    ///// Iterate (iset,sym) pairs such that (gotoKernel kernelIdx sym) is not empty
-    //let IterateGotosOfKernel kernelIdx f =
-    //    for sym in relevantSymbolsOfKernel (kernelTab.Kernel kernelIdx) do 
-    //        match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = sym } with 
-    //        | None -> ()
-    //        | Some k -> f sym k
 
     // This is used to compute the closure of an LALR(1) kernel 
     //
@@ -414,12 +372,8 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                                   else spontaneous.Add(gotoItemIdx, lookaheadToken) |> ignore
 
 
-        //printfn "#kernelIdxs = %d, count = %d" kernelTab.Indexes.Length !count
         spontaneous, propagate
    
-    //printfn "#spontaneous = %d, #propagate = %d" spontaneous.Count propagate.Count; stdout.Flush();
-   
-    //exit 0;
     // Repeatedly use the "spontaneous" and "propagate" maps to build the full set 
     // of lookaheads for each LR(0) kernelItem.   
     reportTime(); printf  "building lookahead table..."; stdout.Flush();
@@ -459,11 +413,12 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                     queue.Enqueue(gotoKernelIdx, lookahead)
         acc
 
-    //printf  "built lookahead table, #lookaheads = %d\n" lookaheadTable.Count; stdout.Flush();
     let stringOfSym (symbolIndex : SymbolIndex) =
         match symbolIndex with
         | TerminalIndex i -> fst spec.Terminals.[i]
         | NonTerminalIndex i -> spec.NonTerminals.[i]
+    
+    let stringOfSyms syms = String.Join(" ", Array.map stringOfSym syms)
 
     reportTime(); printf "building action table..."; stdout.Flush();
     let shiftReduceConflicts = ref 0
@@ -629,18 +584,11 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     /// The final results
     let states = kernels
     let prods = Array.map (fun (prod : Production) -> (prod.Head, indexOfNonTerminal.[prod.Head], prod.Body, prod.Code)) spec.Productions
-
-    let outputSym os sym = fprintf os "%s" (stringOfSym sym)
-    let outputSyms os syms = fprintf os "%s" (String.Join(" ",Array.map stringOfSym syms))
-    let outputItem os item = fprintf os "    %s -&gt; %a . %a" (spec.NonTerminals.[(headOfItem item)]) outputSyms (lsyms_of_item item) outputSyms (rsyms_of_item item) 
-    let outputItemSet os s = Set.iter (fun item -> fprintfn os "%a" outputItem item) s
-    let outputFirstSet os m = Set.iter (function None ->  fprintf os "&lt;empty&gt;" | Some x -> fprintf os "  term %s\n" x) m
-    let outputFirstMap os m = Map.iter (fun x y -> fprintf os "first '%a' = \n%a\n" outputSym x outputFirstSet y) m
     
     let outputAction f a = 
         match a with 
         | Shift n -> fprintf f "shift <a href=\"#s%d\">%d</a>" n n 
-        | Reduce prodIdx ->  fprintf f "reduce %s -&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) outputSyms (productionBodies.[prodIdx])
+        | Reduce prodIdx ->  fprintf f "reduce %s -&gt; %s" (spec.NonTerminals.[productionHeads.[prodIdx]]) (stringOfSyms productionBodies.[prodIdx])
         | Error ->  fprintf f "error"
         | Accept -> fprintf f "accept"
 
@@ -655,19 +603,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             let term = fst spec.Terminals.[i]
             fprintf os "    %s (%a): %a\n" term outputPrecInfo prec outputAction action
 
-    let outputActionTable os m = Array.iteri (fun i n -> fprintf os "state %d:\n%a\n" i outputActions n) m
-
-    let outputImmediateActions os m = 
-        match m with 
-        | None -> fprintf os "  &lt;none&gt;"
-        | Some a -> fprintf os "    "; outputAction os a
-    
-    let outputGotos (f : TextWriter) (gotos : int option array) =
-        for i = 0 to gotos.Length - 1 do
-            match gotos.[i] with
-            | Some st -> fprintf f "    %s: <a href=\"#s%d\">%d</a>\n" spec.NonTerminals.[i] st st
-            | None -> ()
-
     Option.iter (fun f -> 
         printfn  "writing tables to log"
         stdout.Flush()
@@ -680,7 +615,10 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             
             fprintfn f "  items:"
             for item in states.[i] do
-                fprintfn f "%a (%a)" outputItem item outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
+                let syms = ResizeArray(Array.map stringOfSym productionBodies.[item.ProductionIndex])
+                syms.Insert(item.DotIndex, ".")
+                fprintf f "    %s -&gt; %s" (spec.NonTerminals.[(headOfItem item)]) (String.Join(' ', syms))
+                fprintfn f " (%a)" outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
             fprintfn f ""
 
             fprintfn f "  actions:"
@@ -698,12 +636,10 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     let states = Array.map (fun state -> Array.map (fun (item : LR0Item) -> item.ProductionIndex) (Set.toArray state)) states
 
-    {
-        Productions = prods
-        States = states
-        StartStates = startKernelIdxs
-        ActionTable = actionTable
-        GotoTable = gotoTable
-        EndOfInputTerminalIndex = indexOfTerminal.[endOfInputTerminal]
-        ErrorTerminalIndex = errorTerminalIdx 
-    }
+    { Productions = prods
+      States = states
+      StartStates = startKernelIdxs
+      ActionTable = actionTable
+      GotoTable = gotoTable
+      EndOfInputTerminalIndex = indexOfTerminal.[endOfInputTerminal]
+      ErrorTerminalIndex = errorTerminalIdx }
