@@ -1,14 +1,13 @@
 ﻿module FsLexYacc.FsYacc.Compile
 
+open System
+open System.Collections.Generic
+open System.Diagnostics
+
+open Printf
+
 open Syntax
 open Preprocess
-
-open System
-open System.IO
-open System.Collections.Generic
-open Printf
-open Microsoft.FSharp.Collections
-open System.Diagnostics
 
 type Action = 
   | Shift of stateIndex : int
@@ -177,8 +176,11 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.ProductionIndex]]) spec.StartSymbols
     let isStartItem1 (item : LR1Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.LR0Item.ProductionIndex]]) spec.StartSymbols
 
-    let computeClosure (itemSet : Set<LR0Item>) =
-        let mutable accu = itemSet
+    let computeClosure (itemSet : LR0Item []) =
+        let mutable accu = HashSet(HashIdentity.Structural)
+        for item in itemSet do
+            accu.Add(item) |> ignore
+
         let queue = Queue<LR0Item>(itemSet)
         while queue.Count > 0 do
             let item = queue.Dequeue()
@@ -188,11 +190,11 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                 | NonTerminalIndex ni ->
                     for prod in productionsOfNonTerminal.[ni] do
                         let newItem = createLR0Item prod
-                        if not (Set.contains newItem accu) then
-                            accu <- Set.add newItem accu
+                        if accu.Add(newItem) then
                             queue.Enqueue newItem
                 | _ -> ()
-        accu
+
+        Array.sort (Array.ofSeq accu)
 
     let computeClosure = memoize1 computeClosure
 
@@ -204,7 +206,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             let body = productionBodies.[item.ProductionIndex]
             if item.DotIndex < body.Length && body.[item.DotIndex] = sym then
                 accu.Add(advanceOfItem item) 
-        Set.ofSeq accu
+        Array.sort (accu.ToArray())
 
     let computeGotosOfKernel kernel = 
         let accu = Dictionary<SymbolIndex, HashSet<LR0Item>>(HashIdentity.Structural)
@@ -215,19 +217,18 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                 if not (accu.ContainsKey(sym)) then
                     accu.[sym] <- HashSet(HashIdentity.Structural)
                 accu.[sym].Add(advanceOfItem item) |> ignore
-        Array.map Set.ofSeq (Array.ofSeq accu.Values)
+        Array.map (fun hs -> Array.sort (Array.ofSeq hs)) (Array.ofSeq accu.Values)
 
     // Build the full set of LR(0) kernels 
     reportTime(); printf "building kernels..."; stdout.Flush();
     let startItems = Array.map (fun startSymbol -> createLR0Item productionsOfNonTerminal.[indexOfNonTerminal.[startSymbol]].[0]) spec.StartSymbols
-    let startKernels = Array.map Set.singleton startItems
+    let startKernels = Array.map (fun x -> [| x |]) startItems
     let kernels = 
-        let mutable accu = Set.empty
         let queue = Queue(startKernels)
+        let accu = HashSet(HashIdentity.Structural)
         while queue.Count > 0 do
             let kernel = queue.Dequeue()
-            if not (accu.Contains(kernel)) then
-                accu <- accu.Add(kernel)
+            if accu.Add(kernel) then
                 for goto in computeGotosOfKernel kernel do
                     queue.Enqueue(goto)
         Array.ofSeq accu
@@ -247,7 +248,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     /// A cached version of the "goto" computation on LR(0) kernels 
     let gotoKernel (gotoItemIndex : GotoItemIndex) = 
         let gset = computeGotoOfKernel (kernels.[gotoItemIndex.KernelIndex]) gotoItemIndex.SymbolIndex
-        if gset.IsEmpty then None else Some (indexOfKernel.[gset])
+        if gset.Length = 0 then None else Some (indexOfKernel.[gset])
 
     let gotoKernel = memoize1 gotoKernel
 
@@ -274,10 +275,8 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                             for first in firstSet do
                                 queue.Enqueue({ LR0Item = createLR0Item prodIdx; Lookahead = first})
                     | TerminalIndex _ -> ()
-        let ary = Array.zeroCreate acc.Count
-        acc.CopyTo(ary)
-        Array.sortInPlace ary
-        ary
+
+        Array.sort (Array.ofSeq (acc))
 
     // Compute the "spontaneous" and "propagate" maps for each LR(0) kernelItem 
     //
@@ -594,7 +593,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         fprintfn f "startStates = %s" (String.Join(";", (Array.map string startKernelIdxs)));
         fprintfn f "------------------------") logf
 
-    let states = Array.map (fun state -> Array.map (fun (item : LR0Item) -> item.ProductionIndex) (Set.toArray state)) states
+    let states = Array.map (fun state -> Array.map (fun (item : LR0Item) -> item.ProductionIndex) state) states
 
     { Productions = prods
       States = states
