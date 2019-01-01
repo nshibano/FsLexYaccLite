@@ -61,6 +61,23 @@ let memoize2 f =
             d.[(x, y)] <- z
             z
 
+type MultiDictionary<'T, 'U when 'T : equality> = Dictionary<'T, HashSet<'U>>
+
+let MultiDictionary_Create<'T, 'U when 'T : equality>() : MultiDictionary<'T, 'U> = Dictionary<'T, HashSet<'U>>(HashIdentity.Structural)
+
+let MultiDictionary_Contains (d : Dictionary<'T, HashSet<'U>>) (k : 'T) (v : 'U) =
+    match d.TryGetValue(k) with
+    | true, values -> values.Contains(v)
+    | false, _ -> false
+
+let MultiDictionary_Add (d : Dictionary<'T, HashSet<'U>>) (k : 'T) (v : 'U) =
+    match d.TryGetValue(k) with
+    | true, values -> values.Add(v) |> ignore
+    | false, _ ->
+        let values = HashSet(HashIdentity.Structural)
+        values.Add(v) |> ignore
+        d.[k] <- values
+
 type CompiledTable =
     {
         Productions : (string * NonTerminalIndex * Symbol array * Code option) []
@@ -200,23 +217,21 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     // Goto set of a kernel of LR(0) nonTerminals, items etc 
     // Input is kernel, output is kernel
-    let computeGotoOfKernel kernel sym = 
+    let computeGotoOfKernel (kernel : LR0Item []) (symbol : SymbolIndex) : LR0Item [] = 
         let accu = List()
         for item in computeClosure kernel do
             let body = productionBodies.[item.ProductionIndex]
-            if item.DotIndex < body.Length && body.[item.DotIndex] = sym then
+            if item.DotIndex < body.Length && body.[item.DotIndex] = symbol then
                 accu.Add(advanceOfItem item) 
         Array.sort (accu.ToArray())
 
-    let computeGotosOfKernel kernel = 
-        let accu = Dictionary<SymbolIndex, HashSet<LR0Item>>(HashIdentity.Structural)
+    let computeGotosOfKernel (kernel : LR0Item []) : LR0Item [] [] = 
+        let accu = MultiDictionary_Create<SymbolIndex, LR0Item>()
+
         for item in computeClosure kernel do
             let body = productionBodies.[item.ProductionIndex]
             if item.DotIndex < body.Length then
-                let sym = body.[item.DotIndex]
-                if not (accu.ContainsKey(sym)) then
-                    accu.[sym] <- HashSet(HashIdentity.Structural)
-                accu.[sym].Add(advanceOfItem item) |> ignore
+                MultiDictionary_Add accu body.[item.DotIndex] (advanceOfItem item)
         Array.map (fun hs -> Array.sort (Array.ofSeq hs)) (Array.ofSeq accu.Values)
 
     // Build the full set of LR(0) kernels 
@@ -304,15 +319,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let spontaneous, propagate  =
 
         let spontaneous = HashSet<KernelItemIndex * TerminalIndex>(HashIdentity.Structural)
-        let propagate = Dictionary<KernelItemIndex, HashSet<KernelItemIndex>>(HashIdentity.Structural)
-
-        let propagate_Add x y =
-            match propagate.TryGetValue(x) with
-            | true, ys -> ys.Add(y) |> ignore
-            | false, _ ->
-                let ys = HashSet(HashIdentity.Structural)
-                ys.Add(y) |> ignore
-                propagate.[x] <- ys
+        let propagate = MultiDictionary_Create<KernelItemIndex, KernelItemIndex>()
 
         for kernelIdx = 0 to kernels.Length - 1 do
             printf  "."; stdout.Flush();
@@ -326,7 +333,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                             let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = advanceOfItem lr1Item.LR0Item }
                             let lookaheadToken = lr1Item.Lookahead
                             if lookaheadToken = dummyLookaheadIdx then
-                                propagate_Add { KernelIndex = kernelIdx; Item = lr0Item } gotoItemIdx |> ignore
+                                MultiDictionary_Add propagate { KernelIndex = kernelIdx; Item = lr0Item } gotoItemIdx |> ignore
                             else
                                 spontaneous.Add(gotoItemIdx, lookaheadToken) |> ignore
 
@@ -344,31 +351,16 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         for s in spontaneous do
             queue.Enqueue(s)
 
-        let acc = Dictionary<KernelItemIndex, HashSet<TerminalIndex>>(HashIdentity.Structural)
-
-        let contains kernelItemIndex lookahead =
-            match acc.TryGetValue(kernelItemIndex) with
-            | true, s -> s.Contains(lookahead)
-            | false, _ -> false
-
-        let add kernelItemIndex lookahead =
-            let s =
-                match acc.TryGetValue(kernelItemIndex) with
-                | true, s -> s
-                | false, _ ->
-                    let s = HashSet(HashIdentity.Structural)
-                    acc.Add(kernelItemIndex, s)
-                    s
-            s.Add(lookahead) |> ignore
+        let acc = MultiDictionary_Create<KernelItemIndex, TerminalIndex>()
 
         // Compute the closure
         while queue.Count > 0 do
             let kernelItemIdx, lookahead = queue.Dequeue()
-            add kernelItemIdx lookahead
+            MultiDictionary_Add acc kernelItemIdx lookahead
             match propagate.TryGetValue(kernelItemIdx) with
             | true, s ->
                 for gotoKernelIdx in s do
-                    if not (contains gotoKernelIdx lookahead) then 
+                    if not (MultiDictionary_Contains acc gotoKernelIdx lookahead) then 
                         queue.Enqueue(gotoKernelIdx, lookahead)
             |  false, _ -> ()
         
