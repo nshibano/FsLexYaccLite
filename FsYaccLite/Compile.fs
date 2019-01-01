@@ -328,7 +328,15 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let spontaneous, propagate  =
 
         let spontaneous = HashSet<KernelItemIndex * TerminalIndex>(HashIdentity.Structural)
-        let propagate = new PropagateTable()
+        let propagate = Dictionary<KernelItemIndex, HashSet<KernelItemIndex>>(HashIdentity.Structural)
+
+        let propagate_Add x y =
+            match propagate.TryGetValue(x) with
+            | true, ys -> ys.Add(y) |> ignore
+            | false, _ ->
+                let ys = HashSet(HashIdentity.Structural)
+                ys.Add(y) |> ignore
+                propagate.[x] <- ys
 
         for kernelIdx = 0 to kernels.Length - 1 do
             printf  "."; stdout.Flush();
@@ -347,7 +355,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                             let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = gotoItem }
                             let lookaheadToken = item.Lookahead
                             if lookaheadToken = dummyLookaheadIdx 
-                            then propagate.Add(itemIdx, gotoItemIdx) |> ignore
+                            then propagate_Add itemIdx gotoItemIdx |> ignore
                             else spontaneous.Add(gotoItemIdx, lookaheadToken) |> ignore
 
         spontaneous, propagate
@@ -385,9 +393,13 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         while queue.Count > 0 do
             let kernelItemIdx, lookahead = queue.Dequeue()
             add kernelItemIdx lookahead
-            for gotoKernelIdx in propagate.[kernelItemIdx] do
-                if not (contains gotoKernelIdx lookahead) then 
-                    queue.Enqueue(gotoKernelIdx, lookahead)
+            match propagate.TryGetValue(kernelItemIdx) with
+            | true, s ->
+                for gotoKernelIdx in s do
+                    if not (contains gotoKernelIdx lookahead) then 
+                        queue.Enqueue(gotoKernelIdx, lookahead)
+            |  false, _ -> ()
+        
         acc
 
     let stringOfSym (symbolIndex : SymbolIndex) =
