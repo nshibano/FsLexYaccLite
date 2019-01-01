@@ -616,7 +616,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             fprintfn f "  items:"
             for item in states.[i] do
                 let syms = ResizeArray(Array.map stringOfSym productionBodies.[item.ProductionIndex])
-                syms.Insert(item.DotIndex, ".")
+                syms.Insert(item.DotIndex, "\u25CF")
                 fprintf f "    %s -&gt; %s" (spec.NonTerminals.[(headOfItem item)]) (String.Join(' ', syms))
                 fprintfn f " (%a)" outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
             fprintfn f ""
