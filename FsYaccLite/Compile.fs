@@ -511,11 +511,11 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                     if not (isStartItem1 item) then
                         let prodIdx = item.LR0Item.ProductionIndex
                         let prec = productionPrecedences.[item.LR0Item.ProductionIndex]
-                        let action = (prec, Reduce prodIdx)
+                        let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Reduce prodIdx)
                         addResolvingPrecedence arr kernelIdx lookahead action 
                     elif lookahead = endOfInputTerminalIdx then
                         let prec = productionPrecedences.[item.LR0Item.ProductionIndex]
-                        let action = (prec,Accept)
+                        let action = (Option.map (fun (x, y, _) -> (x, y)) prec ,Accept)
                         addResolvingPrecedence arr kernelIdx lookahead action 
                     else ()
 
@@ -532,7 +532,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                         for terminalIdx = 0 to spec.Terminals.Length - 1 do
                             if snd(arr.[terminalIdx]) = Error then 
                                 let prodIdx = item.ProductionIndex
-                                let action = (productionPrecedences.[item.ProductionIndex], (if isStartItem(item) then Accept else Reduce prodIdx))
+                                let action = (Option.map (fun (x, y, _) -> (x, y)) productionPrecedences.[item.ProductionIndex], (if isStartItem(item) then Accept else Reduce prodIdx))
                                 addResolvingPrecedence arr kernelIdx terminalIdx action
 
             arr
@@ -558,7 +558,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     let outputPrecInfo f p = 
         match p with 
-        | Some (assoc,n) -> fprintf f " (%d %s)" n (stringOfAssoc assoc)
+        | Some (assoc, n, symbol) -> fprintf f " (%d %s %s)" n (stringOfAssoc assoc) symbol
         | None  -> ()
 
     let stringOfPrecInfo p = 

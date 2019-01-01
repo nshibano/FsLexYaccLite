@@ -1,18 +1,19 @@
 ﻿module FsLexYacc.FsYacc.Preprocess
 
+open System.Collections.Generic
+
 open Syntax
 
-type PrecedenceInfo = (Associativity * int) option
 type Symbol = Terminal of string | NonTerminal of string
 
 type Production =
     { Head : string
       Body : Symbol array
-      PrecedenceInfo : PrecedenceInfo
+      PrecedenceInfo : (Associativity * int * string) option
       Code : Code option }
 
 type ProcessedParserSpec = 
-    { Terminals: (string * PrecedenceInfo) array
+    { Terminals: (string * (Associativity * int) option) array
       NonTerminals: string array
       Productions: Production array
       StartSymbols: string array }
@@ -34,22 +35,26 @@ let processParserSpecAst (spec : ParserSpec) =
     
     let explicitPrecInfo = Map.ofList explicitPrecInfo
     let terminals = Array.append (Array.map fst (Array.ofList spec.Tokens)) [| errorTerminal |]
-    let terminalSet = Set.ofArray terminals
+    let terminalsSet = HashSet(terminals)
        
     let productions =  
         spec.Rules |> List.mapi (fun i (nonterm,rules) -> 
             rules |> List.mapi (fun j (Rule(syms,precsym,code)) -> 
                 let precInfo = 
-                    let precsym = List.foldBack (fun x acc -> match acc with Some _ -> acc | None -> match x with z when terminalSet.Contains z -> Some z | _ -> acc) syms precsym
+                    let precsym = List.foldBack (fun x acc -> match acc with Some _ -> acc | None -> match x with z when terminalsSet.Contains z -> Some z | _ -> acc) syms precsym
                     match precsym with 
-                    | Some sym -> if explicitPrecInfo.ContainsKey(sym) then Some explicitPrecInfo.[sym] else None
+                    | Some sym ->
+                        if explicitPrecInfo.ContainsKey(sym) then
+                            let x, y = explicitPrecInfo.[sym]
+                            Some (x, y, sym)
+                        else None
                     | None -> None
-                { Head = nonterm; PrecedenceInfo = precInfo; Body = Array.map (fun s -> if terminalSet.Contains s then Terminal s else NonTerminal s) (Array.ofList syms); Code = code }))
+                { Head = nonterm; PrecedenceInfo = precInfo; Body = Array.map (fun s -> if terminalsSet.Contains s then Terminal s else NonTerminal s) (Array.ofList syms); Code = code }))
          |> List.concat
          |> Array.ofList
 
     let nonTerminals = Array.map fst (Array.ofList spec.Rules)
-    let nonTerminalSet = Set.ofArray nonTerminals
+    let nonTerminalSet = HashSet(nonTerminals)
 
     let checkNonTerminal nt =  
         if nt <> errorTerminal && not (nonTerminalSet.Contains(nt)) then 
@@ -59,7 +64,7 @@ let processParserSpecAst (spec : ParserSpec) =
         for sym in prod.Body do 
            match sym with 
            | NonTerminal nt -> checkNonTerminal nt 
-           | Terminal t -> if not (terminalSet.Contains t) then failwith (sprintf "token %s is not declared" t)
+           | Terminal t -> if not (terminalsSet.Contains t) then failwith (sprintf "token %s is not declared" t)
            
     if spec.StartSymbols = [] then (failwith "at least one %start declaration is required\n")
 
