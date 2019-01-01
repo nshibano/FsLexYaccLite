@@ -335,7 +335,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         
     let spontaneous, propagate  =
 
-        let spontaneous = new SpontaneousTable()
+        let spontaneous = HashSet<KernelItemIndex * TerminalIndex>(HashIdentity.Structural)
         let propagate = new PropagateTable()
 
         for kernelIdx = 0 to kernels.Length - 1 do
@@ -368,10 +368,9 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
         // Seed the table with the startKernelItems and the spontaneous info
         for idx in startKernelItemIdxs do
-            queue.Enqueue (idx,endOfInputTerminalIdx)
-        for KeyValue(kernelItemIdx,lookaheads) in spontaneous.IEnumerable do
-            for lookahead in lookaheads do
-                queue.Enqueue (kernelItemIdx,lookahead) 
+            queue.Enqueue(idx,endOfInputTerminalIdx)
+        for (kernelItemIdx, lookahead) in spontaneous do
+            queue.Enqueue(kernelItemIdx,lookahead) 
 
         let acc = Dictionary<KernelItemIndex, HashSet<TerminalIndex>>(HashIdentity.Structural)
 
