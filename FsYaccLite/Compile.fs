@@ -654,10 +654,10 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     
     let outputAction f a = 
         match a with 
-        | Shift n -> fprintf f "  shift <a href=\"#s%d\">%d</a>" n n 
-        | Reduce prodIdx ->  fprintf f "  reduce %s --&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) outputSyms (productionBodies.[prodIdx])
-        | Error ->  fprintf f "  error"
-        | Accept -> fprintf f "  accept"
+        | Shift n -> fprintf f "shift <a href=\"#s%d\">%d</a>" n n 
+        | Reduce prodIdx ->  fprintf f "reduce %s --&gt; %a" (spec.NonTerminals.[productionHeads.[prodIdx]]) outputSyms (productionBodies.[prodIdx])
+        | Error ->  fprintf f "error"
+        | Accept -> fprintf f "accept"
 
     let outputPrecInfo os p = 
         match p with 
@@ -675,7 +675,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let outputImmediateActions os m = 
         match m with 
         | None -> fprintf os "  &lt;none&gt;"
-        | Some a -> outputAction os a
+        | Some a -> fprintf os "    "; outputAction os a
     
     let outputGotos os m = Array.iteri (fun ntIdx s -> let nonterm = spec.NonTerminals.[ntIdx] in match s with Some st -> fprintf os "    goto %s: <a href=\"#s%d\">%d</a>\n" nonterm st st | None -> ()) m
     
@@ -700,7 +700,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             fprintfn f "  immediate action:"
             match immediateActionTable.[i] with 
             | None -> fprintfn f "    &lt;none&gt;"
-            | Some a -> fprintf f "  "; outputAction f a
+            | Some a -> fprintf f "    "; outputAction f a; fprintfn f ""
             fprintfn f ""
 
             fprintf f "  gotos:\n"
