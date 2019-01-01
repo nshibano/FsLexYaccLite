@@ -199,10 +199,8 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         Set.ofSeq acc
     
     let firstSetOfSymbolString = memoize2 firstSetOfSymbolString
-    
-    let createItem productionIndex = { ProductionIndex = productionIndex; DotIndex = 0 }
-    let precedenceOfItem (item : LR0Item) = productionPrecedences.[item.ProductionIndex]
-    let headOfItem (item : LR0Item) = productionHeads.[item.ProductionIndex]
+
+    let createLR0Item productionIndex = { ProductionIndex = productionIndex; DotIndex = 0 }
 
     let rsym_of_item (item : LR0Item) = 
         let body = productionBodies.[item.ProductionIndex]
@@ -213,13 +211,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         else failwith "unreachable"
 
     let advanceOfItem (item : LR0Item) = { item with DotIndex = item.DotIndex + 1 }
-    //let startNonTerminalsSet = Set.ofArray (Array.map (fun s -> indexOfNonTerminal.[s]) spec.StartSymbols)
     let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.ProductionIndex]]) spec.StartSymbols
-        //startNonTerminalsSet.Contains(headOfItem item)
-    //let isKernelItem (item : Item) =
-    //    let ans = isStartItem item || item.DotIndex <> 0
-    //    if not ans then failwith "unreachable"
-    //    ans
 
     let computeClosure (itemSet : Set<LR0Item>) =
         let mutable accu = itemSet
@@ -231,7 +223,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                 match body.[item.DotIndex] with
                 | NonTerminalIndex ni ->
                     for prod in productionsOfNonTerminal.[ni] do
-                        let newItem = createItem prod
+                        let newItem = createLR0Item prod
                         if not (Set.contains newItem accu) then
                             accu <- Set.add newItem accu
                             queue.Enqueue newItem
@@ -263,7 +255,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     // Build the full set of LR(0) kernels 
     reportTime(); printf "building kernels..."; stdout.Flush();
-    let startItems = Array.map (fun startSymbol -> createItem productionsOfNonTerminal.[indexOfNonTerminal.[startSymbol]].[0]) spec.StartSymbols
+    let startItems = Array.map (fun startSymbol -> createLR0Item productionsOfNonTerminal.[indexOfNonTerminal.[startSymbol]].[0]) spec.StartSymbols
     let startKernels = Array.map Set.singleton startItems
     let kernels = 
         let mutable accu = Set.empty
@@ -317,7 +309,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                         | NonTerminalIndex ntB -> 
                              let firstSet = firstSetOfSymbolString (Array.toList body.[(item.DotIndex + 1)..]) pretoken
                              for prodIdx in productionsOfNonTerminal.[ntB] do
-                                 queue.Enqueue (createItem prodIdx, firstSet)
+                                 queue.Enqueue (createLR0Item prodIdx, firstSet)
                         | TerminalIndex _ -> ()
         acc
 
@@ -523,7 +515,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
             for (KeyValue(item, lookaheads)) in items.IEnumerable do
 
-                let nonTermA = headOfItem item
                 match rsym_of_item item with 
                 | Some (TerminalIndex termIdx) -> 
                     let action =
@@ -536,11 +527,11 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                     for lookahead in lookaheads do
                         if not (isStartItem(item)) then
                             let prodIdx = item.ProductionIndex
-                            let prec = precedenceOfItem item
+                            let prec = productionPrecedences.[item.ProductionIndex]
                             let action = (prec, Reduce prodIdx)
                             addResolvingPrecedence arr kernelIdx lookahead action 
                         elif lookahead = endOfInputTerminalIdx then
-                            let prec = precedenceOfItem item
+                            let prec = productionPrecedences.[item.ProductionIndex]
                             let action = (prec,Accept)
                             addResolvingPrecedence arr kernelIdx lookahead action 
                         else ()
@@ -554,13 +545,12 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             // A -> B C . rules give rise to reductions in favour of errors 
             if not <| norec then
                 for item in computeClosure kernel do
-                    let prec = precedenceOfItem item
                     match rsym_of_item item with 
                     | None ->
                         for terminalIdx = 0 to spec.Terminals.Length - 1 do
                             if snd(arr.[terminalIdx]) = Error then 
                                 let prodIdx = item.ProductionIndex
-                                let action = (prec, (if isStartItem(item) then Accept else Reduce prodIdx))
+                                let action = (productionPrecedences.[item.ProductionIndex], (if isStartItem(item) then Accept else Reduce prodIdx))
                                 addResolvingPrecedence arr kernelIdx terminalIdx action
                     | _  -> ()
 
@@ -604,7 +594,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             for item in states.[i] do
                 let syms = ResizeArray(Array.map stringOfSym productionBodies.[item.ProductionIndex])
                 syms.Insert(item.DotIndex, "\u25CF")
-                fprintf f "    %s -&gt; %s" (spec.NonTerminals.[(headOfItem item)]) (String.Join(' ', syms))
+                fprintf f "    %s -&gt; %s" (spec.NonTerminals.[productionHeads.[item.ProductionIndex]]) (String.Join(' ', syms))
                 fprintfn f "%a" outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
             fprintfn f ""
 
