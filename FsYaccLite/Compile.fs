@@ -61,16 +61,16 @@ let memoize2 f =
             d.[(x, y)] <- z
             z
 
-type MultiDictionary<'T, 'U when 'T : equality> = Dictionary<'T, HashSet<'U>>
+type MultiDictionary<'T, 'U> = Dictionary<'T, HashSet<'U>>
 
 let MultiDictionary_Create<'T, 'U when 'T : equality>() : MultiDictionary<'T, 'U> = Dictionary<'T, HashSet<'U>>(HashIdentity.Structural)
 
-let MultiDictionary_Contains (d : Dictionary<'T, HashSet<'U>>) (k : 'T) (v : 'U) =
+let MultiDictionary_Contains (d : MultiDictionary<'T, 'U>) (k : 'T) (v : 'U) =
     match d.TryGetValue(k) with
     | true, values -> values.Contains(v)
     | false, _ -> false
 
-let MultiDictionary_Add (d : Dictionary<'T, HashSet<'U>>) (k : 'T) (v : 'U) =
+let MultiDictionary_Add (d : MultiDictionary<'T, 'U>) (k : 'T) (v : 'U) =
     match d.TryGetValue(k) with
     | true, values -> values.Add(v) |> ignore
     | false, _ ->
