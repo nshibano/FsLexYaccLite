@@ -39,8 +39,7 @@ type GotoItemIndex =
       SymbolIndex : SymbolIndex }
 
 type LR1Item =
-    { ProductionIndex : ProductionIndex
-      DotIndex : int
+    { LR0Item : LR0Item
       Lookahead : TerminalIndex }
 
 let memoize1 f =
@@ -207,7 +206,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     let advanceOfItem (item : LR0Item) = { item with DotIndex = item.DotIndex + 1 }
     let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.ProductionIndex]]) spec.StartSymbols
-    let isStartItem1 (item : LR1Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.ProductionIndex]]) spec.StartSymbols
+    let isStartItem1 (item : LR1Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.LR0Item.ProductionIndex]]) spec.StartSymbols
 
     let computeClosure (itemSet : Set<LR0Item>) =
         let mutable accu = itemSet
@@ -297,14 +296,14 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         while queue.Count > 0 do
             let item = queue.Dequeue()
             if acc.Add(item) then
-                let body = productionBodies.[item.ProductionIndex]
-                if item.DotIndex < body.Length then
-                    match body.[item.DotIndex] with
+                let body = productionBodies.[item.LR0Item.ProductionIndex]
+                if item.LR0Item.DotIndex < body.Length then
+                    match body.[item.LR0Item.DotIndex] with
                     | NonTerminalIndex ntB -> 
-                        let firstSet = firstSetOfSymbolString (Array.toList body.[(item.DotIndex + 1)..]) item.Lookahead
+                        let firstSet = firstSetOfSymbolString (Array.toList body.[(item.LR0Item.DotIndex + 1)..]) item.Lookahead
                         for prodIdx in productionsOfNonTerminal.[ntB] do
                             for first in firstSet do
-                                queue.Enqueue({ ProductionIndex = prodIdx; DotIndex = 0; Lookahead = first})
+                                queue.Enqueue({ LR0Item = createLR0Item prodIdx; Lookahead = first})
                     | TerminalIndex _ -> ()
         let ary = Array.zeroCreate acc.Count
         acc.CopyTo(ary)
@@ -331,7 +330,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     
     reportTime(); printf "computing lookahead relations..."; stdout.Flush();
 
-    let closure1OfItemWithDummy (item : LR0Item) = ComputeClosure1 [| { ProductionIndex = item.ProductionIndex; DotIndex = item.DotIndex; Lookahead = dummyLookaheadIdx } |]
+    let closure1OfItemWithDummy (item : LR0Item) = ComputeClosure1 [| { LR0Item = item; Lookahead = dummyLookaheadIdx } |]
     let closure1OfItemWithDummy = memoize1 closure1OfItemWithDummy
         
     let spontaneous, propagate  =
@@ -346,13 +345,13 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                 let itemIdx = { KernelIndex = kernelIdx; Item = item }
                 let jset = closure1OfItemWithDummy item
                 for item in jset do
-                    let body = productionBodies.[item.ProductionIndex]
-                    if item.DotIndex < body.Length then
-                         let rsym = body.[item.DotIndex]
+                    let body = productionBodies.[item.LR0Item.ProductionIndex]
+                    if item.LR0Item.DotIndex < body.Length then
+                         let rsym = body.[item.LR0Item.DotIndex]
                          match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = rsym } with 
                          | None -> ()
                          | Some gotoKernelIdx ->
-                              let gotoItem = advanceOfItem { ProductionIndex = item.ProductionIndex; DotIndex = item.DotIndex } // closureItem
+                              let gotoItem = advanceOfItem item.LR0Item
                               let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = gotoItem }
                               let lookaheadToken = item.Lookahead
                               if lookaheadToken = dummyLookaheadIdx 
@@ -498,21 +497,19 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             let kernel = kernels.[kernelIdx]
             let arr = Array.create spec.Terminals.Length (None, Error)
 
-            //printf  "building lookahead table LR(1) items for kernelIdx %d\n" kernelIdx; stdout.Flush();
-
             // Compute the LR(1) items based on lookaheads
             let items =
                 let accu = ResizeArray()
                 for item in kernel do
-                        let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
-                        for  lookahead in lookaheadTable.[kernelItemIdx] do
-                            accu.Add({ ProductionIndex = item.ProductionIndex; DotIndex = item.DotIndex; Lookahead = lookahead })
+                    let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
+                    for  lookahead in lookaheadTable.[kernelItemIdx] do
+                        accu.Add({ LR0Item = item; Lookahead = lookahead })
                 ComputeClosure1 (Array.sort (accu.ToArray()))
 
             for item in items do
-                let body = productionBodies.[item.ProductionIndex]
-                if item.DotIndex < body.Length then
-                    match body.[item.DotIndex] with
+                let body = productionBodies.[item.LR0Item.ProductionIndex]
+                if item.LR0Item.DotIndex < body.Length then
+                    match body.[item.LR0Item.DotIndex] with
                     | TerminalIndex termIdx ->
                         let action =
                           match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = TerminalIndex termIdx } with 
@@ -524,12 +521,12 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                 else
                     let lookahead = item.Lookahead
                     if not (isStartItem1 item) then
-                        let prodIdx = item.ProductionIndex
-                        let prec = productionPrecedences.[item.ProductionIndex]
+                        let prodIdx = item.LR0Item.ProductionIndex
+                        let prec = productionPrecedences.[item.LR0Item.ProductionIndex]
                         let action = (prec, Reduce prodIdx)
                         addResolvingPrecedence arr kernelIdx lookahead action 
                     elif lookahead = endOfInputTerminalIdx then
-                        let prec = productionPrecedences.[item.ProductionIndex]
+                        let prec = productionPrecedences.[item.LR0Item.ProductionIndex]
                         let action = (prec,Accept)
                         addResolvingPrecedence arr kernelIdx lookahead action 
                     else ()
