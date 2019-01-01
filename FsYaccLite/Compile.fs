@@ -129,21 +129,21 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     printf  "computing first function..."; stdout.Flush();
 
     let firstSetOfSymbol =
-        let firstSets = Dictionary<SymbolIndex, HashSet<TerminalIndex option>>(HashIdentity.Structural)
+        let accu = Dictionary<SymbolIndex, HashSet<TerminalIndex option>>(HashIdentity.Structural)
 
         // For terminals, add itself (Some term) to its first-set.
         for term = 0 to spec.Terminals.Length - 1 do
             let set = HashSet(HashIdentity.Structural)
             set.Add(Some term) |> ignore
-            firstSets.Add(TerminalIndex term, set)
+            accu.Add(TerminalIndex term, set)
 
         // For non-terminals, start with empty set.
         for nonTerm = 0 to spec.NonTerminals.Length - 1 do
-            firstSets.Add(NonTerminalIndex nonTerm, HashSet(HashIdentity.Structural))
+            accu.Add(NonTerminalIndex nonTerm, HashSet(HashIdentity.Structural))
         
         let mutable added = false
         let add symbolIndex firstSetItem =
-            added <- firstSets.[symbolIndex].Add(firstSetItem) || added
+            added <- accu.[symbolIndex].Add(firstSetItem) || added
 
         let scan() =
             for prodIdx = 0 to spec.Productions.Length - 1 do
@@ -152,10 +152,10 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                 let mutable pos = 0
                 while pos < body.Length do
                     // add first symbols of production body to the first-set of this production head 
-                    for firstSetItem in firstSets.[body.[pos]] do
+                    for firstSetItem in accu.[body.[pos]] do
                         if firstSetItem.IsSome then
                             add (NonTerminalIndex head) firstSetItem
-                    if firstSets.[body.[pos]].Contains None then
+                    if accu.[body.[pos]].Contains None then
                         // the symbol at pos can be empty, therefore go through the following symbols
                         pos <- pos + 1
                     else
@@ -172,20 +172,25 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             added <- false
             scan()
 
-        firstSets
+        accu
 
-    let firstSetOfSymbolString (str : SymbolIndex list) (term : TerminalIndex) =
-        let acc = List<TerminalIndex>()
-        let rec add l = 
-            match l with 
-            | [] -> acc.Add(term)
-            | sym :: moreSyms -> 
-                let firstSetOfSym = firstSetOfSymbol.[sym]
-                Seq.iter (function Some v -> acc.Add(v) | None -> ()) firstSetOfSym
+    let firstSetOfSymbolString (str : SymbolIndex []) (term : TerminalIndex) =
+        let accu = HashSet<TerminalIndex>(HashIdentity.Structural)
+
+        let rec loop pos =
+            if pos < str.Length then
+                let firstSetOfSym = firstSetOfSymbol.[str.[pos]]
+                for first in firstSetOfSym do
+                    match first with
+                    | Some v -> accu.Add(v) |> ignore
+                    | None -> ()
                 if firstSetOfSym.Contains(None) then
-                    add moreSyms 
-        add str
-        Set.ofSeq acc
+                    loop (pos + 1)
+            else
+                accu.Add(term) |> ignore
+
+        loop 0
+        accu
     
     let firstSetOfSymbolString = memoize2 firstSetOfSymbolString
 
@@ -285,7 +290,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                 if item.LR0Item.DotIndex < body.Length then
                     match body.[item.LR0Item.DotIndex] with
                     | NonTerminalIndex ntB -> 
-                        let firstSet = firstSetOfSymbolString (Array.toList body.[(item.LR0Item.DotIndex + 1)..]) item.Lookahead
+                        let firstSet = firstSetOfSymbolString body.[(item.LR0Item.DotIndex + 1)..] item.Lookahead
                         for prodIdx in productionsOfNonTerminal.[ntB] do
                             for first in firstSet do
                                 queue.Enqueue({ LR0Item = createLR0Item prodIdx; Lookahead = first})
