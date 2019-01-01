@@ -78,6 +78,17 @@ let MultiDictionary_Add (d : Dictionary<'T, HashSet<'U>>) (k : 'T) (v : 'U) =
         values.Add(v) |> ignore
         d.[k] <- values
 
+let sortedArrayofList (l : List<'T>) =
+    let ary = l.ToArray()
+    Array.sortInPlace ary
+    ary
+
+let sortedArrayofHashSet (hs : HashSet<'T>) =
+    let ary = Array.zeroCreate hs.Count
+    hs.CopyTo(ary)
+    Array.sortInPlace ary
+    ary
+
 type CompiledTable =
     {
         Productions : (string * NonTerminalIndex * Symbol array * Code option) []
@@ -216,7 +227,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                             queue.Enqueue newItem
                 | _ -> ()
 
-        Array.sort (Array.ofSeq accu)
+        sortedArrayofHashSet accu
 
     let computeClosure = memoize1 computeClosure
 
@@ -224,11 +235,13 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     // Input is kernel, output is kernel
     let computeGotoOfKernel (kernel : LR0Item []) (symbol : SymbolIndex) : LR0Item [] = 
         let accu = List()
+
         for item in computeClosure kernel do
             let body = productionBodies.[item.ProductionIndex]
             if item.DotIndex < body.Length && body.[item.DotIndex] = symbol then
-                accu.Add(advanceOfItem item) 
-        Array.sort (accu.ToArray())
+                accu.Add(advanceOfItem item)
+
+        sortedArrayofList accu
 
     let computeGotosOfKernel (kernel : LR0Item []) : LR0Item [] [] = 
         let accu = MultiDictionary_Create<SymbolIndex, LR0Item>()
@@ -237,7 +250,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             let body = productionBodies.[item.ProductionIndex]
             if item.DotIndex < body.Length then
                 MultiDictionary_Add accu body.[item.DotIndex] (advanceOfItem item)
-        Array.map (fun hs -> Array.sort (Array.ofSeq hs)) (Array.ofSeq accu.Values)
+        Array.map sortedArrayofHashSet (Array.ofSeq accu.Values)
 
     // Build the full set of LR(0) kernels 
     reportTime(); printf "building kernels..."; stdout.Flush();
@@ -296,7 +309,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                                 queue.Enqueue({ LR0Item = createLR0Item prodIdx; Lookahead = first})
                     | TerminalIndex _ -> ()
 
-        Array.sort (Array.ofSeq (acc))
+        sortedArrayofHashSet acc
 
     // Compute the "spontaneous" and "propagate" maps for each LR(0) kernelItem 
     //
@@ -476,7 +489,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                     let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
                     for  lookahead in lookaheadTable.[kernelItemIdx] do
                         accu.Add({ LR0Item = item; Lookahead = lookahead })
-                ComputeClosure1 (Array.sort (accu.ToArray()))
+                ComputeClosure1 (sortedArrayofList accu)
 
             for item in items do
                 let body = productionBodies.[item.LR0Item.ProductionIndex]
