@@ -347,16 +347,16 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                 for item in jset do
                     let body = productionBodies.[item.LR0Item.ProductionIndex]
                     if item.LR0Item.DotIndex < body.Length then
-                         let rsym = body.[item.LR0Item.DotIndex]
-                         match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = rsym } with 
-                         | None -> ()
-                         | Some gotoKernelIdx ->
-                              let gotoItem = advanceOfItem item.LR0Item
-                              let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = gotoItem }
-                              let lookaheadToken = item.Lookahead
-                              if lookaheadToken = dummyLookaheadIdx 
-                              then propagate.Add(itemIdx, gotoItemIdx) |> ignore
-                              else spontaneous.Add(gotoItemIdx, lookaheadToken) |> ignore
+                        let rsym = body.[item.LR0Item.DotIndex]
+                        match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = rsym } with 
+                        | None -> ()
+                        | Some gotoKernelIdx ->
+                            let gotoItem = advanceOfItem item.LR0Item
+                            let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = gotoItem }
+                            let lookaheadToken = item.Lookahead
+                            if lookaheadToken = dummyLookaheadIdx 
+                            then propagate.Add(itemIdx, gotoItemIdx) |> ignore
+                            else spontaneous.Add(gotoItemIdx, lookaheadToken) |> ignore
 
         spontaneous, propagate
    
@@ -369,8 +369,8 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         // Seed the table with the startKernelItems and the spontaneous info
         for idx in startKernelItemIdxs do
             queue.Enqueue(idx,endOfInputTerminalIdx)
-        for (kernelItemIdx, lookahead) in spontaneous do
-            queue.Enqueue(kernelItemIdx,lookahead) 
+        for s in spontaneous do
+            queue.Enqueue(s)
 
         let acc = Dictionary<KernelItemIndex, HashSet<TerminalIndex>>(HashIdentity.Structural)
 
