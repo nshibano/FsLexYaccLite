@@ -250,7 +250,9 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             let body = productionBodies.[item.ProductionIndex]
             if item.DotIndex < body.Length then
                 MultiDictionary_Add accu body.[item.DotIndex] (advanceOfItem item)
-        Array.map sortedArrayofHashSet (Array.ofSeq accu.Values)
+        
+        let gotoSymbols = Array.sort (Array.ofSeq accu.Keys)
+        Array.map (fun sym -> sortedArrayofHashSet accu.[sym]) gotoSymbols
 
     // Build the full set of LR(0) kernels 
     reportTime(); printf "building kernels..."; stdout.Flush();

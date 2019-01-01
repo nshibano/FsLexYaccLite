@@ -146,7 +146,9 @@ let main() =
   let cprintfn (os:TextWriter,lineCount) fmt = Printf.kfprintf (fun () -> incr lineCount; os.WriteLine()) os fmt
 
   let logf = Option.map (fun path -> File.CreateText path :> TextWriter) outputo
-  Option.iter (fun f -> fprintfn f "<pre>\nOutput file describing compiled parser placed in %s and %s" output outputi) logf
+  Option.iter (fun f ->
+    fprintfn f "<pre>"
+    fprintfn f "Output file describing compiled parser placed in %s and %s" output outputi) logf
 
   printfn "building tables"; 
   let preprocessed = processParserSpecAst spec
