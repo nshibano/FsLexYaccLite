@@ -34,10 +34,6 @@ type KernelItemIndex =
     { KernelIndex : int
       Item : LR0Item }
 
-type GotoItemIndex =
-    { KernelIndex : int
-      SymbolIndex : SymbolIndex }
-
 type LR1Item =
     { LR0Item : LR0Item
       Lookahead : TerminalIndex }
@@ -249,7 +245,11 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             if item.DotIndex < body.Length then
                 MultiDictionary_Add accu body.[item.DotIndex] (advanceOfItem item)
         
-        let gotoSymbols = Array.sort (Array.ofSeq accu.Keys)
+        let gotoSymbols =
+            let ary = Array.ofSeq accu.Keys
+            Array.sortInPlace ary
+            ary
+        
         Array.map (fun sym -> sortedArrayofHashSet accu.[sym]) gotoSymbols
 
     reportTime(); printf "building kernels..."; stdout.Flush();
@@ -276,11 +276,11 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let startKernelIdxs = Array.map (fun kernel -> indexOfKernel.[kernel]) startKernels
     let startKernelItemIdxs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
 
-    let gotoKernel (gotoItemIndex : GotoItemIndex) = 
-        let gset = computeGotoOfKernel (kernels.[gotoItemIndex.KernelIndex]) gotoItemIndex.SymbolIndex
+    let gotoKernel kernelIndex symbolIndex = 
+        let gset = computeGotoOfKernel (kernels.[kernelIndex]) symbolIndex
         if gset.Length = 0 then None else Some (indexOfKernel.[gset])
 
-    let gotoKernel = memoize1 gotoKernel
+    let gotoKernel = memoize2 gotoKernel
     
     let ComputeClosure1 (iset : LR1Item []) = 
         let accu = HashSet<LR1Item>(HashIdentity.Structural)
@@ -316,7 +316,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                 for lr1Item in closure1OfItemWithDummy lr0Item do
                     let body = productionBodies.[lr1Item.LR0Item.ProductionIndex]
                     if lr1Item.LR0Item.DotIndex < body.Length then
-                        match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = body.[lr1Item.LR0Item.DotIndex] } with 
+                        match gotoKernel  kernelIdx body.[lr1Item.LR0Item.DotIndex] with 
                         | None -> ()
                         | Some gotoKernelIdx ->
                             let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = advanceOfItem lr1Item.LR0Item }
@@ -464,7 +464,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                     match body.[item.LR0Item.DotIndex] with
                     | TerminalIndex termIdx ->
                         let action =
-                          match gotoKernel { KernelIndex = kernelIdx; SymbolIndex = TerminalIndex termIdx } with 
+                          match gotoKernel kernelIdx (TerminalIndex termIdx) with 
                           | None -> failwith "action on terminal should have found a non-empty goto state"
                           | Some gkernelItemIdx -> Shift gkernelItemIdx
                         let prec = snd spec.Terminals.[termIdx]
@@ -509,7 +509,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let gotoTable = 
          Array.init kernels.Length (fun kernelIndex ->
             Array.init spec.NonTerminals.Length (fun nonTerminalIndex ->
-                gotoKernel ({ KernelIndex = kernelIndex; SymbolIndex = NonTerminalIndex nonTerminalIndex }))         )
+                gotoKernel  kernelIndex (NonTerminalIndex nonTerminalIndex)))
 
     reportTime(); printfn  "returning tables."; stdout.Flush();
     if !shiftReduceConflicts > 0 then printfn  "%d shift/reduce conflicts" !shiftReduceConflicts; stdout.Flush();

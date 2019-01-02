@@ -3,6 +3,7 @@ open System.Diagnostics
 open System.IO
 
 let cmd name arg =
+    Console.WriteLine(name + " " + arg)
     let info = ProcessStartInfo(name, arg)
     info.RedirectStandardOutput <- true
     info.RedirectStandardError <- true
