@@ -107,13 +107,13 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         stopWatch.Restart()
 
     let indexOfNonTerminal =
-        let d = Dictionary<string, NonTerminalIndex>()
+        let d = Dictionary<string, NonTerminalIndex>(HashIdentity.Structural)
         for i = 0 to spec.NonTerminals.Length - 1 do
             d.Add(spec.NonTerminals.[i], i)
         d
 
     let indexOfTerminal =
-        let d = Dictionary<string, int>()
+        let d = Dictionary<string, int>(HashIdentity.Structural)
         for i = 0 to spec.Terminals.Length - 1 do
             d.Add(fst spec.Terminals.[i], i)
         d
@@ -136,21 +136,20 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let endOfInputTerminalIdx = indexOfTerminal.[endOfInputTerminal]
     let errorTerminalIdx = indexOfTerminal.[errorTerminal]
 
-    // Compute the FIRST function
     printf  "computing first function..."; stdout.Flush();
 
     let firstSetOfSymbol =
-        let accu = Dictionary<SymbolIndex, HashSet<TerminalIndex option>>(HashIdentity.Structural)
+        let accu = Dictionary<SymbolIndex, HashSet<TerminalIndex option>>(HashIdentity.Structural) // None is epsilon
 
-        // For terminals, add itself (Some term) to its first-set.
-        for term = 0 to spec.Terminals.Length - 1 do
+        // For terminals, add itself to its FIRST set.
+        for terminalIndex = 0 to spec.Terminals.Length - 1 do
             let set = HashSet(HashIdentity.Structural)
-            set.Add(Some term) |> ignore
-            accu.Add(TerminalIndex term, set)
+            set.Add(Some terminalIndex) |> ignore
+            accu.Add(TerminalIndex terminalIndex, set)
 
         // For non-terminals, start with empty set.
-        for nonTerm = 0 to spec.NonTerminals.Length - 1 do
-            accu.Add(NonTerminalIndex nonTerm, HashSet(HashIdentity.Structural))
+        for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
+            accu.Add(NonTerminalIndex nonTerminalIndex, HashSet(HashIdentity.Structural))
         
         let mutable added = false
         let add symbolIndex firstSetItem =
@@ -173,11 +172,12 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                         // otherwise, stop here
                         pos <- Int32.MaxValue
                 if pos = body.Length then
-                    // the scan for production body symbols were gone through the end of the body
-                    // therefore all symbols in production body can be empty
-                    // therefore this production is nullable
+                    // the scan for production body symbols has been gone through the end of the body
+                    // therefore all symbols in production body contains epsilon
+                    // therefore the FIRST set for this non-terminal should contain epsilon
                     add (NonTerminalIndex head) None
-                
+
+        // repeat scan until it becomes making no difference
         scan()
         while added do
             added <- false
@@ -231,8 +231,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     let computeClosure = memoize1 computeClosure
 
-    // Goto set of a kernel of LR(0) nonTerminals, items etc 
-    // Input is kernel, output is kernel
     let computeGotoOfKernel (kernel : LR0Item []) (symbol : SymbolIndex) : LR0Item [] = 
         let accu = List()
 
@@ -254,7 +252,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         let gotoSymbols = Array.sort (Array.ofSeq accu.Keys)
         Array.map (fun sym -> sortedArrayofHashSet accu.[sym]) gotoSymbols
 
-    // Build the full set of LR(0) kernels 
     reportTime(); printf "building kernels..."; stdout.Flush();
     let startItems = Array.map (fun startSymbol -> createLR0Item productionsOfNonTerminal.[indexOfNonTerminal.[startSymbol]].[0]) spec.StartSymbols
     let startKernels = Array.map (fun x -> [| x |]) startItems
@@ -270,7 +267,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     
     reportTime(); printf "building kernel table..."; stdout.Flush();
 
-    // Give an index to each LR(0) kernel, and from now on refer to them only by index
     let indexOfKernel =
         let d = Dictionary(HashIdentity.Structural)
         for i = 0 to kernels.Length - 1 do
@@ -280,57 +276,30 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     let startKernelIdxs = Array.map (fun kernel -> indexOfKernel.[kernel]) startKernels
     let startKernelItemIdxs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
 
-    /// A cached version of the "goto" computation on LR(0) kernels 
     let gotoKernel (gotoItemIndex : GotoItemIndex) = 
         let gset = computeGotoOfKernel (kernels.[gotoItemIndex.KernelIndex]) gotoItemIndex.SymbolIndex
         if gset.Length = 0 then None else Some (indexOfKernel.[gset])
 
     let gotoKernel = memoize1 gotoKernel
-
-    // This is used to compute the closure of an LALR(1) kernel 
-    //
-    // For each item [A --> X.BY, a] in I
-    //   For each production B -> g in G'
-    //     For each terminal b in FIRST(Ya)
-    //        such that [B --> .g, b] is not in I do
-    //            add [B --> .g, b] to I
     
     let ComputeClosure1 (iset : LR1Item []) = 
-        let acc = HashSet<LR1Item>(HashIdentity.Structural)
+        let accu = HashSet<LR1Item>(HashIdentity.Structural)
         let queue = Queue(iset)
         while queue.Count > 0 do
             let item = queue.Dequeue()
-            if acc.Add(item) then
+            if accu.Add(item) then
                 let body = productionBodies.[item.LR0Item.ProductionIndex]
                 if item.LR0Item.DotIndex < body.Length then
                     match body.[item.LR0Item.DotIndex] with
-                    | NonTerminalIndex ntB -> 
+                    | NonTerminalIndex nonTerminalIndex -> 
                         let firstSet = firstSetOfSymbolString body.[(item.LR0Item.DotIndex + 1)..] item.Lookahead
-                        for prodIdx in productionsOfNonTerminal.[ntB] do
-                            for first in firstSet do
-                                queue.Enqueue({ LR0Item = createLR0Item prodIdx; Lookahead = first})
+                        for productionIndex in productionsOfNonTerminal.[nonTerminalIndex] do
+                            for lookahead in firstSet do
+                                queue.Enqueue({ LR0Item = createLR0Item productionIndex; Lookahead = lookahead})
                     | TerminalIndex _ -> ()
 
-        sortedArrayofHashSet acc
+        sortedArrayofHashSet accu
 
-    // Compute the "spontaneous" and "propagate" maps for each LR(0) kernelItem 
-    //
-    // Input: The kernal K of a set of LR(0) items I and a grammar symbol X
-    //
-    // Output: The lookaheads generated spontaneously by items in I for kernel items 
-    // in goto(I,X) and the items I from which lookaheads are propagated to kernel
-    // items in goto(I,X)
-    //
-    // Method
-    //   1. Construct LR(0) kernel items (done - above)
-    //   2. 
-    // TODO: this is very, very slow. 
-    //
-    // PLAN TO OPTIMIZE THIS;
-    //   - Clarify and comment what's going on here
-    //   - verify if we really have to do these enormouos closure computations
-    //   - assess if it's possible to use the symbol we're looking for to help trim the jset
-    
     reportTime(); printf "computing lookahead relations..."; stdout.Flush();
 
     let closure1OfItemWithDummy (item : LR0Item) = ComputeClosure1 [| { LR0Item = item; Lookahead = dummyLookaheadIdx } |]
@@ -359,13 +328,10 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
         spontaneous, propagate
    
-    // Repeatedly use the "spontaneous" and "propagate" maps to build the full set 
-    // of lookaheads for each LR(0) kernelItem.   
     reportTime(); printf  "building lookahead table..."; stdout.Flush();
     let lookaheadTable = 
         let queue = Queue()
 
-        // Seed the table with the startKernelItems and the spontaneous info
         for idx in startKernelItemIdxs do
             queue.Enqueue(idx,endOfInputTerminalIdx)
         for s in spontaneous do
@@ -373,7 +339,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
         let acc = MultiDictionary_Create<KernelItemIndex, TerminalIndex>()
 
-        // Compute the closure
         while queue.Count > 0 do
             let kernelItemIdx, lookahead = queue.Dequeue()
             MultiDictionary_Add acc kernelItemIdx lookahead
