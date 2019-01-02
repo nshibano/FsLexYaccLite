@@ -548,6 +548,21 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         printfn  "writing tables to log"
         stdout.Flush()
         
+        fprintfn f ""
+
+        fprintfn f "FIRST sets:"
+
+        let rows = List()
+
+        for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
+            let rowA = spec.NonTerminals.[nonTerminalIndex] + ":"
+            let items = sortedArrayofHashSet(firstSetOfSymbol.[NonTerminalIndex nonTerminalIndex])
+            let itemStrings = Array.map (fun item -> match item with Some terminalIndex -> fst spec.Terminals.[terminalIndex] | None -> "ε") items
+            let rowB = String.Join(' ', itemStrings)
+            rows.Add([| (rowA, rowA.Length); (rowB, rowB.Length) |])
+
+        outputTable f 2 (rows.ToArray())
+
         fprintfn f "------------------------";
         fprintfn f "states = ";
         fprintfn f "";
