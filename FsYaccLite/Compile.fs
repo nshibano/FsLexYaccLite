@@ -86,9 +86,17 @@ let sortedArrayofHashSet (hs : HashSet<'T>) =
     Array.sortInPlace ary
     ary
 
+type CompiledProduction =
+    {
+        HeadNonTerminal : string
+        HeadNonTerminalIndex : NonTerminalIndex
+        BodySymbols : Symbol []
+        Code : Code option
+    }
+
 type CompiledTable =
     {
-        Productions : (string * NonTerminalIndex * Symbol array * Code option) []
+        Productions : CompiledProduction []
         States : ProductionIndex [] [] 
         StartStates : int []
         ActionTable : Action [] []
@@ -131,7 +139,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     let dummyLookaheadIdx = indexOfTerminal.[dummyLookahead]
     let endOfInputTerminalIdx = indexOfTerminal.[endOfInputTerminal]
-    let errorTerminalIdx = indexOfTerminal.[errorTerminal]
 
     printf  "computing first function..."; stdout.Flush();
 
@@ -334,7 +341,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         let queue = Queue()
 
         for idx in startKernelItemIdxs do
-            queue.Enqueue(idx,endOfInputTerminalIdx)
+            queue.Enqueue(idx, endOfInputTerminalIdx)
         for s in spontaneous do
             queue.Enqueue(s)
 
@@ -519,7 +526,13 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
 
     /// The final results
     let states = kernels
-    let prods = Array.map (fun (prod : Production) -> (prod.Head, indexOfNonTerminal.[prod.Head], prod.Body, prod.Code)) spec.Productions
+    let prods =
+        Array.map
+            (fun (prod : Production) ->
+                { HeadNonTerminal = prod.Head;
+                  HeadNonTerminalIndex = indexOfNonTerminal.[prod.Head]
+                  BodySymbols = prod.Body
+                  Code = prod.Code }) spec.Productions
 
     let outputPrecInfo f p = 
         match p with 
@@ -641,4 +654,4 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
       ActionTable = actionTable
       GotoTable = gotoTable
       EndOfInputTerminalIndex = indexOfTerminal.[endOfInputTerminal]
-      ErrorTerminalIndex = errorTerminalIdx }
+      ErrorTerminalIndex = indexOfTerminal.[errorTerminal] }

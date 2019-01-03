@@ -255,8 +255,8 @@ let main() =
   cprintfn cos "/// This function maps production indexes returned in syntax errors to strings representing the non terminal that would be produced by that production";
   cprintfn cos "let prodIdxToNonTerminal (prodIdx:int) = ";
   cprintfn cos "  match prodIdx with";
-  compiled.Productions |> Array.iteri (fun i (nt,ntIdx,syms,code) -> 
-      cprintfn cos "    | %d -> NONTERM_%s " i nt);
+  compiled.Productions |> Array.iteri (fun i prod -> 
+      cprintfn cos "    | %d -> NONTERM_%s " i prod.HeadNonTerminal);
   cprintfn cos "    | _ -> failwith \"prodIdxToNonTerminal: bad production index\""
 
   //cprintfn cosi "";
@@ -425,14 +425,14 @@ let main() =
   end;
   begin 
       cprintf cos "let _fsyacc_reductionSymbolCounts = [|" ;
-      for nt,ntIdx,syms,code in compiled.Productions do 
-          cprintf cos "%a" outputCodedUInt16 syms.Length;
+      for prod in compiled.Productions do 
+          cprintf cos "%a" outputCodedUInt16 prod.BodySymbols.Length;
       cprintfn cos "|]" ;
   end;
   begin 
       cprintf cos "let _fsyacc_productionToNonTerminalTable = [|" ;
-      for nt,ntIdx,syms,code in compiled.Productions do 
-          cprintf cos "%a" outputCodedUInt16 ntIdx;
+      for prod in compiled.Productions do 
+          cprintf cos "%a" outputCodedUInt16 prod.HeadNonTerminalIndex;
       cprintfn cos "|]" ;
   end;
   
@@ -440,12 +440,12 @@ let main() =
   begin 
       cprintf cos "let _fsyacc_reductions ()  =" ;
       cprintfn cos "    [| " ;
-      for nt,ntIdx,syms,code in compiled.Productions do 
+      for prod in compiled.Productions do 
           //cprintfn cos "# %d \"%s\"" !lineCountOutput output;
           cprintfn cos "        (fun (parseState : %s.IParseState) ->"  parslib
           if !compat then 
               cprintfn cos "            Parsing.set_parse_state parseState;"
-          syms |> Array.iteri (fun i sym -> 
+          prod.BodySymbols |> Array.iteri (fun i sym -> 
               let tyopt = 
                   match sym with
                   | Terminal t -> 
@@ -462,7 +462,7 @@ let main() =
           //match code with 
           //| Some (_,pos) -> cprintfn cos "# %d \"%s\"" pos.pos_lnum pos.pos_fname
           //| None -> ()
-          match code with 
+          match prod.Code with 
           | Some (code,_) -> 
               let dollar = ref false in 
               let c = code |> String.collect (fun c -> 
@@ -481,7 +481,7 @@ let main() =
           //match code with 
           //| Some (_,pos) -> cprintfn cos "# %d \"%s\"" pos.pos_lnum pos.pos_fname
           //| None -> ()
-          cprintfn cos "                 : %s));" (if types.ContainsKey nt then  types.[nt] else "'"+nt);
+          cprintfn cos "                 : %s));" (if types.ContainsKey prod.HeadNonTerminal then  types.[prod.HeadNonTerminal] else "'" + prod.HeadNonTerminal);
       done;
       cprintfn cos "|]" ;
   end;
