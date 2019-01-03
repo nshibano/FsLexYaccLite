@@ -107,7 +107,7 @@ let MultiDictionary_Add (d : MultiDictionary<'T, 'U>) (k : 'T) (v : 'U) =
         values.Add(v) |> ignore
         d.[k] <- values
 
-let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
+let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
     let stopWatch = Stopwatch.StartNew()
     let reportTime() =
         printfn "time: %d(ms)" stopWatch.ElapsedMilliseconds

@@ -36,7 +36,7 @@ let outputTable (f : TextWriter) (indent : int) (rows : (string * int) [] []) =
             f.Write(String(' ', maxWidths.[i] - (snd row.[i])))
         f.WriteLine()
 
-let outputCompilationReport (f : TextWriter) (spec : ProcessedParserSpec) (comp : CompiledTable) =
+let outputCompilationReport (f : TextWriter) (spec : PreprocessedParserSpec) (comp : CompiledTable) =
 
     printfn  "writing tables to log"
     stdout.Flush()
@@ -103,7 +103,7 @@ let outputCompilationReport (f : TextWriter) (spec : ProcessedParserSpec) (comp 
     fprintfn f "startStates = %s" (String.Join(";", (Array.map string comp.StartStates)));
     fprintfn f "------------------------"
 
-let outputTableImages (path : string) (spec : ParserSpec) (pre : ProcessedParserSpec) (comp : CompiledTable)  =
+let outputTableImages (path : string) (spec : ParserSpec) (pre : PreprocessedParserSpec) (comp : CompiledTable)  =
     let actionTableBmp = new Bitmap(pre.Terminals.Length, comp.States.Length)
     let colorOfAction (x : Action) =
         match x with
