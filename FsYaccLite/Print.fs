@@ -56,8 +56,8 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
 
     for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
         let rowA = spec.NonTerminals.[nonTerminalIndex] + ":"
-        let items = sortedArrayOfHashSet(comp.FirstSets.[symbolIndexOfNonTerminalIndex nonTerminalIndex])
-        let itemStrings = Array.map (fun item -> match item with Some terminalIndex -> fst spec.Terminals.[terminalIndex] | None -> "ε") items
+        let firstSet = sortedArrayOfHashSet(comp.FirstSets.[symbolIndexOfNonTerminalIndex nonTerminalIndex])
+        let itemStrings = Array.map (fun item -> match item with Epsilon -> "ε" | terminalIndex -> fst spec.Terminals.[terminalIndex]) firstSet
         let rowB = String.Join(' ', itemStrings)
         rows.Add([| (rowA, rowA.Length); (rowB, rowB.Length) |])
 

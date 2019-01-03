@@ -15,6 +15,7 @@ type TerminalIndex = int
 type NonTerminalIndex = int
 type SymbolIndex = int
 type ProductionIndex = int
+type TerminalIndexOrEpsilon = int
 
 type LR0Item =
     { ProductionIndex : ProductionIndex
@@ -44,7 +45,7 @@ type CompiledProduction =
 
 type Compiled =
     {
-        FirstSets : Dictionary<SymbolIndex, HashSet<TerminalIndex option>>
+        FirstSets : Dictionary<SymbolIndex, HashSet<TerminalIndexOrEpsilon>>
         Productions : CompiledProduction []
         States : ProductionIndex [] []
         Kernels : LR0Item [] []
@@ -117,6 +118,8 @@ let MultiDictionary_Add (d : MultiDictionary<'T, 'U>) (k : 'T) (v : 'U) =
         values.Add(v) |> ignore
         d.[k] <- values
 
+let [<Literal>] Epsilon = -1
+
 let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
     let stopWatch = Stopwatch.StartNew()
     let reportTime() =
@@ -168,12 +171,12 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
     printf  "computing first function..."; stdout.Flush();
 
     let firstSetOfSymbol =
-        let accu = Dictionary<SymbolIndex, HashSet<TerminalIndex option>>(HashIdentity.Structural) // None is epsilon
+        let accu = Dictionary<SymbolIndex, HashSet<TerminalIndexOrEpsilon>>(HashIdentity.Structural)
 
         // For terminals, add itself to its FIRST set.
         for terminalIndex = 0 to spec.Terminals.Length - 1 do
             let set = HashSet(HashIdentity.Structural)
-            set.Add(Some terminalIndex) |> ignore
+            set.Add(terminalIndex) |> ignore
             accu.Add(symbolIndexOfTerminalIndex terminalIndex, set)
 
         // For non-terminals, start with empty set.
@@ -192,9 +195,9 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                 while pos < body.Length do
                     // add first symbols of production body to the first-set of this production head 
                     for firstSetItem in accu.[body.[pos]] do
-                        if firstSetItem.IsSome then
+                        if firstSetItem <> Epsilon then
                             add (symbolIndexOfNonTerminalIndex head) firstSetItem
-                    if accu.[body.[pos]].Contains None then
+                    if accu.[body.[pos]].Contains Epsilon then
                         // the symbol at pos can be empty, therefore go through the following symbols
                         pos <- pos + 1
                     else
@@ -204,7 +207,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                     // the scan for production body symbols has been gone through the end of the body
                     // therefore all symbols in production body contains epsilon
                     // therefore the FIRST set for this non-terminal should contain epsilon
-                    add (symbolIndexOfNonTerminalIndex head) None
+                    add (symbolIndexOfNonTerminalIndex head) Epsilon
 
         // repeat scan until it becomes making no difference
         scan()
@@ -214,18 +217,18 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
 
         accu
 
-    let firstSetOfPartOfProductionBody (productionIndex : int) (startPos : int) (lookahead : TerminalIndex) =
+    let firstSetOfPartOfProductionBodyWithLookahead (productionIndex : int) (startPos : int) (lookahead : TerminalIndex) =
         let accu = HashSet<TerminalIndex>(HashIdentity.Structural)
         let body = productions.[productionIndex].BodySymbolIndexes
         let mutable pos = startPos
 
         while pos < body.Length do
-            let firstSetOfSym = firstSetOfSymbol.[body.[pos]]
-            for first in firstSetOfSym do
+            let firstSet = firstSetOfSymbol.[body.[pos]]
+            for first in firstSet do
                 match first with
-                | Some v -> accu.Add(v) |> ignore
-                | None -> ()
-            if firstSetOfSym.Contains(None) then
+                | Epsilon -> ()
+                | terminalIndex -> accu.Add(terminalIndex) |> ignore
+            if firstSet.Contains(Epsilon) then
                 pos <- pos + 1
             else
                 pos <- Int32.MaxValue
@@ -234,7 +237,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
 
         accu
     
-    let firstSetOfPartOfProductionBody = memoize3 firstSetOfPartOfProductionBody
+    let firstSetOfPartOfProductionBodyWithLookahead = memoize3 firstSetOfPartOfProductionBodyWithLookahead
 
     let advanceOfItem (item : LR0Item) = { item with DotIndex = item.DotIndex + 1 }
 
@@ -324,7 +327,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                 if item.LR0Item.DotIndex < body.Length then
                     let symbol = body.[item.LR0Item.DotIndex]
                     if symbolIndexIsNonTerminal symbol then
-                        let firstSet = firstSetOfPartOfProductionBody item.LR0Item.ProductionIndex (item.LR0Item.DotIndex + 1) item.Lookahead
+                        let firstSet = firstSetOfPartOfProductionBodyWithLookahead item.LR0Item.ProductionIndex (item.LR0Item.DotIndex + 1) item.Lookahead
                         for productionIndex in productionsOfNonTerminal.[nonTerminalIndexOfSymbolIndex symbol] do
                             for lookahead in firstSet do
                                 queue.Enqueue({ LR0Item = createLR0Item productionIndex; Lookahead = lookahead})
@@ -334,7 +337,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
     let closure1OfItemWithDummy (item : LR0Item) = ComputeClosure1 [| { LR0Item = item; Lookahead = dummyLookaheadIdx } |]
     let closure1OfItemWithDummy = memoize1 closure1OfItemWithDummy
         
-    let spontaneous, propagate  =
+    let spontaneous, propagate =
 
         let spontaneous = HashSet<KernelItemIndex * TerminalIndex>(HashIdentity.Structural)
         let propagate = MultiDictionary_Create<KernelItemIndex, KernelItemIndex>()
