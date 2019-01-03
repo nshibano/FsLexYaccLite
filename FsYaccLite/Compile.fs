@@ -16,6 +16,7 @@ type NonTerminalIndex = int
 type SymbolIndex = int
 type ProductionIndex = int
 type TerminalIndexOrEpsilon = int
+type KernelIndex = int
 
 type LR0Item =
     { ProductionIndex : ProductionIndex
@@ -24,7 +25,7 @@ type LR0Item =
 let createLR0Item productionIndex = { ProductionIndex = productionIndex; DotIndex = 0 }
 
 type KernelItemIndex =
-    { KernelIndex : int
+    { KernelIndex : KernelIndex
       Item : LR0Item }
 
 type LR1Item =
@@ -166,7 +167,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
         Array.map (fun (l : ResizeArray<int>) -> l.ToArray()) table
 
     let dummyLookaheadIdx = indexOfTerminal.[dummyLookahead]
-    let endOfInputTerminalIdx = indexOfTerminal.[endOfInputTerminal]
+    let endOfInputTerminalIndex = indexOfTerminal.[endOfInputTerminal]
 
     printf  "computing first function..."; stdout.Flush();
 
@@ -307,17 +308,17 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
         d
     
     let startKernelIdxs = Array.map (fun kernel -> indexOfKernel.[kernel]) startKernels
-    let startKernelItemIdxs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
+    let startKernelItemIndexs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
 
     reportTime(); printf "computing lookahead relations..."; stdout.Flush();
 
-    let gotoKernel kernelIndex symbolIndex = 
+    let gotoKernel (kernelIndex : KernelIndex) (symbolIndex : SymbolIndex) : KernelIndex option = 
         let gset = computeGotoOfKernel (kernels.[kernelIndex]) symbolIndex
         if gset.Length = 0 then None else Some (indexOfKernel.[gset])
 
     let gotoKernel = memoize2 gotoKernel
     
-    let ComputeClosure1 (itemSet : LR1Item []) = 
+    let computeLR1Closure (itemSet : LR1Item []) = 
         let accu = HashSet<LR1Item>(HashIdentity.Structural)
         let queue = Queue(itemSet)
         while queue.Count > 0 do
@@ -334,54 +335,54 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
 
         sortedArrayOfHashSet accu
 
-    let closure1OfItemWithDummy (item : LR0Item) = ComputeClosure1 [| { LR0Item = item; Lookahead = dummyLookaheadIdx } |]
-    let closure1OfItemWithDummy = memoize1 closure1OfItemWithDummy
+    let computeLR1ClosureOfLR0ItemWithDummy (item : LR0Item) = computeLR1Closure [| { LR0Item = item; Lookahead = dummyLookaheadIdx } |]
+    let computeLR1ClosureOfLR0ItemWithDummy = memoize1 computeLR1ClosureOfLR0ItemWithDummy
         
     let spontaneous, propagate =
 
         let spontaneous = HashSet<KernelItemIndex * TerminalIndex>(HashIdentity.Structural)
         let propagate = MultiDictionary_Create<KernelItemIndex, KernelItemIndex>()
 
-        for kernelIdx = 0 to kernels.Length - 1 do
+        for kernelIndex = 0 to kernels.Length - 1 do
             printf  "."; stdout.Flush();
-            for lr0Item in kernels.[kernelIdx] do  
-                for lr1Item in closure1OfItemWithDummy lr0Item do
+            for kernelItem in kernels.[kernelIndex] do  
+                for lr1Item in computeLR1ClosureOfLR0ItemWithDummy kernelItem do
                     let body = productions.[lr1Item.LR0Item.ProductionIndex].BodySymbolIndexes
                     if lr1Item.LR0Item.DotIndex < body.Length then
-                        match gotoKernel  kernelIdx body.[lr1Item.LR0Item.DotIndex] with 
+                        match gotoKernel kernelIndex body.[lr1Item.LR0Item.DotIndex] with 
                         | None -> ()
-                        | Some gotoKernelIdx ->
-                            let gotoItemIdx = { KernelIndex = gotoKernelIdx; Item = advanceOfItem lr1Item.LR0Item }
+                        | Some gotoKernelIndex ->
+                            let gotoItemIndex = { KernelIndex = gotoKernelIndex; Item = advanceOfItem lr1Item.LR0Item }
                             let lookaheadToken = lr1Item.Lookahead
                             if lookaheadToken = dummyLookaheadIdx then
-                                MultiDictionary_Add propagate { KernelIndex = kernelIdx; Item = lr0Item } gotoItemIdx |> ignore
+                                MultiDictionary_Add propagate { KernelIndex = kernelIndex; Item = kernelItem } gotoItemIndex |> ignore
                             else
-                                spontaneous.Add(gotoItemIdx, lookaheadToken) |> ignore
+                                spontaneous.Add(gotoItemIndex, lookaheadToken) |> ignore
 
         spontaneous, propagate
    
     reportTime(); printf  "building lookahead table..."; stdout.Flush();
     let lookaheadTable = 
-        let queue = Queue()
+        let queue = Queue<KernelItemIndex * TerminalIndex>()
 
-        for idx in startKernelItemIdxs do
-            queue.Enqueue(idx, endOfInputTerminalIdx)
+        for kernelItemIndex in startKernelItemIndexs do
+            queue.Enqueue(kernelItemIndex, endOfInputTerminalIndex)
         for s in spontaneous do
             queue.Enqueue(s)
 
-        let acc = MultiDictionary_Create<KernelItemIndex, TerminalIndex>()
+        let accu = MultiDictionary_Create<KernelItemIndex, TerminalIndex>()
 
         while queue.Count > 0 do
-            let kernelItemIdx, lookahead = queue.Dequeue()
-            MultiDictionary_Add acc kernelItemIdx lookahead
-            match propagate.TryGetValue(kernelItemIdx) with
-            | true, s ->
-                for gotoKernelIdx in s do
-                    if not (MultiDictionary_Contains acc gotoKernelIdx lookahead) then 
-                        queue.Enqueue(gotoKernelIdx, lookahead)
+            let kernelItemIndex, lookahead = queue.Dequeue()
+            MultiDictionary_Add accu kernelItemIndex lookahead
+            match propagate.TryGetValue(kernelItemIndex) with
+            | true, kernelItemsPropagateTo ->
+                for kenerlItem in kernelItemsPropagateTo do
+                    if not (MultiDictionary_Contains accu kenerlItem lookahead) then 
+                        queue.Enqueue(kenerlItem, lookahead)
             |  false, _ -> ()
         
-        acc
+        accu
 
     let stringOfSym (symbolIndex : SymbolIndex) = spec.Symbols.[symbolIndex]
     let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productions.[item.ProductionIndex].HeadNonTerminalIndex]) spec.StartSymbols
@@ -483,9 +484,9 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                 let accu = ResizeArray()
                 for item in kernel do
                     let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
-                    for  lookahead in lookaheadTable.[kernelItemIdx] do
+                    for lookahead in lookaheadTable.[kernelItemIdx] do
                         accu.Add({ LR0Item = item; Lookahead = lookahead })
-                ComputeClosure1 (sortedArrayofList accu)
+                computeLR1Closure (sortedArrayofList accu)
 
             for item in items do
                 let body = productions.[item.LR0Item.ProductionIndex].BodySymbolIndexes
@@ -506,7 +507,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                         let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
                         let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Reduce prodIdx)
                         addResolvingPrecedence arr kernelIdx lookahead action 
-                    elif lookahead = endOfInputTerminalIdx then
+                    elif lookahead = endOfInputTerminalIndex then
                         let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
                         let action = (Option.map (fun (x, y, _) -> (x, y)) prec ,Accept)
                         addResolvingPrecedence arr kernelIdx lookahead action 
