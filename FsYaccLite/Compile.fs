@@ -72,24 +72,34 @@ let sortedArrayOfSeq seq =
     ary
 
 let memoize1 f =
-    let d = Dictionary(HashIdentity.Structural)
-    fun x ->
-        match d.TryGetValue(x) with
-        | true, y -> y
+    let dict = Dictionary(HashIdentity.Structural)
+    fun a ->
+        match dict.TryGetValue(a) with
+        | true, x -> x
         | false, _ ->
-            let y = f x
-            d.[x] <- y
-            y
+            let b = f a
+            dict.[a] <- b
+            b
 
 let memoize2 f =
-    let d = Dictionary(HashIdentity.Structural)
-    fun x y ->
-        match d.TryGetValue((x, y)) with
-        | true, z -> z
+    let dict = Dictionary(HashIdentity.Structural)
+    fun a b ->
+        match dict.TryGetValue((a, b)) with
+        | true, c -> c
         | false, _ ->
-            let z = f x y
-            d.[(x, y)] <- z
-            z
+            let c = f a b
+            dict.[(a, b)] <- c
+            c
+
+let memoize3 f =
+    let dict = Dictionary(HashIdentity.Structural)
+    fun a b c ->
+        match dict.TryGetValue((a, b, c)) with
+        | true, d -> d
+        | false, _ ->
+            let d = f a b c
+            dict.[(a, b, c)] <- d
+            d
 
 type MultiDictionary<'T, 'U when 'T : equality and 'U : equality> = Dictionary<'T, HashSet<'U>>
 let MultiDictionary_Create<'T, 'U when 'T : equality and 'U : equality>() : MultiDictionary<'T, 'U> = Dictionary<'T, HashSet<'U>>(HashIdentity.Structural)
@@ -204,30 +214,32 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
 
         accu
 
-    let firstSetOfSymbolString (str : SymbolIndex []) (term : TerminalIndex) =
+    let firstSetOfPartOfProductionBody (productionIndex : int) (startPos : int) (lookahead : TerminalIndex) =
         let accu = HashSet<TerminalIndex>(HashIdentity.Structural)
+        let body = productions.[productionIndex].BodySymbolIndexes
+        let mutable pos = startPos
 
-        let rec loop pos =
-            if pos < str.Length then
-                let firstSetOfSym = firstSetOfSymbol.[str.[pos]]
-                for first in firstSetOfSym do
-                    match first with
-                    | Some v -> accu.Add(v) |> ignore
-                    | None -> ()
-                if firstSetOfSym.Contains(None) then
-                    loop (pos + 1)
+        while pos < body.Length do
+            let firstSetOfSym = firstSetOfSymbol.[body.[pos]]
+            for first in firstSetOfSym do
+                match first with
+                | Some v -> accu.Add(v) |> ignore
+                | None -> ()
+            if firstSetOfSym.Contains(None) then
+                pos <- pos + 1
             else
-                accu.Add(term) |> ignore
+                pos <- Int32.MaxValue
+        if pos = body.Length then
+            accu.Add(lookahead) |> ignore
 
-        loop 0
         accu
     
-    let firstSetOfSymbolString = memoize2 firstSetOfSymbolString
+    let firstSetOfPartOfProductionBody = memoize3 firstSetOfPartOfProductionBody
 
     let advanceOfItem (item : LR0Item) = { item with DotIndex = item.DotIndex + 1 }
 
     let computeClosure (itemSet : LR0Item []) =
-        let mutable accu = HashSet(HashIdentity.Structural)
+        let accu = HashSet(HashIdentity.Structural)
         for item in itemSet do
             accu.Add(item) |> ignore
 
@@ -312,9 +324,8 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                 if item.LR0Item.DotIndex < body.Length then
                     let symbol = body.[item.LR0Item.DotIndex]
                     if symbolIndexIsNonTerminal symbol then
-                        let nonTerminalIndex = nonTerminalIndexOfSymbolIndex symbol
-                        let firstSet = firstSetOfSymbolString body.[(item.LR0Item.DotIndex + 1)..] item.Lookahead
-                        for productionIndex in productionsOfNonTerminal.[nonTerminalIndex] do
+                        let firstSet = firstSetOfPartOfProductionBody item.LR0Item.ProductionIndex (item.LR0Item.DotIndex + 1) item.Lookahead
+                        for productionIndex in productionsOfNonTerminal.[nonTerminalIndexOfSymbolIndex symbol] do
                             for lookahead in firstSet do
                                 queue.Enqueue({ LR0Item = createLR0Item productionIndex; Lookahead = lookahead})
 
