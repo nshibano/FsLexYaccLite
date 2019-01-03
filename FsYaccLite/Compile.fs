@@ -60,7 +60,7 @@ let sortedArrayofList (l : List<'T>) =
     Array.sortInPlace ary
     ary
 
-let sortedArrayofHashSet (hs : HashSet<'T>) =
+let sortedArrayOfHashSet (hs : HashSet<'T>) =
     let ary = Array.zeroCreate hs.Count
     hs.CopyTo(ary)
     Array.sortInPlace ary
@@ -243,7 +243,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                         if accu.Add(newItem) then
                             queue.Enqueue newItem
 
-        sortedArrayofHashSet accu
+        sortedArrayOfHashSet accu
 
     let computeClosure = memoize1 computeClosure
 
@@ -265,7 +265,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
             if item.DotIndex < body.Length then
                 MultiDictionary_Add accu body.[item.DotIndex] (advanceOfItem item)
         
-        Array.map (fun symbolIndex -> sortedArrayofHashSet accu.[symbolIndex]) (sortedArrayOfSeq accu.Keys)
+        Array.map (fun symbolIndex -> sortedArrayOfHashSet accu.[symbolIndex]) (sortedArrayOfSeq accu.Keys)
 
     reportTime(); printf "building kernels..."; stdout.Flush();
     let startItems = Array.map (fun startSymbol -> createLR0Item productionsOfNonTerminal.[indexOfNonTerminal.[startSymbol]].[0]) spec.StartSymbols
@@ -302,9 +302,9 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
 
     let gotoKernel = memoize2 gotoKernel
     
-    let ComputeClosure1 (iset : LR1Item []) = 
+    let ComputeClosure1 (itemSet : LR1Item []) = 
         let accu = HashSet<LR1Item>(HashIdentity.Structural)
-        let queue = Queue(iset)
+        let queue = Queue(itemSet)
         while queue.Count > 0 do
             let item = queue.Dequeue()
             if accu.Add(item) then
@@ -318,7 +318,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                             for lookahead in firstSet do
                                 queue.Enqueue({ LR0Item = createLR0Item productionIndex; Lookahead = lookahead})
 
-        sortedArrayofHashSet accu
+        sortedArrayOfHashSet accu
 
     let closure1OfItemWithDummy (item : LR0Item) = ComputeClosure1 [| { LR0Item = item; Lookahead = dummyLookaheadIdx } |]
     let closure1OfItemWithDummy = memoize1 closure1OfItemWithDummy
@@ -369,12 +369,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
         
         acc
 
-    let stringOfSym (symbolIndex : SymbolIndex) =
-        if symbolIndexIsTerminal symbolIndex then
-            fst spec.Terminals.[terminalIndexOfSymbolIndex symbolIndex]
-        else
-            spec.NonTerminals.[nonTerminalIndexOfSymbolIndex symbolIndex]
-
+    let stringOfSym (symbolIndex : SymbolIndex) = spec.Symbols.[symbolIndex]
     let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productions.[item.ProductionIndex].HeadNonTerminalIndex]) spec.StartSymbols
     let isStartItem1 (item : LR1Item) = isStartItem item.LR0Item    
 
@@ -483,13 +478,13 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                 if item.LR0Item.DotIndex < body.Length then
                     let symbol = body.[item.LR0Item.DotIndex]
                     if symbolIndexIsTerminal symbol then
-                        let termIdx = terminalIndexOfSymbolIndex symbol
+                        let terminalIndex = terminalIndexOfSymbolIndex symbol
                         let action =
                           match gotoKernel kernelIdx symbol with 
                           | None -> failwith "action on terminal should have found a non-empty goto state"
                           | Some gkernelItemIdx -> Shift gkernelItemIdx
-                        let prec = snd spec.Terminals.[termIdx]
-                        addResolvingPrecedence arr kernelIdx termIdx (prec, action)
+                        let prec = snd spec.Terminals.[terminalIndex]
+                        addResolvingPrecedence arr kernelIdx terminalIndex (prec, action)
                 else
                     let lookahead = item.Lookahead
                     if not (isStartItem1 item) then

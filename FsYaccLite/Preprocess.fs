@@ -11,8 +11,9 @@ type Production =
       Code : Code option }
 
 type Preprocessed = 
-    { Terminals: (string * (Associativity * int) option) array
+    { Terminals: (string * (Associativity * int) option) []
       NonTerminals: string array
+      Symbols : string []
       Productions: Production array
       StartSymbols: string array }
 
@@ -88,5 +89,6 @@ let processParserSpecAst (spec : ParserSpec) =
 
     { Terminals = terminals
       NonTerminals = nonTerminals
+      Symbols = Array.append (Array.map fst terminals) nonTerminals
       Productions = productions
       StartSymbols = fakeStartSymbols }
