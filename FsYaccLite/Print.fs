@@ -36,74 +36,72 @@ let outputTable (f : TextWriter) (indent : int) (rows : (string * int) [] []) =
             f.Write(String(' ', maxWidths.[i] - (snd row.[i])))
         f.WriteLine()
 
-let outputCompilationReport (logf : TextWriter option) (spec : ProcessedParserSpec) (comp : CompiledTable) =
+let outputCompilationReport (f : TextWriter) (spec : ProcessedParserSpec) (comp : CompiledTable) =
 
-    Option.iter (fun f -> 
-        printfn  "writing tables to log"
-        stdout.Flush()
+    printfn  "writing tables to log"
+    stdout.Flush()
         
+    fprintfn f ""
+
+    fprintfn f "FIRST sets:"
+
+    let rows = List()
+
+    for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
+        let rowA = spec.NonTerminals.[nonTerminalIndex] + ":"
+        let items = sortedArrayofHashSet(comp.FirstSets.[NonTerminalIndex nonTerminalIndex])
+        let itemStrings = Array.map (fun item -> match item with Some terminalIndex -> fst spec.Terminals.[terminalIndex] | None -> "ε") items
+        let rowB = String.Join(' ', itemStrings)
+        rows.Add([| (rowA, rowA.Length); (rowB, rowB.Length) |])
+
+    outputTable f 2 (rows.ToArray())
+
+    fprintfn f "------------------------";
+    fprintfn f "states = ";
+    fprintfn f "";
+    for i = 0 to comp.Kernels.Length - 1 do
+        fprintfn f "<div id=\"s%d\">state %d:</div>" i i
+            
+        fprintfn f "  items:"
+        for item in comp.Kernels.[i] do
+            let syms = ResizeArray(Array.map (fun sym -> match sym with NonTerminal s -> s | Terminal s -> s) spec.Productions.[item.ProductionIndex].Body)
+            let mark = if item.DotIndex < syms.Count then "\u25CF" else "\u25A0"
+            syms.Insert(item.DotIndex, mark)
+            fprintf f "    %s -&gt; %s" (spec.Productions.[item.ProductionIndex].Head) (String.Join(' ', syms))
+            fprintfn f "%a" outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
         fprintfn f ""
 
-        //fprintfn f "FIRST sets:"
+        fprintfn f "  actions:"
+        let rows = ResizeArray()
+        for j = 0 to comp.ActionTable.[i].Length - 1 do
+            let action = comp.ActionTable.[i].[j]
+            if action <> Error then
+                let term, prec = spec.Terminals.[j]
+                let precText = stringOfPrecInfo prec
+                let termText = (if precText.Length = 0 then term else term + " " + precText) + ":"
 
-        //let rows = List()
-
-        //for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
-        //    let rowA = spec.NonTerminals.[nonTerminalIndex] + ":"
-        //    let items = sortedArrayofHashSet(firstSetOfSymbol.[NonTerminalIndex nonTerminalIndex])
-        //    let itemStrings = Array.map (fun item -> match item with Some terminalIndex -> fst spec.Terminals.[terminalIndex] | None -> "ε") items
-        //    let rowB = String.Join(' ', itemStrings)
-        //    rows.Add([| (rowA, rowA.Length); (rowB, rowB.Length) |])
-
-        //outputTable f 2 (rows.ToArray())
-
-        fprintfn f "------------------------";
-        fprintfn f "states = ";
-        fprintfn f "";
-        for i = 0 to comp.Kernels.Length - 1 do
-            fprintfn f "<div id=\"s%d\">state %d:</div>" i i
-            
-            fprintfn f "  items:"
-            for item in comp.Kernels.[i] do
-                let syms = ResizeArray(Array.map (fun sym -> match sym with NonTerminal s -> s | Terminal s -> s) spec.Productions.[item.ProductionIndex].Body)
-                let mark = if item.DotIndex < syms.Count then "\u25CF" else "\u25A0"
-                syms.Insert(item.DotIndex, mark)
-                fprintf f "    %s -&gt; %s" (spec.Productions.[item.ProductionIndex].Head) (String.Join(' ', syms))
-                fprintfn f "%a" outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
-            fprintfn f ""
-
-            fprintfn f "  actions:"
-            let rows = ResizeArray()
-            for j = 0 to comp.ActionTable.[i].Length - 1 do
-                let action = comp.ActionTable.[i].[j]
-                if action <> Error then
-                    let term, prec = spec.Terminals.[j]
-                    let precText = stringOfPrecInfo prec
-                    let termText = (if precText.Length = 0 then term else term + " " + precText) + ":"
-
-                    let actionText =
-                        match action with 
-                        | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
-                        | Reduce prodIdx ->
-                            let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(' ', Array.map (fun sym -> match sym with NonTerminal s -> s | Terminal s -> s) spec.Productions.[prodIdx].Body))
-                            (s, s.Length - 4)
-                        | Error -> ("error", 5)
-                        | Accept -> ("accept", 6)
+                let actionText =
+                    match action with 
+                    | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
+                    | Reduce prodIdx ->
+                        let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(' ', Array.map (fun sym -> match sym with NonTerminal s -> s | Terminal s -> s) spec.Productions.[prodIdx].Body))
+                        (s, s.Length - 4)
+                    | Error -> ("error", 5)
+                    | Accept -> ("accept", 6)
                     
-                    rows.Add([| (termText, termText.Length); actionText |])
-            outputTable f 4 (rows.ToArray())
-            fprintfn f ""
+                rows.Add([| (termText, termText.Length); actionText |])
+        outputTable f 4 (rows.ToArray())
+        fprintfn f ""
 
-            fprintfn f "  gotos:"
-            for j = 0 to comp.GotoTable.[i].Length - 1 do
-                match comp.GotoTable.[i].[j] with
-                | Some st -> fprintfn f "    %s: <a href=\"#s%d\">%d</a>" spec.NonTerminals.[j] st st
-                | None -> ()
-            fprintfn f ""
+        fprintfn f "  gotos:"
+        for j = 0 to comp.GotoTable.[i].Length - 1 do
+            match comp.GotoTable.[i].[j] with
+            | Some st -> fprintfn f "    %s: <a href=\"#s%d\">%d</a>" spec.NonTerminals.[j] st st
+            | None -> ()
+        fprintfn f ""
             
-        fprintfn f "startStates = %s" (String.Join(";", (Array.map string comp.StartStates)));
-        fprintfn f "------------------------") logf
-
+    fprintfn f "startStates = %s" (String.Join(";", (Array.map string comp.StartStates)));
+    fprintfn f "------------------------"
 
 let outputTableImages (path : string) (spec : ParserSpec) (pre : ProcessedParserSpec) (comp : CompiledTable)  =
     let actionTableBmp = new Bitmap(pre.Terminals.Length, comp.States.Length)

@@ -49,6 +49,7 @@ type CompiledProduction =
 
 type CompiledTable =
     {
+        FirstSets : Dictionary<SymbolIndex, HashSet<TerminalIndex option>>
         Productions : CompiledProduction []
         States : ProductionIndex [] []
         Kernels : LR0Item [] []
@@ -525,7 +526,8 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     if !reduceReduceConflicts > 0 then printfn  "%d reduce/reduce conflicts" !reduceReduceConflicts; stdout.Flush();
     if !shiftReduceConflicts > 0 || !reduceReduceConflicts > 0 then printfn  "consider setting precedences explicitly using %%left %%right and %%nonassoc on terminals and/or setting explicit precedence on rules using %%prec"
 
-    { Productions =
+    { FirstSets = firstSetOfSymbol
+      Productions =
         Array.map
             (fun (prod : Production) ->
                 { HeadNonTerminal = prod.Head;
