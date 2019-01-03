@@ -154,7 +154,7 @@ let main() =
   let preprocessed = processParserSpecAst spec
   let compiled = compile !newprec !norec preprocessed
   Option.iter (fun f -> Print.outputCompilationReport f preprocessed compiled) logf
-  Print.outputTableImages "" spec preprocessed compiled 
+  Print.outputTableImages filename preprocessed compiled 
   //let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
   //    compile logf !newprec !norec spec1 
   Option.iter (fun f -> fprintfn f "</pre>") logf

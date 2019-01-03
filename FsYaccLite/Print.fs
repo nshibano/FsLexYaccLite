@@ -103,8 +103,8 @@ let outputCompilationReport (f : TextWriter) (spec : PreprocessedParserSpec) (co
     fprintfn f "startStates = %s" (String.Join(";", (Array.map string comp.StartStates)));
     fprintfn f "------------------------"
 
-let outputTableImages (path : string) (spec : ParserSpec) (pre : PreprocessedParserSpec) (comp : CompiledTable)  =
-    let actionTableBmp = new Bitmap(pre.Terminals.Length, comp.States.Length)
+let outputTableImages (path : string) (p : PreprocessedParserSpec) (c : CompiledTable)  =
+    let actionTableBmp = new Bitmap(p.Terminals.Length, c.States.Length)
     let colorOfAction (x : Action) =
         match x with
         | Error -> Color.Black
@@ -113,15 +113,15 @@ let outputTableImages (path : string) (spec : ParserSpec) (pre : PreprocessedPar
         | Reduce code -> Color.FromArgb(0xFF000000 ||| (7199369 * code))
     for i = 0 to actionTableBmp.Width - 1 do
         for j = 0 to actionTableBmp.Height - 1 do
-            actionTableBmp.SetPixel(i, j, colorOfAction (comp.ActionTable.[j].[i]))
+            actionTableBmp.SetPixel(i, j, colorOfAction (c.ActionTable.[j].[i]))
     actionTableBmp.Save(path + "-actionTable.bmp")
 
-    let gotoTableBmp = new Bitmap(pre.NonTerminals.Length, comp.States.Length)
+    let gotoTableBmp = new Bitmap(p.NonTerminals.Length, c.States.Length)
     let colorOfGoto x =
         match x with
         | None -> Color.Black
         | Some code -> Color.FromArgb(0xFF000000 ||| (5999471 * code))
     for i = 0 to gotoTableBmp.Width - 1 do
         for j = 0 to gotoTableBmp.Height - 1 do
-            gotoTableBmp.SetPixel(i, j, colorOfGoto comp.GotoTable.[j].[i])
+            gotoTableBmp.SetPixel(i, j, colorOfGoto c.GotoTable.[j].[i])
     gotoTableBmp.Save(path + "-gotoTable.bmp")
