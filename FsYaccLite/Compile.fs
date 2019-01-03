@@ -50,7 +50,8 @@ type CompiledProduction =
 type CompiledTable =
     {
         Productions : CompiledProduction []
-        States : ProductionIndex [] [] 
+        States : ProductionIndex [] []
+        Kernels : LR0Item [] []
         StartStates : int []
         ActionTable : Action [] []
         GotoTable : int option [] [] 
@@ -524,98 +525,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     if !reduceReduceConflicts > 0 then printfn  "%d reduce/reduce conflicts" !reduceReduceConflicts; stdout.Flush();
     if !shiftReduceConflicts > 0 || !reduceReduceConflicts > 0 then printfn  "consider setting precedences explicitly using %%left %%right and %%nonassoc on terminals and/or setting explicit precedence on rules using %%prec"
 
-    /// The final results
-
-    let outputPrecInfo f p = 
-        match p with 
-        | Some (assoc, n, symbol) -> fprintf f " (%d %s %s)" n (stringOfAssoc assoc) symbol
-        | None  -> ()
-
-    let stringOfPrecInfo p = 
-        match p with 
-        | Some (assoc,n) -> sprintf "(%d %s)" n (stringOfAssoc assoc)
-        | None  -> ""
-    
-    let outputTable (f : TextWriter) (indent : int) (rows : (string * int) [] []) =
-        let cols = Array.max (Array.map Array.length rows)
-        let maxWidths = Array.create cols 0
-        for row in rows do
-            for i = 0 to row.Length - 1 do
-                maxWidths.[i] <- max maxWidths.[i] (snd row.[i])
-        for row in rows do
-            f.Write(String(' ', indent))
-            for i = 0 to row.Length - 1 do
-                if i > 0 then f.Write(' ')
-                f.Write(fst row.[i])
-                f.Write(String(' ', maxWidths.[i] - (snd row.[i])))
-            f.WriteLine()
-
-    Option.iter (fun f -> 
-        printfn  "writing tables to log"
-        stdout.Flush()
-        
-        fprintfn f ""
-
-        fprintfn f "FIRST sets:"
-
-        let rows = List()
-
-        for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
-            let rowA = spec.NonTerminals.[nonTerminalIndex] + ":"
-            let items = sortedArrayofHashSet(firstSetOfSymbol.[NonTerminalIndex nonTerminalIndex])
-            let itemStrings = Array.map (fun item -> match item with Some terminalIndex -> fst spec.Terminals.[terminalIndex] | None -> "ε") items
-            let rowB = String.Join(' ', itemStrings)
-            rows.Add([| (rowA, rowA.Length); (rowB, rowB.Length) |])
-
-        outputTable f 2 (rows.ToArray())
-
-        fprintfn f "------------------------";
-        fprintfn f "states = ";
-        fprintfn f "";
-        for i = 0 to kernels.Length - 1 do
-            fprintfn f "<div id=\"s%d\">state %d:</div>" i i
-            
-            fprintfn f "  items:"
-            for item in kernels.[i] do
-                let syms = ResizeArray(Array.map stringOfSym productionBodies.[item.ProductionIndex])
-                let mark = if item.DotIndex < syms.Count then "\u25CF" else "\u25A0"
-                syms.Insert(item.DotIndex, mark)
-                fprintf f "    %s -&gt; %s" (spec.NonTerminals.[productionHeads.[item.ProductionIndex]]) (String.Join(' ', syms))
-                fprintfn f "%a" outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
-            fprintfn f ""
-
-            fprintfn f "  actions:"
-            let rows = ResizeArray()
-            for j = 0 to actionTable.[i].Length - 1 do
-                let action = actionTable.[i].[j]
-                if action <> Error then
-                    let term, prec = spec.Terminals.[j]
-                    let precText = stringOfPrecInfo prec
-                    let termText = (if precText.Length = 0 then term else term + " " + precText) + ":"
-
-                    let actionText =
-                        match action with 
-                        | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
-                        | Reduce prodIdx ->
-                            let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[productionHeads.[prodIdx]]) (stringOfSyms productionBodies.[prodIdx])
-                            (s, s.Length - 4)
-                        | Error -> ("error", 5)
-                        | Accept -> ("accept", 6)
-                    
-                    rows.Add([| (termText, termText.Length); actionText |])
-            outputTable f 4 (rows.ToArray())
-            fprintfn f ""
-
-            fprintfn f "  gotos:"
-            for j = 0 to gotoTable.[i].Length - 1 do
-                match gotoTable.[i].[j] with
-                | Some st -> fprintfn f "    %s: <a href=\"#s%d\">%d</a>" spec.NonTerminals.[j] st st
-                | None -> ()
-            fprintfn f ""
-            
-        fprintfn f "startStates = %s" (String.Join(";", (Array.map string startKernelIdxs)));
-        fprintfn f "------------------------") logf
-
     { Productions =
         Array.map
             (fun (prod : Production) ->
@@ -624,6 +533,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                   BodySymbols = prod.Body
                   Code = prod.Code }) spec.Productions
       States = Array.map (fun state -> Array.map (fun (item : LR0Item) -> item.ProductionIndex) state) kernels
+      Kernels = kernels
       StartStates = startKernelIdxs
       ActionTable = actionTable
       GotoTable = gotoTable
