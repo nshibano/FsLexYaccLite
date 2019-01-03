@@ -447,13 +447,13 @@ let main() =
           if !compat then 
               cprintfn cos "            Parsing.set_parse_state parseState;"
           prod.Body |> Array.iteri (fun i sym -> 
-              let tyopt = 
-                  match sym with
-                  | Terminal t -> 
-                      if tokens.ContainsKey t then 
-                        tokens.[t]
+              let tyopt =
+                  if Array.contains sym preprocessed.NonTerminals then
+                        Some (getType sym)
+                  else
+                      if tokens.ContainsKey sym then 
+                        tokens.[sym]
                       else None
-                  | NonTerminal nt -> Some (getType nt) 
               match tyopt with 
               | Some ty -> cprintfn cos "            let _%d = (let data = parseState.GetInput(%d) in (Microsoft.FSharp.Core.Operators.unbox data : %s)) in" (i+1) (i+1) ty
               | None -> ())

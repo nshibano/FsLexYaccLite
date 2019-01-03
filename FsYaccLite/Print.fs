@@ -38,6 +38,13 @@ let outputTable (f : TextWriter) (indent : int) (rows : (string * int) [] []) =
 
 let outputCompilationReport (f : TextWriter) (spec : PreprocessedParserSpec) (comp : CompiledTable) =
 
+    let symbolIndexIsTerminal (i : SymbolIndex) = i < spec.Terminals.Length
+    let symbolIndexIsNonTerminal (i : SymbolIndex) = spec.Terminals.Length <= i
+    let symbolIndexOfTerminalIndex (i : TerminalIndex) : SymbolIndex = i
+    let symbolIndexOfNonTerminalIndex (i : NonTerminalIndex) : SymbolIndex = spec.Terminals.Length + i 
+    let terminalIndexOfSymbolIndex (i : SymbolIndex) : TerminalIndex = i
+    let nonTerminalIndexOfSymbolIndex (i : SymbolIndex) : NonTerminalIndex = i - spec.Terminals.Length
+
     printfn  "writing tables to log"
     stdout.Flush()
         
@@ -49,7 +56,7 @@ let outputCompilationReport (f : TextWriter) (spec : PreprocessedParserSpec) (co
 
     for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
         let rowA = spec.NonTerminals.[nonTerminalIndex] + ":"
-        let items = sortedArrayofHashSet(comp.FirstSets.[NonTerminalIndex nonTerminalIndex])
+        let items = sortedArrayofHashSet(comp.FirstSets.[symbolIndexOfNonTerminalIndex nonTerminalIndex])
         let itemStrings = Array.map (fun item -> match item with Some terminalIndex -> fst spec.Terminals.[terminalIndex] | None -> "ε") items
         let rowB = String.Join(' ', itemStrings)
         rows.Add([| (rowA, rowA.Length); (rowB, rowB.Length) |])
@@ -64,7 +71,7 @@ let outputCompilationReport (f : TextWriter) (spec : PreprocessedParserSpec) (co
             
         fprintfn f "  items:"
         for item in comp.Kernels.[i] do
-            let syms = ResizeArray(Array.map (fun sym -> match sym with NonTerminal s -> s | Terminal s -> s) spec.Productions.[item.ProductionIndex].Body)
+            let syms = ResizeArray(spec.Productions.[item.ProductionIndex].Body)
             let mark = if item.DotIndex < syms.Count then "\u25CF" else "\u25A0"
             syms.Insert(item.DotIndex, mark)
             fprintf f "    %s -&gt; %s" (spec.Productions.[item.ProductionIndex].Head) (String.Join(' ', syms))
@@ -84,7 +91,7 @@ let outputCompilationReport (f : TextWriter) (spec : PreprocessedParserSpec) (co
                     match action with 
                     | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
                     | Reduce prodIdx ->
-                        let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(' ', Array.map (fun sym -> match sym with NonTerminal s -> s | Terminal s -> s) spec.Productions.[prodIdx].Body))
+                        let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(' ', spec.Productions.[prodIdx].Body))
                         (s, s.Length - 4)
                     | Error -> ("error", 5)
                     | Accept -> ("accept", 6)

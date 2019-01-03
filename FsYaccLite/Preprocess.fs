@@ -4,11 +4,9 @@ open System.Collections.Generic
 
 open Syntax
 
-type Symbol = Terminal of string | NonTerminal of string
-
 type Production =
     { Head : string
-      Body : Symbol array
+      Body : string array
       PrecedenceInfo : (Associativity * int * string) option
       Code : Code option }
 
@@ -49,7 +47,7 @@ let processParserSpecAst (spec : ParserSpec) =
                             Some (x, y, sym)
                         else None
                     | None -> None
-                { Head = nonterm; PrecedenceInfo = precInfo; Body = Array.map (fun s -> if terminalsSet.Contains s then Terminal s else NonTerminal s) (Array.ofList syms); Code = code }))
+                { Head = nonterm; PrecedenceInfo = precInfo; Body = Array.ofList syms; Code = code }))
          |> List.concat
          |> Array.ofList
 
@@ -61,10 +59,11 @@ let processParserSpecAst (spec : ParserSpec) =
             failwith (sprintf "NonTerminal '%s' has no productions" nt)
 
     for prod in productions do
-        for sym in prod.Body do 
-           match sym with 
-           | NonTerminal nt -> checkNonTerminal nt 
-           | Terminal t -> if not (terminalsSet.Contains t) then failwith (sprintf "token %s is not declared" t)
+        for sym in prod.Body do
+            if nonTerminalSet.Contains(sym) then
+                checkNonTerminal sym 
+            else
+                if not (terminalsSet.Contains sym) then failwith (sprintf "token %s is not declared" sym)
            
     if spec.StartSymbols = [] then (failwith "at least one %start declaration is required\n")
 
@@ -82,7 +81,7 @@ let processParserSpecAst (spec : ParserSpec) =
         Array.append
             (Array.map2
                 (fun fakeStartNonTerminal startSymbol ->
-                    { Head = fakeStartNonTerminal; PrecedenceInfo = None; Body = [| NonTerminal startSymbol |]; Code = None })
+                    { Head = fakeStartNonTerminal; PrecedenceInfo = None; Body = [| startSymbol |]; Code = None })
                 fakeStartSymbols
                 startSymbols)
             productions
