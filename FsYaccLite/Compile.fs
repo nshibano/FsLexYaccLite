@@ -11,12 +11,6 @@ open Printf
 open Syntax
 open Preprocess
 
-type Action = 
-  | Shift of stateIndex : int
-  | Reduce of productionIndex : int
-  | Accept
-  | Error
-    
 type TerminalIndex = int
 type NonTerminalIndex = int
 type ProductionIndex = int
@@ -38,6 +32,42 @@ type KernelItemIndex =
 type LR1Item =
     { LR0Item : LR0Item
       Lookahead : TerminalIndex }
+
+type Action = 
+  | Shift of stateIndex : int
+  | Reduce of productionIndex : int
+  | Accept
+  | Error
+    
+type CompiledProduction =
+    {
+        HeadNonTerminal : string
+        HeadNonTerminalIndex : NonTerminalIndex
+        BodySymbols : Symbol []
+        Code : Code option
+    }
+
+type CompiledTable =
+    {
+        Productions : CompiledProduction []
+        States : ProductionIndex [] [] 
+        StartStates : int []
+        ActionTable : Action [] []
+        GotoTable : int option [] [] 
+        EndOfInputTerminalIndex : int
+        ErrorTerminalIndex : int
+    }
+
+let sortedArrayofList (l : List<'T>) =
+    let ary = l.ToArray()
+    Array.sortInPlace ary
+    ary
+
+let sortedArrayofHashSet (hs : HashSet<'T>) =
+    let ary = Array.zeroCreate hs.Count
+    hs.CopyTo(ary)
+    Array.sortInPlace ary
+    ary
 
 let memoize1 f =
     let d = Dictionary(HashIdentity.Structural)
@@ -74,36 +104,6 @@ let MultiDictionary_Add (d : MultiDictionary<'T, 'U>) (k : 'T) (v : 'U) =
         let values = HashSet(HashIdentity.Structural)
         values.Add(v) |> ignore
         d.[k] <- values
-
-let sortedArrayofList (l : List<'T>) =
-    let ary = l.ToArray()
-    Array.sortInPlace ary
-    ary
-
-let sortedArrayofHashSet (hs : HashSet<'T>) =
-    let ary = Array.zeroCreate hs.Count
-    hs.CopyTo(ary)
-    Array.sortInPlace ary
-    ary
-
-type CompiledProduction =
-    {
-        HeadNonTerminal : string
-        HeadNonTerminalIndex : NonTerminalIndex
-        BodySymbols : Symbol []
-        Code : Code option
-    }
-
-type CompiledTable =
-    {
-        Productions : CompiledProduction []
-        States : ProductionIndex [] [] 
-        StartStates : int []
-        ActionTable : Action [] []
-        GotoTable : int option [] [] 
-        EndOfInputTerminalIndex : int
-        ErrorTerminalIndex : int
-    }
 
 let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (spec : ProcessedParserSpec) =
     let stopWatch = Stopwatch.StartNew()
@@ -525,14 +525,6 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
     if !shiftReduceConflicts > 0 || !reduceReduceConflicts > 0 then printfn  "consider setting precedences explicitly using %%left %%right and %%nonassoc on terminals and/or setting explicit precedence on rules using %%prec"
 
     /// The final results
-    let states = kernels
-    let prods =
-        Array.map
-            (fun (prod : Production) ->
-                { HeadNonTerminal = prod.Head;
-                  HeadNonTerminalIndex = indexOfNonTerminal.[prod.Head]
-                  BodySymbols = prod.Body
-                  Code = prod.Code }) spec.Productions
 
     let outputPrecInfo f p = 
         match p with 
@@ -580,11 +572,11 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         fprintfn f "------------------------";
         fprintfn f "states = ";
         fprintfn f "";
-        for i = 0 to states.Length - 1 do
+        for i = 0 to kernels.Length - 1 do
             fprintfn f "<div id=\"s%d\">state %d:</div>" i i
             
             fprintfn f "  items:"
-            for item in states.[i] do
+            for item in kernels.[i] do
                 let syms = ResizeArray(Array.map stringOfSym productionBodies.[item.ProductionIndex])
                 let mark = if item.DotIndex < syms.Count then "\u25CF" else "\u25A0"
                 syms.Insert(item.DotIndex, mark)
@@ -624,32 +616,14 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         fprintfn f "startStates = %s" (String.Join(";", (Array.map string startKernelIdxs)));
         fprintfn f "------------------------") logf
 
-    let states = Array.map (fun state -> Array.map (fun (item : LR0Item) -> item.ProductionIndex) state) states
-
-    let bmp1 = new Bitmap(spec.Terminals.Length, states.Length)
-    let colorOfAction (x : Action) =
-        match x with
-        | Error -> Color.Black
-        | Accept -> Color.White
-        | Shift code ->  Color.FromArgb(0xFF000000 ||| (5999471 * code))
-        | Reduce code -> Color.FromArgb(0xFF000000 ||| (7199369 * code))
-    for i = 0 to bmp1.Width - 1 do
-        for j = 0 to bmp1.Height - 1 do
-            bmp1.SetPixel(i, j, colorOfAction (actionTable.[j].[i]))
-    bmp1.Save("actionTable.bmp")
-
-    let bmp2 = new Bitmap(spec.NonTerminals.Length, states.Length)
-    let colorOfGoto x =
-        match x with
-        | None -> Color.Black
-        | Some code -> Color.FromArgb(0xFF000000 ||| (5999471 * code))
-    for i = 0 to bmp2.Width - 1 do
-        for j = 0 to bmp2.Height - 1 do
-            bmp2.SetPixel(i, j, colorOfGoto gotoTable.[j].[i])
-    bmp2.Save("gotoTable.bmp")
-
-    { Productions = prods
-      States = states
+    { Productions =
+        Array.map
+            (fun (prod : Production) ->
+                { HeadNonTerminal = prod.Head;
+                  HeadNonTerminalIndex = indexOfNonTerminal.[prod.Head]
+                  BodySymbols = prod.Body
+                  Code = prod.Code }) spec.Productions
+      States = Array.map (fun state -> Array.map (fun (item : LR0Item) -> item.ProductionIndex) state) kernels
       StartStates = startKernelIdxs
       ActionTable = actionTable
       GotoTable = gotoTable

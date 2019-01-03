@@ -153,7 +153,7 @@ let main() =
   printfn "building tables"; 
   let preprocessed = processParserSpecAst spec
   let compiled = compile logf !newprec !norec preprocessed 
-
+  Print.outputTableImages "" spec preprocessed compiled 
   //let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
   //    compile logf !newprec !norec spec1 
   Option.iter (fun f -> fprintfn f "</pre>") logf

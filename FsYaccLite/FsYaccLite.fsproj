@@ -16,6 +16,7 @@
     <Compile Include="Lexer.fs" />
     <Compile Include="Preprocess.fs" />
     <Compile Include="Compile.fs" />
+    <Compile Include="Print.fs" />
     <Compile Include="Yacc.fs" />
     <None Include="Lexer.fsl" />
     <None Include="Parser.fsy" />
