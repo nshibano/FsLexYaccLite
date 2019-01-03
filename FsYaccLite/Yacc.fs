@@ -256,8 +256,8 @@ let main() =
   cprintfn cos "/// This function maps production indexes returned in syntax errors to strings representing the non terminal that would be produced by that production";
   cprintfn cos "let prodIdxToNonTerminal (prodIdx:int) = ";
   cprintfn cos "  match prodIdx with";
-  compiled.Productions |> Array.iteri (fun i prod -> 
-      cprintfn cos "    | %d -> NONTERM_%s " i prod.HeadNonTerminal);
+  preprocessed.Productions |> Array.iteri (fun i prod -> 
+      cprintfn cos "    | %d -> NONTERM_%s " i prod.Head);
   cprintfn cos "    | _ -> failwith \"prodIdxToNonTerminal: bad production index\""
 
   //cprintfn cosi "";
@@ -426,8 +426,8 @@ let main() =
   end;
   begin 
       cprintf cos "let _fsyacc_reductionSymbolCounts = [|" ;
-      for prod in compiled.Productions do 
-          cprintf cos "%a" outputCodedUInt16 prod.BodySymbols.Length;
+      for prod in preprocessed.Productions do 
+          cprintf cos "%a" outputCodedUInt16 prod.Body.Length;
       cprintfn cos "|]" ;
   end;
   begin 
@@ -441,12 +441,12 @@ let main() =
   begin 
       cprintf cos "let _fsyacc_reductions ()  =" ;
       cprintfn cos "    [| " ;
-      for prod in compiled.Productions do 
+      for prod in preprocessed.Productions do 
           //cprintfn cos "# %d \"%s\"" !lineCountOutput output;
           cprintfn cos "        (fun (parseState : %s.IParseState) ->"  parslib
           if !compat then 
               cprintfn cos "            Parsing.set_parse_state parseState;"
-          prod.BodySymbols |> Array.iteri (fun i sym -> 
+          prod.Body |> Array.iteri (fun i sym -> 
               let tyopt = 
                   match sym with
                   | Terminal t -> 
@@ -482,7 +482,7 @@ let main() =
           //match code with 
           //| Some (_,pos) -> cprintfn cos "# %d \"%s\"" pos.pos_lnum pos.pos_fname
           //| None -> ()
-          cprintfn cos "                 : %s));" (if types.ContainsKey prod.HeadNonTerminal then  types.[prod.HeadNonTerminal] else "'" + prod.HeadNonTerminal);
+          cprintfn cos "                 : %s));" (if types.ContainsKey prod.Head then  types.[prod.Head] else "'" + prod.Head);
       done;
       cprintfn cos "|]" ;
   end;

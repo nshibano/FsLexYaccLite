@@ -41,11 +41,8 @@ type Action =
     
 type CompiledProduction =
     {
-        HeadNonTerminal : string
         HeadNonTerminalIndex : NonTerminalIndex
-        BodySymbols : Symbol []
         BodySymbolIndexes : SymbolIndex []
-        Code : Code option
     }
 
 type CompiledTable =
@@ -139,11 +136,8 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
     let productions =
         Array.map
             (fun (prod : Production) ->
-                { HeadNonTerminal = prod.Head;
-                  HeadNonTerminalIndex = indexOfNonTerminal.[prod.Head]
-                  BodySymbolIndexes = Array.map indexOfSymbol prod.Body
-                  BodySymbols = prod.Body
-                  Code = prod.Code }) spec.Productions
+                { HeadNonTerminalIndex = indexOfNonTerminal.[prod.Head]
+                  BodySymbolIndexes = Array.map indexOfSymbol prod.Body }) spec.Productions
 
     //let productionHeads = Array.map (fun p -> indexOfNonTerminal.[p.Head]) spec.Productions
     //let productionBodies = Array.map (fun p -> Array.map indexOfSymbol p.Body) spec.Productions
