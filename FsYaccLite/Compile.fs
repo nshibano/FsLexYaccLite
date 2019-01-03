@@ -4,6 +4,7 @@ open System
 open System.Collections.Generic
 open System.IO
 open System.Diagnostics
+open System.Drawing
 
 open Printf
 
@@ -611,6 +612,28 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         fprintfn f "------------------------") logf
 
     let states = Array.map (fun state -> Array.map (fun (item : LR0Item) -> item.ProductionIndex) state) states
+
+    let bmp1 = new Bitmap(spec.Terminals.Length, states.Length)
+    let colorOfAction (x : Action) =
+        match x with
+        | Error -> Color.Black
+        | Accept -> Color.White
+        | Shift code ->  Color.FromArgb(0xFF000000 ||| (5999471 * code))
+        | Reduce code -> Color.FromArgb(0xFF000000 ||| (7199369 * code))
+    for i = 0 to bmp1.Width - 1 do
+        for j = 0 to bmp1.Height - 1 do
+            bmp1.SetPixel(i, j, colorOfAction (snd actionTable.[j].[i]))
+    bmp1.Save("actionTable.bmp")
+
+    let bmp2 = new Bitmap(spec.NonTerminals.Length, states.Length)
+    let colorOfGoto x =
+        match x with
+        | None -> Color.Black
+        | Some code -> Color.FromArgb(0xFF000000 ||| (5999471 * code))
+    for i = 0 to bmp2.Width - 1 do
+        for j = 0 to bmp2.Height - 1 do
+            bmp2.SetPixel(i, j, colorOfGoto gotoTable.[j].[i])
+    bmp2.Save("gotoTable.bmp")
 
     { Productions = prods
       States = states
