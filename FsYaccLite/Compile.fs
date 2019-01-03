@@ -44,6 +44,7 @@ type CompiledProduction =
         HeadNonTerminal : string
         HeadNonTerminalIndex : NonTerminalIndex
         BodySymbols : Symbol []
+        BodySymbolIndexes : SymbolIndex []
         Code : Code option
     }
 
@@ -68,6 +69,11 @@ let sortedArrayofList (l : List<'T>) =
 let sortedArrayofHashSet (hs : HashSet<'T>) =
     let ary = Array.zeroCreate hs.Count
     hs.CopyTo(ary)
+    Array.sortInPlace ary
+    ary
+
+let sortedArrayOfSeq seq =
+    let ary = Array.ofSeq seq
     Array.sortInPlace ary
     ary
 
@@ -130,13 +136,22 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
         | Terminal s -> TerminalIndex (indexOfTerminal.[s])
         | NonTerminal s -> NonTerminalIndex (indexOfNonTerminal.[s])
 
-    let productionHeads = Array.map (fun p -> indexOfNonTerminal.[p.Head]) spec.Productions
-    let productionBodies = Array.map (fun p -> Array.map indexOfSymbol p.Body) spec.Productions
-    let productionPrecedences = Array.map (fun p -> p.PrecedenceInfo) spec.Productions
+    let productions =
+        Array.map
+            (fun (prod : Production) ->
+                { HeadNonTerminal = prod.Head;
+                  HeadNonTerminalIndex = indexOfNonTerminal.[prod.Head]
+                  BodySymbolIndexes = Array.map indexOfSymbol prod.Body
+                  BodySymbols = prod.Body
+                  Code = prod.Code }) spec.Productions
+
+    //let productionHeads = Array.map (fun p -> indexOfNonTerminal.[p.Head]) spec.Productions
+    //let productionBodies = Array.map (fun p -> Array.map indexOfSymbol p.Body) spec.Productions
+    //let productionPrecedences = Array.map (fun p -> p.PrecedenceInfo) spec.Productions
     let productionsOfNonTerminal : ProductionIndex[][] =
         let table = Array.init spec.NonTerminals.Length (fun _ -> ResizeArray<int>())
         for i = 0 to spec.Productions.Length - 1 do
-            table.[productionHeads.[i]].Add(i)
+            table.[productions.[i].HeadNonTerminalIndex].Add(i)
         Array.map (fun (l : ResizeArray<int>) -> l.ToArray()) table
 
     let dummyLookaheadIdx = indexOfTerminal.[dummyLookahead]
@@ -163,8 +178,8 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
 
         let scan() =
             for prodIdx = 0 to spec.Productions.Length - 1 do
-                let head = productionHeads.[prodIdx]
-                let body = productionBodies.[prodIdx]
+                let head = productions.[prodIdx].HeadNonTerminalIndex
+                let body = productions.[prodIdx].BodySymbolIndexes
                 let mutable pos = 0
                 while pos < body.Length do
                     // add first symbols of production body to the first-set of this production head 
@@ -212,8 +227,6 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
     let firstSetOfSymbolString = memoize2 firstSetOfSymbolString
 
     let advanceOfItem (item : LR0Item) = { item with DotIndex = item.DotIndex + 1 }
-    let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.ProductionIndex]]) spec.StartSymbols
-    let isStartItem1 (item : LR1Item) = Array.contains (spec.NonTerminals.[productionHeads.[item.LR0Item.ProductionIndex]]) spec.StartSymbols
 
     let computeClosure (itemSet : LR0Item []) =
         let mutable accu = HashSet(HashIdentity.Structural)
@@ -223,7 +236,7 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
         let queue = Queue<LR0Item>(itemSet)
         while queue.Count > 0 do
             let item = queue.Dequeue()
-            let body = productionBodies.[item.ProductionIndex]
+            let body = productions.[item.ProductionIndex].BodySymbolIndexes
             if item.DotIndex < body.Length then
                 match body.[item.DotIndex] with
                 | NonTerminalIndex ni ->
@@ -241,7 +254,7 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
         let accu = List()
 
         for item in computeClosure kernel do
-            let body = productionBodies.[item.ProductionIndex]
+            let body = productions.[item.ProductionIndex].BodySymbolIndexes
             if item.DotIndex < body.Length && body.[item.DotIndex] = symbol then
                 accu.Add(advanceOfItem item)
 
@@ -251,29 +264,27 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
         let accu = MultiDictionary_Create<SymbolIndex, LR0Item>()
 
         for item in computeClosure kernel do
-            let body = productionBodies.[item.ProductionIndex]
+            let body = productions.[item.ProductionIndex].BodySymbolIndexes
             if item.DotIndex < body.Length then
                 MultiDictionary_Add accu body.[item.DotIndex] (advanceOfItem item)
         
-        let gotoSymbols =
-            let ary = Array.ofSeq accu.Keys
-            Array.sortInPlace ary
-            ary
-        
-        Array.map (fun sym -> sortedArrayofHashSet accu.[sym]) gotoSymbols
+        Array.map (fun symbolIndex -> sortedArrayofHashSet accu.[symbolIndex]) (sortedArrayOfSeq accu.Keys)
 
     reportTime(); printf "building kernels..."; stdout.Flush();
     let startItems = Array.map (fun startSymbol -> createLR0Item productionsOfNonTerminal.[indexOfNonTerminal.[startSymbol]].[0]) spec.StartSymbols
     let startKernels = Array.map (fun x -> [| x |]) startItems
-    let kernels = 
+    let kernels =
         let queue = Queue(startKernels)
-        let accu = HashSet(HashIdentity.Structural)
+        let accuSet = HashSet(HashIdentity.Structural)
+        let accuList = List()
         while queue.Count > 0 do
             let kernel = queue.Dequeue()
-            if accu.Add(kernel) then
+            if accuSet.Add(kernel) then
+                accuList.Add(kernel)
                 for goto in computeGotosOfKernel kernel do
                     queue.Enqueue(goto)
-        Array.ofSeq accu
+
+        accuList.ToArray()
     
     reportTime(); printf "building kernel table..."; stdout.Flush();
 
@@ -298,7 +309,7 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
         while queue.Count > 0 do
             let item = queue.Dequeue()
             if accu.Add(item) then
-                let body = productionBodies.[item.LR0Item.ProductionIndex]
+                let body = productions.[item.LR0Item.ProductionIndex].BodySymbolIndexes
                 if item.LR0Item.DotIndex < body.Length then
                     match body.[item.LR0Item.DotIndex] with
                     | NonTerminalIndex nonTerminalIndex -> 
@@ -324,7 +335,7 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
             printf  "."; stdout.Flush();
             for lr0Item in kernels.[kernelIdx] do  
                 for lr1Item in closure1OfItemWithDummy lr0Item do
-                    let body = productionBodies.[lr1Item.LR0Item.ProductionIndex]
+                    let body = productions.[lr1Item.LR0Item.ProductionIndex].BodySymbolIndexes
                     if lr1Item.LR0Item.DotIndex < body.Length then
                         match gotoKernel  kernelIdx body.[lr1Item.LR0Item.DotIndex] with 
                         | None -> ()
@@ -365,7 +376,10 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
         match symbolIndex with
         | TerminalIndex i -> fst spec.Terminals.[i]
         | NonTerminalIndex i -> spec.NonTerminals.[i]
-    
+
+    let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productions.[item.ProductionIndex].HeadNonTerminalIndex]) spec.StartSymbols
+    let isStartItem1 (item : LR1Item) = isStartItem item.LR0Item    
+
     reportTime(); printf "building action table..."; stdout.Flush();
     let shiftReduceConflicts = ref 0
     let reduceReduceConflicts = ref 0
@@ -390,8 +404,8 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
                             match a with
                             | Shift x -> "shift", sprintf "shift(%d)" x
                             | Reduce x ->
-                                let nt = productionHeads.[x]
-                                "reduce", productionBodies.[x]
+                                let nt = productions.[x].HeadNonTerminalIndex
+                                "reduce", productions.[x].BodySymbolIndexes
                                 |> Array.map stringOfSym
                                 |> String.concat " "
                                 |> sprintf "reduce(%s:%s)" (spec.NonTerminals.[nt])
@@ -467,7 +481,7 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
                 ComputeClosure1 (sortedArrayofList accu)
 
             for item in items do
-                let body = productionBodies.[item.LR0Item.ProductionIndex]
+                let body = productions.[item.LR0Item.ProductionIndex].BodySymbolIndexes
                 if item.LR0Item.DotIndex < body.Length then
                     match body.[item.LR0Item.DotIndex] with
                     | TerminalIndex termIdx ->
@@ -482,11 +496,11 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
                     let lookahead = item.Lookahead
                     if not (isStartItem1 item) then
                         let prodIdx = item.LR0Item.ProductionIndex
-                        let prec = productionPrecedences.[item.LR0Item.ProductionIndex]
+                        let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
                         let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Reduce prodIdx)
                         addResolvingPrecedence arr kernelIdx lookahead action 
                     elif lookahead = endOfInputTerminalIdx then
-                        let prec = productionPrecedences.[item.LR0Item.ProductionIndex]
+                        let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
                         let action = (Option.map (fun (x, y, _) -> (x, y)) prec ,Accept)
                         addResolvingPrecedence arr kernelIdx lookahead action 
                     else ()
@@ -499,12 +513,12 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
             // A -> B C . rules give rise to reductions in favour of errors 
             if not <| norec then
                 for item in computeClosure kernel do
-                    let body = productionBodies.[item.ProductionIndex]
+                    let body = productions.[item.ProductionIndex].BodySymbolIndexes
                     if item.DotIndex = body.Length then
                         for terminalIdx = 0 to spec.Terminals.Length - 1 do
                             if snd(arr.[terminalIdx]) = Error then 
                                 let prodIdx = item.ProductionIndex
-                                let action = (Option.map (fun (x, y, _) -> (x, y)) productionPrecedences.[item.ProductionIndex], (if isStartItem(item) then Accept else Reduce prodIdx))
+                                let action = (Option.map (fun (x, y, _) -> (x, y)) spec.Productions.[item.ProductionIndex].PrecedenceInfo, (if isStartItem(item) then Accept else Reduce prodIdx))
                                 addResolvingPrecedence arr kernelIdx terminalIdx action
 
             Array.map snd arr
@@ -525,13 +539,7 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
     if !shiftReduceConflicts > 0 || !reduceReduceConflicts > 0 then printfn  "consider setting precedences explicitly using %%left %%right and %%nonassoc on terminals and/or setting explicit precedence on rules using %%prec"
 
     { FirstSets = firstSetOfSymbol
-      Productions =
-        Array.map
-            (fun (prod : Production) ->
-                { HeadNonTerminal = prod.Head;
-                  HeadNonTerminalIndex = indexOfNonTerminal.[prod.Head]
-                  BodySymbols = prod.Body
-                  Code = prod.Code }) spec.Productions
+      Productions = productions
       States = Array.map (fun state -> Array.map (fun (item : LR0Item) -> item.ProductionIndex) state) kernels
       Kernels = kernels
       StartStates = startKernelIdxs
