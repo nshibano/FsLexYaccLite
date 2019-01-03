@@ -36,7 +36,7 @@ let outputTable (f : TextWriter) (indent : int) (rows : (string * int) [] []) =
             f.Write(String(' ', maxWidths.[i] - (snd row.[i])))
         f.WriteLine()
 
-let outputCompilationReport (f : TextWriter) (spec : PreprocessedParserSpec) (comp : CompiledTable) =
+let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compiled) =
 
     let symbolIndexIsTerminal (i : SymbolIndex) = i < spec.Terminals.Length
     let symbolIndexIsNonTerminal (i : SymbolIndex) = spec.Terminals.Length <= i
@@ -110,7 +110,7 @@ let outputCompilationReport (f : TextWriter) (spec : PreprocessedParserSpec) (co
     fprintfn f "startStates = %s" (String.Join(";", (Array.map string comp.StartStates)));
     fprintfn f "------------------------"
 
-let outputTableImages (path : string) (p : PreprocessedParserSpec) (c : CompiledTable)  =
+let outputTableImages (path : string) (p : Preprocessed) (c : Compiled)  =
     let actionTableBmp = new Bitmap(p.Terminals.Length, c.States.Length)
     let colorOfAction (x : Action) =
         match x with

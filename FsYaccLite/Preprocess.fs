@@ -10,7 +10,7 @@ type Production =
       PrecedenceInfo : (Associativity * int * string) option
       Code : Code option }
 
-type PreprocessedParserSpec = 
+type Preprocessed = 
     { Terminals: (string * (Associativity * int) option) array
       NonTerminals: string array
       Productions: Production array

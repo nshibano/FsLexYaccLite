@@ -6,7 +6,7 @@ type Code = string * Microsoft.FSharp.Text.Lexing.Position
 type Rule = Rule of Identifier list * Identifier option * Code option
 type Associativity = LeftAssoc | RightAssoc | NonAssoc
 
-type ParserSpec= 
+type ParserSpec = 
     { Header : Code
       Tokens : (Identifier * string option) list
       Types : (Identifier * string) list

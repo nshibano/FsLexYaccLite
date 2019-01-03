@@ -42,7 +42,7 @@ type CompiledProduction =
         BodySymbolIndexes : SymbolIndex []
     }
 
-type CompiledTable =
+type Compiled =
     {
         FirstSets : Dictionary<SymbolIndex, HashSet<TerminalIndex option>>
         Productions : CompiledProduction []
@@ -107,7 +107,7 @@ let MultiDictionary_Add (d : MultiDictionary<'T, 'U>) (k : 'T) (v : 'U) =
         values.Add(v) |> ignore
         d.[k] <- values
 
-let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
+let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
     let stopWatch = Stopwatch.StartNew()
     let reportTime() =
         printfn "time: %d(ms)" stopWatch.ElapsedMilliseconds
@@ -294,6 +294,8 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
     let startKernelIdxs = Array.map (fun kernel -> indexOfKernel.[kernel]) startKernels
     let startKernelItemIdxs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
 
+    reportTime(); printf "computing lookahead relations..."; stdout.Flush();
+
     let gotoKernel kernelIndex symbolIndex = 
         let gset = computeGotoOfKernel (kernels.[kernelIndex]) symbolIndex
         if gset.Length = 0 then None else Some (indexOfKernel.[gset])
@@ -317,8 +319,6 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
                                 queue.Enqueue({ LR0Item = createLR0Item productionIndex; Lookahead = lookahead})
 
         sortedArrayofHashSet accu
-
-    reportTime(); printf "computing lookahead relations..."; stdout.Flush();
 
     let closure1OfItemWithDummy (item : LR0Item) = ComputeClosure1 [| { LR0Item = item; Lookahead = dummyLookaheadIdx } |]
     let closure1OfItemWithDummy = memoize1 closure1OfItemWithDummy
