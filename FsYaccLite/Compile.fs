@@ -91,7 +91,7 @@ type CompiledTable =
         Productions : (string * NonTerminalIndex * Symbol array * Code option) []
         States : ProductionIndex [] [] 
         StartStates : int []
-        ActionTable : ((Associativity * int) option * Action) [] []
+        ActionTable : Action [] []
         GotoTable : int option [] [] 
         EndOfInputTerminalIndex : int
         ErrorTerminalIndex : int
@@ -500,7 +500,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
                                 let action = (Option.map (fun (x, y, _) -> (x, y)) productionPrecedences.[item.ProductionIndex], (if isStartItem(item) then Accept else Reduce prodIdx))
                                 addResolvingPrecedence arr kernelIdx terminalIdx action
 
-            arr
+            Array.map snd arr
 
         Array.init kernels.Length ComputeActions
 
@@ -582,7 +582,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
             fprintfn f "  actions:"
             let rows = ResizeArray()
             for j = 0 to actionTable.[i].Length - 1 do
-                let _, action = actionTable.[i].[j]
+                let action = actionTable.[i].[j]
                 if action <> Error then
                     let term, prec = spec.Terminals.[j]
                     let precText = stringOfPrecInfo prec
@@ -622,7 +622,7 @@ let compile (logf : System.IO.TextWriter option) (newprec:bool) (norec:bool) (sp
         | Reduce code -> Color.FromArgb(0xFF000000 ||| (7199369 * code))
     for i = 0 to bmp1.Width - 1 do
         for j = 0 to bmp1.Height - 1 do
-            bmp1.SetPixel(i, j, colorOfAction (snd actionTable.[j].[i]))
+            bmp1.SetPixel(i, j, colorOfAction (actionTable.[j].[i]))
     bmp1.Save("actionTable.bmp")
 
     let bmp2 = new Bitmap(spec.NonTerminals.Length, states.Length)

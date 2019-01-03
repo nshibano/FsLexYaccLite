@@ -377,7 +377,7 @@ let main() =
         let terminalsByAction = new Dictionary<_,int list>(10) 
         let countPerAction = new Dictionary<_,_>(10) 
         for terminal = 0 to actions.Length - 1 do  
-              let action = snd actions.[terminal] 
+              let action = actions.[terminal] 
               if terminalsByAction.ContainsKey action then 
                   terminalsByAction.[action] <- terminal :: terminalsByAction.[action] ;
               else
@@ -409,7 +409,7 @@ let main() =
         (* Write the pairs of entries in incremental order by key *)
         (* This lets us implement the lookup by a binary chop. *)
         for terminal = 0 to Array.length actions-1 do  
-            let action = snd actions.[terminal] in 
+            let action = actions.[terminal] in 
             if action <> mostCommonAction then  (
                 actionTableCurrIndex := !actionTableCurrIndex + 1;
                 outputCodedUInt16 os terminal;
