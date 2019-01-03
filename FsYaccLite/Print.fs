@@ -3,8 +3,8 @@
 open System
 open System.Collections.Generic
 open System.IO
-open System.Diagnostics
 open System.Drawing
+open System.Drawing.Imaging
 
 open Printf
 
@@ -114,7 +114,7 @@ let outputTableImages (path : string) (p : PreprocessedParserSpec) (c : Compiled
     for i = 0 to actionTableBmp.Width - 1 do
         for j = 0 to actionTableBmp.Height - 1 do
             actionTableBmp.SetPixel(i, j, colorOfAction (c.ActionTable.[j].[i]))
-    actionTableBmp.Save(path + "-actionTable.bmp")
+    actionTableBmp.Save(path + "-actionTable.png", ImageFormat.Png)
 
     let gotoTableBmp = new Bitmap(p.NonTerminals.Length, c.States.Length)
     let colorOfGoto x =
@@ -124,4 +124,4 @@ let outputTableImages (path : string) (p : PreprocessedParserSpec) (c : Compiled
     for i = 0 to gotoTableBmp.Width - 1 do
         for j = 0 to gotoTableBmp.Height - 1 do
             gotoTableBmp.SetPixel(i, j, colorOfGoto c.GotoTable.[j].[i])
-    gotoTableBmp.Save(path + "-gotoTable.bmp")
+    gotoTableBmp.Save(path + "-gotoTable.png", ImageFormat.Png)
