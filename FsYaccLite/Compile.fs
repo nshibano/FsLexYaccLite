@@ -366,8 +366,6 @@ let compile (newprec:bool) (norec:bool) (spec : PreprocessedParserSpec) =
         | TerminalIndex i -> fst spec.Terminals.[i]
         | NonTerminalIndex i -> spec.NonTerminals.[i]
     
-    let stringOfSyms syms = String.Join(" ", Array.map stringOfSym syms)
-
     reportTime(); printf "building action table..."; stdout.Flush();
     let shiftReduceConflicts = ref 0
     let reduceReduceConflicts = ref 0
