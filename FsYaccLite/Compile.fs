@@ -507,7 +507,8 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                 elif item.Lookahead = endOfInputTerminalIndex then
                     let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
                     let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Accept)
-                    addResolvingPrecedence arr kernelIdx item.Lookahead action 
+                    addResolvingPrecedence arr kernelIdx item.Lookahead action
+                else failwith "unreachable?"
 
             // If there is a single item A -> B C . and no Shift or Accept actions (i.e. only Error or Reduce, so the choice of terminal 
             // cannot affect what we do) then we emit an immediate reduce action for the rule corresponding to that item 
