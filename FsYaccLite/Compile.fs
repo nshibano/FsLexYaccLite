@@ -33,10 +33,10 @@ type LR1Item =
       Lookahead : TerminalIndex }
 
 type Action = 
-  | Shift of stateIndex : int
-  | Reduce of productionIndex : int
-  | Accept
-  | Error
+    | Shift of kernelIndex : KernelIndex
+    | Reduce of productionIndex : ProductionIndex
+    | Accept
+    | Error
     
 type CompiledProduction =
     {
@@ -395,16 +395,14 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
 
         // Now build the action tables. First a utility to merge the given action  
         // into the table, taking into account precedences etc. and reporting errors. 
-        let addResolvingPrecedence (arr : ((Associativity * int) option * Action) []) kernelIdx termIdx (precNew, actionNew) = 
+        let addResolvingPrecedence (row : ((Associativity * int) option * Action) []) kernelIdx termIdx itemNew  = 
             // printf "DEBUG: state %d: adding action for %s, precNew = %a, actionNew = %a\n" kernelIdx (termTab.OfIndex termIdx) outputPrec precNew OutputAction actionNew; 
             // We add in order of precedence - however the precedences may be the same, and we give warnings when rpecedence resolution is based on implicit file orderings 
 
-            let (precSoFar, actionSoFar) as itemSoFar = arr.[termIdx]
+            let itemSoFar = row.[termIdx]
 
             // printf "DEBUG: state %d: adding action for %s, precNew = %a, precSoFar = %a, actionSoFar = %a\n" kernelIdx (termTab.OfIndex termIdx) outputPrec precNew outputPrec precSoFar OutputAction actionSoFar; 
             // if compare_prec precSoFar precNew = -1 then failwith "addResolvingPrecedence"; 
-
-            let itemNew = (precNew, actionNew) 
             let winner = 
                 let reportConflict x1 x2 reason =
                     let reportAction (p, a) =
@@ -426,35 +424,32 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                     let a1n, astr1 = reportAction x1
                     let a2n, astr2 = reportAction x2
                     printfn "%s/%s error at state %d on terminal %s between %s and %s - assuming the former because %s" a1n a2n kernelIdx (fst spec.Terminals.[termIdx]) astr1 astr2 reason
-                match itemSoFar,itemNew with 
-                | (_,Shift s1),(_, Shift s2) -> 
-                   if actionSoFar <> actionNew then 
-                      reportConflict itemSoFar itemNew "internal error"
-                   itemSoFar
-
-                | (((precShift,Shift sIdx) as shiftItem), 
-                   ((precReduce,Reduce prodIdx) as reduceItem))
-                | (((precReduce,Reduce prodIdx) as reduceItem), 
-                   ((precShift,Shift sIdx) as shiftItem)) -> 
+                match itemSoFar, itemNew with 
+                | (_, Shift s1), (_, Shift s2) -> 
+                    if s1 <> s2 then failwith "unreachable"
+                    itemSoFar
+                | (((precShift, Shift _) as shiftItem), ((precReduce, Reduce _) as reduceItem))
+                | (((precReduce, Reduce _) as reduceItem), ((precShift,Shift _) as shiftItem)) -> 
                     match precReduce, precShift with 
-                    | (Some (_,p1) as pp, Some(assocNew,p2)) -> 
-                      if p1 < p2 then shiftItem
-                      elif p1 > p2 then reduceItem
-                      else
-                        match assocNew with 
-                        | LeftAssoc ->  reduceItem
-                        | RightAssoc -> shiftItem
-                        | NonAssoc -> 
-                            if newprec then
-                                pp, Error
-                            else
-                                reportConflict shiftItem reduceItem "we preffer shift on equal precedences"
-                                incr shiftReduceConflicts;
-                                shiftItem
+                    | (Some (assocSoFar, p1), Some(assocNew, p2)) -> 
+                        if p1 < p2 then shiftItem
+                        elif p1 > p2 then reduceItem
+                        else
+                            if assocSoFar <> assocNew then failwith "unreachable"
+                            match assocSoFar with 
+                            | LeftAssoc ->  reduceItem
+                            | RightAssoc -> shiftItem
+                            | NonAssoc -> 
+                                if newprec then
+                                    precReduce, Error
+                                else
+                                    reportConflict shiftItem reduceItem "we preffer shift on equal precedences"
+                                    incr shiftReduceConflicts
+                                    shiftItem
                     | _ ->
-                       reportConflict shiftItem reduceItem "we preffer shift when unable to compare precedences"
-                       incr shiftReduceConflicts;
-                       shiftItem
+                        reportConflict shiftItem reduceItem "we preffer shift when unable to compare precedences"
+                        incr shiftReduceConflicts
+                        shiftItem
                 | ((prec1,Reduce prodIdx1),(prec2, Reduce prodIdx2)) -> 
                     match prec1, prec2 with 
                     | (Some (_,p1), Some(assocNew,p2)) when newprec -> 
@@ -471,7 +466,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                        incr reduceReduceConflicts;
                        if prodIdx1 < prodIdx2 then itemSoFar else itemNew
                 | _ -> itemNew 
-            arr.[termIdx] <- winner
+            row.[termIdx] <- winner
 
           
         // This build the action table for one state. 
