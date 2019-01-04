@@ -395,7 +395,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
 
         // Now build the action tables. First a utility to merge the given action  
         // into the table, taking into account precedences etc. and reporting errors. 
-        let addResolvingPrecedence (arr: _[]) kernelIdx termIdx (precNew, actionNew) = 
+        let addResolvingPrecedence (arr : ((Associativity * int) option * Action) []) kernelIdx termIdx (precNew, actionNew) = 
             // printf "DEBUG: state %d: adding action for %s, precNew = %a, actionNew = %a\n" kernelIdx (termTab.OfIndex termIdx) outputPrec precNew OutputAction actionNew; 
             // We add in order of precedence - however the precedences may be the same, and we give warnings when rpecedence resolution is based on implicit file orderings 
 
@@ -496,22 +496,18 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                         let terminalIndex = terminalIndexOfSymbolIndex symbol
                         let action =
                           match gotoKernel kernelIdx symbol with 
-                          | None -> failwith "action on terminal should have found a non-empty goto state"
+                          | None -> failwith "unreachable"
                           | Some gkernelItemIdx -> Shift gkernelItemIdx
                         let prec = snd spec.Terminals.[terminalIndex]
                         addResolvingPrecedence arr kernelIdx terminalIndex (prec, action)
-                else
-                    let lookahead = item.Lookahead
-                    if not (isStartItem1 item) then
-                        let prodIdx = item.LR0Item.ProductionIndex
-                        let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
-                        let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Reduce prodIdx)
-                        addResolvingPrecedence arr kernelIdx lookahead action 
-                    elif lookahead = endOfInputTerminalIndex then
-                        let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
-                        let action = (Option.map (fun (x, y, _) -> (x, y)) prec ,Accept)
-                        addResolvingPrecedence arr kernelIdx lookahead action 
-                    else ()
+                elif not (isStartItem1 item) then
+                    let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
+                    let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Reduce item.LR0Item.ProductionIndex)
+                    addResolvingPrecedence arr kernelIdx item.Lookahead action 
+                elif item.Lookahead = endOfInputTerminalIndex then
+                    let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
+                    let action = (Option.map (fun (x, y, _) -> (x, y)) prec ,Accept)
+                    addResolvingPrecedence arr kernelIdx item.Lookahead action 
 
             // If there is a single item A -> B C . and no Shift or Accept actions (i.e. only Error or Reduce, so the choice of terminal 
             // cannot affect what we do) then we emit an immediate reduce action for the rule corresponding to that item 
