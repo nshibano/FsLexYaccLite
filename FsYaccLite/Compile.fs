@@ -506,7 +506,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                     addResolvingPrecedence arr kernelIdx item.Lookahead action 
                 elif item.Lookahead = endOfInputTerminalIndex then
                     let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
-                    let action = (Option.map (fun (x, y, _) -> (x, y)) prec ,Accept)
+                    let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Accept)
                     addResolvingPrecedence arr kernelIdx item.Lookahead action 
 
             // If there is a single item A -> B C . and no Shift or Accept actions (i.e. only Error or Reduce, so the choice of terminal 
@@ -515,7 +515,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
             let closure = (computeClosure kernel)
 
             // A -> B C . rules give rise to reductions in favour of errors 
-            if not <| norec then
+            if not norec then
                 for item in computeClosure kernel do
                     let body = productions.[item.ProductionIndex].BodySymbolIndexes
                     if item.DotIndex = body.Length then
