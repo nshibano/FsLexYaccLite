@@ -13,10 +13,13 @@ open Preprocess
 
 type TerminalIndex = int
 type NonTerminalIndex = int
-type SymbolIndex = int
 type ProductionIndex = int
 type TerminalIndexOrEpsilon = int
 type KernelIndex = int
+
+type SymbolIndex =
+    | TerminalIndex of terminalIndex : int
+    | NonTerminalIndex of nonTerminalIndex : int
 
 type LR0Item =
     { ProductionIndex : ProductionIndex
@@ -153,6 +156,8 @@ let MultiDictionary_Add (d : MultiDictionary<'T, 'U>) (k : 'T) (v : 'U) =
 let [<Literal>] Epsilon = -1
 
 let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
+    let total = Stopwatch.StartNew()
+
     let stopWatch = Stopwatch.StartNew()
     let reportTime() =
         printfn "time: %d(ms)" stopWatch.ElapsedMilliseconds
@@ -170,12 +175,12 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
             d.Add(fst spec.Terminals.[i], i)
         d
     
-    let symbolIndexIsTerminal (i : SymbolIndex) = i < spec.Terminals.Length
-    let symbolIndexIsNonTerminal (i : SymbolIndex) = spec.Terminals.Length <= i
-    let symbolIndexOfTerminalIndex (i : TerminalIndex) : SymbolIndex = i
-    let symbolIndexOfNonTerminalIndex (i : NonTerminalIndex) : SymbolIndex = spec.Terminals.Length + i 
-    let terminalIndexOfSymbolIndex (i : SymbolIndex) : TerminalIndex = i
-    let nonTerminalIndexOfSymbolIndex (i : SymbolIndex) : NonTerminalIndex = i - spec.Terminals.Length
+    let symbolIndexIsTerminal (i : SymbolIndex) = match i with TerminalIndex _ -> true | NonTerminalIndex _ -> false 
+    let symbolIndexIsNonTerminal (i : SymbolIndex) = match i with TerminalIndex _ -> false | NonTerminalIndex _ -> true 
+    let symbolIndexOfTerminalIndex (i : TerminalIndex) : SymbolIndex = TerminalIndex i
+    let symbolIndexOfNonTerminalIndex (i : NonTerminalIndex) : SymbolIndex = NonTerminalIndex i
+    let terminalIndexOfSymbolIndex (i : SymbolIndex) : TerminalIndex = match i with TerminalIndex i -> i | _ -> failwith ""
+    let nonTerminalIndexOfSymbolIndex (i : SymbolIndex) : NonTerminalIndex = match i with NonTerminalIndex i -> i | _ -> failwith ""
 
     let indexOfSymbol (symbol : string) =
         match indexOfTerminal.TryGetValue symbol with
@@ -415,7 +420,11 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
         
         accu
 
-    let stringOfSym (symbolIndex : SymbolIndex) = spec.Symbols.[symbolIndex]
+    let stringOfSym (symbolIndex : SymbolIndex) =
+        match symbolIndex with
+        | TerminalIndex i -> fst spec.Terminals.[i]
+        | NonTerminalIndex i -> spec.NonTerminals.[i]
+    
     let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productions.[item.ProductionIndex].HeadNonTerminalIndex]) spec.StartSymbols
     let isStartItem1 (item : LR1Item) = isStartItem item.LR0Item    
 
@@ -569,6 +578,8 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
     if !shiftReduceConflicts > 0 then printfn  "%d shift/reduce conflicts" !shiftReduceConflicts; stdout.Flush();
     if !reduceReduceConflicts > 0 then printfn  "%d reduce/reduce conflicts" !reduceReduceConflicts; stdout.Flush();
     if !shiftReduceConflicts > 0 || !reduceReduceConflicts > 0 then printfn  "consider setting precedences explicitly using %%left %%right and %%nonassoc on terminals and/or setting explicit precedence on rules using %%prec"
+
+    printfn "total : %d(ms)" total.ElapsedMilliseconds
 
     displayMemoStats()
 

@@ -38,12 +38,12 @@ let outputTable (f : TextWriter) (indent : int) (rows : (string * int) [] []) =
 
 let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compiled) =
 
-    let symbolIndexIsTerminal (i : SymbolIndex) = i < spec.Terminals.Length
-    let symbolIndexIsNonTerminal (i : SymbolIndex) = spec.Terminals.Length <= i
-    let symbolIndexOfTerminalIndex (i : TerminalIndex) : SymbolIndex = i
-    let symbolIndexOfNonTerminalIndex (i : NonTerminalIndex) : SymbolIndex = spec.Terminals.Length + i 
-    let terminalIndexOfSymbolIndex (i : SymbolIndex) : TerminalIndex = i
-    let nonTerminalIndexOfSymbolIndex (i : SymbolIndex) : NonTerminalIndex = i - spec.Terminals.Length
+    //let symbolIndexIsTerminal (i : SymbolIndex) = i < spec.Terminals.Length
+    //let symbolIndexIsNonTerminal (i : SymbolIndex) = spec.Terminals.Length <= i
+    //let symbolIndexOfTerminalIndex (i : TerminalIndex) : SymbolIndex = i
+    //let symbolIndexOfNonTerminalIndex (i : NonTerminalIndex) : SymbolIndex = spec.Terminals.Length + i 
+    //let terminalIndexOfSymbolIndex (i : SymbolIndex) : TerminalIndex = i
+    //let nonTerminalIndexOfSymbolIndex (i : SymbolIndex) : NonTerminalIndex = i - spec.Terminals.Length
 
     printfn  "writing tables to log"
     stdout.Flush()
@@ -56,7 +56,7 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
 
     for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
         let rowA = spec.NonTerminals.[nonTerminalIndex] + ":"
-        let firstSet = sortedArrayOfHashSet(comp.FirstSets.[symbolIndexOfNonTerminalIndex nonTerminalIndex])
+        let firstSet = sortedArrayOfHashSet(comp.FirstSets.[NonTerminalIndex nonTerminalIndex])
         let itemStrings = Array.map (fun item -> match item with Epsilon -> "ε" | terminalIndex -> fst spec.Terminals.[terminalIndex]) firstSet
         let rowB = String.Join(' ', itemStrings)
         rows.Add([| (rowA, rowA.Length); (rowB, rowB.Length) |])
