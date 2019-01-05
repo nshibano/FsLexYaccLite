@@ -73,34 +73,65 @@ let sortedArrayOfSeq seq =
     Array.sortInPlace ary
     ary
 
-let memoize1 f =
+type MemoStat =
+    { Name : string
+      mutable Computed : int
+      mutable Reused : int }
+
+let memoStats = List<MemoStat>()
+
+let createMemoStat name =
+    let stat = { Name = name; Computed = 0; Reused = 0 }
+    memoStats.Add(stat)
+    stat
+
+let displayMemoStats() =
+    printfn "-----------------------"
+    printfn "memo stats:"
+    for s in memoStats do
+       printfn "%-50s %10d %10d %.2f" s.Name s.Computed s.Reused (float s.Computed / float (s.Computed + s.Reused))
+    printfn "-----------------------"
+       
+let memoize1 name f =
     let dict = Dictionary(HashIdentity.Structural)
+    let stat = createMemoStat name
     fun a ->
         match dict.TryGetValue(a) with
-        | true, x -> x
+        | true, b ->
+            stat.Reused <- stat.Reused + 1
+            b
         | false, _ ->
             let b = f a
             dict.[a] <- b
+            stat.Computed <- stat.Computed + 1
             b
 
-let memoize2 f =
+let memoize2 name f =
     let dict = Dictionary(HashIdentity.Structural)
+    let stat = createMemoStat name
     fun a b ->
         match dict.TryGetValue((a, b)) with
-        | true, c -> c
+        | true, c ->
+            stat.Reused <- stat.Reused + 1
+            c
         | false, _ ->
             let c = f a b
             dict.[(a, b)] <- c
+            stat.Computed <- stat.Computed + 1
             c
 
-let memoize3 f =
+let memoize3 name f =
     let dict = Dictionary(HashIdentity.Structural)
+    let stat = createMemoStat name
     fun a b c ->
         match dict.TryGetValue((a, b, c)) with
-        | true, d -> d
+        | true, d ->
+            stat.Reused <- stat.Reused + 1            
+            d
         | false, _ ->
             let d = f a b c
             dict.[(a, b, c)] <- d
+            stat.Computed <- stat.Computed + 1
             d
 
 type MultiDictionary<'T, 'U when 'T : equality and 'U : equality> = Dictionary<'T, HashSet<'U>>
@@ -238,7 +269,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
 
         accu
     
-    let firstSetOfPartOfProductionBodyWithLookahead = memoize3 firstSetOfPartOfProductionBodyWithLookahead
+    let firstSetOfPartOfProductionBodyWithLookahead = memoize3 "firstSetOfPartOfProductionBodyWithLookahead" firstSetOfPartOfProductionBodyWithLookahead
 
     let advanceOfItem (item : LR0Item) = { item with DotIndex = item.DotIndex + 1 }
 
@@ -261,7 +292,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
 
         sortedArrayOfHashSet accu
 
-    let computeClosure = memoize1 computeClosure
+    let computeClosure = memoize1 "computeClosure" computeClosure
 
     let computeGotoOfKernel (kernel : LR0Item []) (symbol : SymbolIndex) : LR0Item [] = 
         let accu = List()
@@ -316,7 +347,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
         let gset = computeGotoOfKernel (kernels.[kernelIndex]) symbolIndex
         if gset.Length = 0 then None else Some (indexOfKernel.[gset])
 
-    let gotoKernel = memoize2 gotoKernel
+    let gotoKernel = memoize2 "gotoKernel" gotoKernel
     
     let computeLR1Closure (itemSet : LR1Item []) = 
         let accu = HashSet<LR1Item>(HashIdentity.Structural)
@@ -336,7 +367,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
         sortedArrayOfHashSet accu
 
     let computeLR1ClosureOfLR0ItemWithDummy (item : LR0Item) = computeLR1Closure [| { LR0Item = item; Lookahead = dummyLookaheadIdx } |]
-    let computeLR1ClosureOfLR0ItemWithDummy = memoize1 computeLR1ClosureOfLR0ItemWithDummy
+    let computeLR1ClosureOfLR0ItemWithDummy = memoize1 "computeLR1ClosureOfLR0ItemWithDummy" computeLR1ClosureOfLR0ItemWithDummy
         
     let spontaneous, propagate =
 
@@ -538,6 +569,8 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
     if !shiftReduceConflicts > 0 then printfn  "%d shift/reduce conflicts" !shiftReduceConflicts; stdout.Flush();
     if !reduceReduceConflicts > 0 then printfn  "%d reduce/reduce conflicts" !reduceReduceConflicts; stdout.Flush();
     if !shiftReduceConflicts > 0 || !reduceReduceConflicts > 0 then printfn  "consider setting precedences explicitly using %%left %%right and %%nonassoc on terminals and/or setting explicit precedence on rules using %%prec"
+
+    displayMemoStats()
 
     { FirstSets = firstSetOfSymbol
       Productions = productions
