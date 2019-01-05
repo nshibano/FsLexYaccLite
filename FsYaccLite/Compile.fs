@@ -174,20 +174,13 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
         for i = 0 to spec.Terminals.Length - 1 do
             d.Add(fst spec.Terminals.[i], i)
         d
-    
-    let symbolIndexIsTerminal (i : SymbolIndex) = match i with TerminalIndex _ -> true | NonTerminalIndex _ -> false 
-    let symbolIndexIsNonTerminal (i : SymbolIndex) = match i with TerminalIndex _ -> false | NonTerminalIndex _ -> true 
-    let symbolIndexOfTerminalIndex (i : TerminalIndex) : SymbolIndex = TerminalIndex i
-    let symbolIndexOfNonTerminalIndex (i : NonTerminalIndex) : SymbolIndex = NonTerminalIndex i
-    let terminalIndexOfSymbolIndex (i : SymbolIndex) : TerminalIndex = match i with TerminalIndex i -> i | _ -> failwith ""
-    let nonTerminalIndexOfSymbolIndex (i : SymbolIndex) : NonTerminalIndex = match i with NonTerminalIndex i -> i | _ -> failwith ""
 
     let indexOfSymbol (symbol : string) =
         match indexOfTerminal.TryGetValue symbol with
-        | true, i -> symbolIndexOfTerminalIndex i
+        | true, i -> TerminalIndex i
         | false, _ ->
             match indexOfNonTerminal.TryGetValue symbol with
-            | true, i -> symbolIndexOfNonTerminalIndex i
+            | true, i -> NonTerminalIndex i
             | false, _ -> failwith "unreachable"
 
     let productions =
@@ -214,11 +207,11 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
         for terminalIndex = 0 to spec.Terminals.Length - 1 do
             let set = HashSet(HashIdentity.Structural)
             set.Add(terminalIndex) |> ignore
-            accu.Add(symbolIndexOfTerminalIndex terminalIndex, set)
+            accu.Add(TerminalIndex terminalIndex, set)
 
         // For non-terminals, start with empty set.
         for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
-            accu.Add(symbolIndexOfNonTerminalIndex nonTerminalIndex, HashSet(HashIdentity.Structural))
+            accu.Add(NonTerminalIndex nonTerminalIndex, HashSet(HashIdentity.Structural))
         
         let mutable added = false
         let add symbolIndex firstSetItem =
@@ -233,7 +226,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                     // add first symbols of production body to the first-set of this production head 
                     for firstSetItem in accu.[body.[pos]] do
                         if firstSetItem <> Epsilon then
-                            add (symbolIndexOfNonTerminalIndex head) firstSetItem
+                            add (NonTerminalIndex head) firstSetItem
                     if accu.[body.[pos]].Contains Epsilon then
                         // the symbol at pos can be empty, therefore go through the following symbols
                         pos <- pos + 1
@@ -244,7 +237,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                     // the scan for production body symbols has been gone through the end of the body
                     // therefore all symbols in production body contains epsilon
                     // therefore the FIRST set for this non-terminal should contain epsilon
-                    add (symbolIndexOfNonTerminalIndex head) Epsilon
+                    add (NonTerminalIndex head) Epsilon
 
         // repeat scan until it becomes making no difference
         scan()
@@ -289,11 +282,13 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
             let body = productions.[item.ProductionIndex].BodySymbolIndexes
             if item.DotIndex < body.Length then
                 let symbol = body.[item.DotIndex]
-                if symbolIndexIsNonTerminal symbol then
-                    for prod in productionsOfNonTerminal.[nonTerminalIndexOfSymbolIndex symbol] do
+                match symbol with
+                | NonTerminalIndex nonTerminalIndex ->
+                    for prod in productionsOfNonTerminal.[nonTerminalIndex] do
                         let newItem = createLR0Item prod
                         if accu.Add(newItem) then
                             queue.Enqueue newItem
+                | _ -> ()
 
         sortedArrayOfHashSet accu
 
@@ -363,11 +358,13 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                 let body = productions.[item.LR0Item.ProductionIndex].BodySymbolIndexes
                 if item.LR0Item.DotIndex < body.Length then
                     let symbol = body.[item.LR0Item.DotIndex]
-                    if symbolIndexIsNonTerminal symbol then
+                    match symbol with
+                    | NonTerminalIndex nonTerminalIndex ->
                         let firstSet = firstSetOfPartOfProductionBodyWithLookahead item.LR0Item.ProductionIndex (item.LR0Item.DotIndex + 1) item.Lookahead
-                        for productionIndex in productionsOfNonTerminal.[nonTerminalIndexOfSymbolIndex symbol] do
+                        for productionIndex in productionsOfNonTerminal.[nonTerminalIndex] do
                             for lookahead in firstSet do
                                 queue.Enqueue({ LR0Item = createLR0Item productionIndex; Lookahead = lookahead})
+                    | _ -> ()
 
         sortedArrayOfHashSet accu
 
@@ -527,14 +524,15 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                 let body = productions.[item.LR0Item.ProductionIndex].BodySymbolIndexes
                 if item.LR0Item.DotIndex < body.Length then
                     let symbol = body.[item.LR0Item.DotIndex]
-                    if symbolIndexIsTerminal symbol then
-                        let terminalIndex = terminalIndexOfSymbolIndex symbol
+                    match symbol with
+                    | TerminalIndex terminalIndex ->
                         let action =
                           match gotoKernel kernelIdx symbol with 
                           | None -> failwith "unreachable"
                           | Some gkernelItemIdx -> Shift gkernelItemIdx
                         let prec = snd spec.Terminals.[terminalIndex]
                         addResolvingPrecedence arr kernelIdx terminalIndex (prec, action)
+                    | _ -> ()
                 elif not (isStartItem1 item) then
                     let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
                     let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Reduce item.LR0Item.ProductionIndex)
@@ -571,7 +569,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
     let gotoTable = 
          Array.init kernels.Length (fun kernelIndex ->
             Array.init spec.NonTerminals.Length (fun nonTerminalIndex ->
-                let symbolIndex = symbolIndexOfNonTerminalIndex nonTerminalIndex
+                let symbolIndex = NonTerminalIndex nonTerminalIndex
                 gotoKernel  kernelIndex (symbolIndex)))
 
     reportTime(); printfn  "returning tables."; stdout.Flush();
