@@ -123,20 +123,6 @@ let memoize2 name f =
             stat.Computed <- stat.Computed + 1
             c
 
-let memoize3 name f =
-    let dict = Dictionary(HashIdentity.Structural)
-    let stat = createMemoStat name
-    fun a b c ->
-        match dict.TryGetValue((a, b, c)) with
-        | true, d ->
-            stat.Reused <- stat.Reused + 1            
-            d
-        | false, _ ->
-            let d = f a b c
-            dict.[(a, b, c)] <- d
-            stat.Computed <- stat.Computed + 1
-            d
-
 type MultiDictionary<'T, 'U when 'T : equality and 'U : equality> = Dictionary<'T, HashSet<'U>>
 let MultiDictionary_Create<'T, 'U when 'T : equality and 'U : equality>() : MultiDictionary<'T, 'U> = Dictionary<'T, HashSet<'U>>(HashIdentity.Structural)
 
@@ -267,8 +253,6 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
 
         accu
     
-    let firstSetOfPartOfProductionBodyWithLookahead = memoize3 "firstSetOfPartOfProductionBodyWithLookahead" firstSetOfPartOfProductionBodyWithLookahead
-
     let advanceOfItem (item : LR0Item) = { item with DotIndex = item.DotIndex + 1 }
 
     let computeClosure (itemSet : LR0Item []) =
@@ -369,7 +353,6 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
         sortedArrayOfHashSet accu
 
     let computeLR1ClosureOfLR0ItemWithDummy (item : LR0Item) = computeLR1Closure [| { LR0Item = item; Lookahead = dummyLookaheadIdx } |]
-    let computeLR1ClosureOfLR0ItemWithDummy = memoize1 "computeLR1ClosureOfLR0ItemWithDummy" computeLR1ClosureOfLR0ItemWithDummy
         
     let spontaneous, propagate =
 
