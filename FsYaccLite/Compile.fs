@@ -79,12 +79,13 @@ let sortedArrayOfSeq seq =
 type MemoStat =
     { Name : string
       mutable Computed : int
-      mutable Reused : int }
+      mutable Reused : int
+      mutable Savings : int64 }
 
 let memoStats = List<MemoStat>()
 
 let createMemoStat name =
-    let stat = { Name = name; Computed = 0; Reused = 0 }
+    let stat = { Name = name; Computed = 0; Reused = 0; Savings = 0L }
     memoStats.Add(stat)
     stat
 
@@ -92,7 +93,7 @@ let displayMemoStats() =
     printfn "-----------------------"
     printfn "memo stats:"
     for s in memoStats do
-       printfn "%-50s %10d %10d %.2f" s.Name s.Computed s.Reused (float s.Computed / float (s.Computed + s.Reused))
+       printfn "%-50s %10d %10d %.2f %d" s.Name s.Computed s.Reused (float s.Computed / float (s.Computed + s.Reused)) (int (1000.0 * float s.Savings / float Stopwatch.Frequency))
     printfn "-----------------------"
        
 let memoize1 name f =
@@ -100,12 +101,15 @@ let memoize1 name f =
     let stat = createMemoStat name
     fun a ->
         match dict.TryGetValue(a) with
-        | true, b ->
+        | true, (b, cost) ->
             stat.Reused <- stat.Reused + 1
+            stat.Savings <- stat.Savings + cost
             b
         | false, _ ->
+            let sw = Stopwatch.StartNew()
             let b = f a
-            dict.[a] <- b
+            let cost = sw.ElapsedTicks
+            dict.[a] <- (b, cost)
             stat.Computed <- stat.Computed + 1
             b
 
@@ -114,12 +118,15 @@ let memoize2 name f =
     let stat = createMemoStat name
     fun a b ->
         match dict.TryGetValue((a, b)) with
-        | true, c ->
+        | true, (c, cost) ->
             stat.Reused <- stat.Reused + 1
+            stat.Savings <- stat.Savings + cost
             c
         | false, _ ->
+            let sw = Stopwatch.StartNew()
             let c = f a b
-            dict.[(a, b)] <- c
+            let cost = sw.ElapsedTicks
+            dict.[(a, b)] <- (c, cost)
             stat.Computed <- stat.Computed + 1
             c
 
