@@ -38,13 +38,6 @@ let outputTable (f : TextWriter) (indent : int) (rows : (string * int) [] []) =
 
 let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compiled) =
 
-    //let symbolIndexIsTerminal (i : SymbolIndex) = i < spec.Terminals.Length
-    //let symbolIndexIsNonTerminal (i : SymbolIndex) = spec.Terminals.Length <= i
-    //let symbolIndexOfTerminalIndex (i : TerminalIndex) : SymbolIndex = i
-    //let symbolIndexOfNonTerminalIndex (i : NonTerminalIndex) : SymbolIndex = spec.Terminals.Length + i 
-    //let terminalIndexOfSymbolIndex (i : SymbolIndex) : TerminalIndex = i
-    //let nonTerminalIndexOfSymbolIndex (i : SymbolIndex) : NonTerminalIndex = i - spec.Terminals.Length
-
     printfn  "writing tables to log"
     stdout.Flush()
         
