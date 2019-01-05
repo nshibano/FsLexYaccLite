@@ -203,7 +203,7 @@ module Implementation =
         // catastrophe and the loss of intermediate results.
         //
         let mutable inEofCountDown = false
-        let mutable eofCountDown = 20 // Number of EOFs to supply at the end for error recovery
+        let mutable eofCountDown = 0 //20 // Number of EOFs to supply at the end for error recovery
         // The 100 here means a maximum of 100 elements for each rule
         let ruleStartPoss = (Array.zeroCreate 100 : Position array)              
         let ruleEndPoss   = (Array.zeroCreate 100 : Position array)              

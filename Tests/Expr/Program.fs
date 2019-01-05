@@ -50,6 +50,9 @@ let main argv =
     //for i = 1 to 3 do
     //    printfn "%A" (Lexer.token lexbuf)
 
+    case "1" (Number 1)
+    case "x" (Ident "x")
+
     case "x + y" (Add (Ident "x", Ident "y"))
     case "1 + 2 + 3" (Add (Add (Number 1,Number 2),Number 3))
 
@@ -63,7 +66,7 @@ let main argv =
     case "l :: m :: n" (Cons (Ident "l",Cons (Ident "m",Ident "n")))
     
     case "x .. y" (Range (Ident "x",Ident "y"))
-    //error "x .. y .. z"
+    error "x .. y .. z"
 
     case "if 1 then 2" (If (Number 1,Number 2,None))
     case "if 1 then 2 else 3" (If (Number 1,Number 2,Some (Number 3)))
