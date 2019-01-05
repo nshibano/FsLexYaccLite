@@ -367,7 +367,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
         let propagate = MultiDictionary_Create<KernelItemIndex, KernelItemIndex>()
 
         for kernelIndex = 0 to kernels.Length - 1 do
-            printf  "."; stdout.Flush();
+            printf "."; stdout.Flush();
             for kernelItem in kernels.[kernelIndex] do  
                 for lr1Item in computeLR1ClosureOfLR0ItemWithDummy kernelItem do
                     let body = productions.[lr1Item.LR0Item.ProductionIndex].BodySymbolIndexes
