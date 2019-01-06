@@ -103,14 +103,23 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
     fprintfn f "startStates = %s" (String.Join(";", (Array.map string comp.StartStates)));
     fprintfn f "------------------------"
 
+let randomLightColor (hashBase : int) (key : int) =
+    let cutoff = 0.3
+    let h = hashBase * key
+    let f x = int (float 0xFF * (cutoff + (1.0 - cutoff) * float (0x3FF &&& x) / float 0x400))
+    let r = f h
+    let g = f (h >>> 10)
+    let b = f (h >>> 20)
+    Color.FromArgb(0xFF, r, g, b)
+
 let outputTableImages (path : string) (p : Preprocessed) (c : Compiled)  =
     let actionTableBmp = new Bitmap(p.Terminals.Length, c.States.Length)
     let colorOfAction (x : Action) =
         match x with
         | Error -> Color.Black
         | Accept -> Color.White
-        | Shift code ->  Color.FromArgb(0xFF000000 ||| (5999471 * code))
-        | Reduce code -> Color.FromArgb(0xFF000000 ||| (7199369 * code))
+        | Shift code ->  randomLightColor 5999471 code //Color.FromArgb(0xFF000000 ||| (5999471 * code))
+        | Reduce code -> randomLightColor 7199369 code //Color.FromArgb(0xFF000000 ||| (7199369 * code))
     for i = 0 to actionTableBmp.Width - 1 do
         for j = 0 to actionTableBmp.Height - 1 do
             actionTableBmp.SetPixel(i, j, colorOfAction (c.ActionTable.[j].[i]))
@@ -120,7 +129,7 @@ let outputTableImages (path : string) (p : Preprocessed) (c : Compiled)  =
     let colorOfGoto x =
         match x with
         | None -> Color.Black
-        | Some code -> Color.FromArgb(0xFF000000 ||| (5999471 * code))
+        | Some code -> randomLightColor 5999471 code //Color.FromArgb(0xFF000000 ||| (5999471 * code))
     for i = 0 to gotoTableBmp.Width - 1 do
         for j = 0 to gotoTableBmp.Height - 1 do
             gotoTableBmp.SetPixel(i, j, colorOfGoto c.GotoTable.[j].[i])
