@@ -428,14 +428,13 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
                     let body = productions.[lr1Item.LR0Item.ProductionIndex].BodySymbolIndexes
                     if lr1Item.LR0Item.DotIndex < body.Length then
                         match gotoKernel kernelIndex body.[lr1Item.LR0Item.DotIndex] with 
-                        | None -> failwith "unreachable"
                         | Some gotoKernelIndex ->
                             let gotoItemIndex = { KernelIndex = gotoKernelIndex; Item = advanceOfItem lr1Item.LR0Item }
-                            let lookaheadToken = lr1Item.Lookahead
-                            if lookaheadToken = dummyLookaheadIdx then
-                                MultiDictionary_Add propagate { KernelIndex = kernelIndex; Item = kernelItem } gotoItemIndex |> ignore
+                            if lr1Item.Lookahead = dummyLookaheadIdx then
+                                MultiDictionary_Add propagate { KernelIndex = kernelIndex; Item = kernelItem } gotoItemIndex
                             else
-                                spontaneous.Add(gotoItemIndex, lookaheadToken) |> ignore
+                                spontaneous.Add(gotoItemIndex, lr1Item.Lookahead) |> ignore
+                        | None -> failwith "unreachable"
 
         spontaneous, propagate
    
