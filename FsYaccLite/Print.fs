@@ -91,6 +91,9 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
                     
                 rows.Add([| (termText, termText.Length); actionText |])
         outputTable f 4 (rows.ToArray())
+        let errorActionsInRow = Array.fold (fun count action -> count + (if action = Error then 1 else 0)) 0 comp.ActionTable.[i]
+        if errorActionsInRow > 0 then
+            fprintfn f "    (%d error actions)" errorActionsInRow
         fprintfn f ""
 
         fprintfn f "  gotos:"

@@ -130,6 +130,23 @@ let memoize2 name f =
             stat.Computed <- stat.Computed + 1
             c
 
+let memoize3 name f =
+    let dict = Dictionary(HashIdentity.Structural)
+    let stat = createMemoStat name
+    fun a b c ->
+        match dict.TryGetValue((a, b, c)) with
+        | true, (d, cost) ->
+            stat.Reused <- stat.Reused + 1
+            stat.Savings <- stat.Savings + cost
+            d
+        | false, _ ->
+            let sw = Stopwatch.StartNew()
+            let d = f a b c
+            let cost = sw.ElapsedTicks
+            dict.[(a, b, c)] <- (d, cost)
+            stat.Computed <- stat.Computed + 1
+            d
+
 type MultiDictionary<'T, 'U when 'T : equality and 'U : equality> = Dictionary<'T, HashSet<'U>>
 let MultiDictionary_Create<'T, 'U when 'T : equality and 'U : equality>() : MultiDictionary<'T, 'U> = Dictionary<'T, HashSet<'U>>(HashIdentity.Structural)
 
@@ -240,7 +257,7 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
 
         accu
 
-    let firstSetOfPartOfProductionBodyWithLookahead (productionIndex : int) (startPos : int) (lookahead : TerminalIndex) =
+    let firstSetOfPartOfProductionBodyWithLookahead (productionIndex : ProductionIndex) (startPos : int) (lookahead : TerminalIndex) =
         let accu = HashSet<TerminalIndex>(HashIdentity.Structural)
         let body = productions.[productionIndex].BodySymbolIndexes
         let mutable pos = startPos
@@ -257,6 +274,46 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                 pos <- Int32.MaxValue
         if pos = body.Length then
             accu.Add(lookahead) |> ignore
+
+        accu
+
+    reportTime(); printf  "computing FOLLOW function..."; stdout.Flush();
+
+    let followSetsOfNonTerminal =
+        let accu = Dictionary<NonTerminalIndex, HashSet<TerminalIndex>>(HashIdentity.Structural)
+
+        for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
+            accu.Add(nonTerminalIndex, HashSet(HashIdentity.Structural))
+        
+        for startSymbol in spec.StartSymbols do
+            accu.[indexOfNonTerminal.[startSymbol]].Add(endOfInputTerminalIndex) |> ignore
+
+        let mutable added = false
+        let add nonTerminalIndex terminalIndex =
+            added <- accu.[nonTerminalIndex].Add(terminalIndex) || added
+
+        let scan() =
+            for prodIdx = 0 to spec.Productions.Length - 1 do
+                let head = productions.[prodIdx].HeadNonTerminalIndex
+                let body = productions.[prodIdx].BodySymbolIndexes
+                let mutable pos = 0
+                while pos < body.Length do
+                    match body.[pos] with
+                    | NonTerminalIndex nonTerminalIndex ->
+                        let firstSetOfFollowingPart = firstSetOfPartOfProductionBodyWithLookahead prodIdx (pos + 1) Epsilon
+                        for terminalIndexOrEpsilon in firstSetOfFollowingPart do
+                            if terminalIndexOrEpsilon <> Epsilon then
+                                add nonTerminalIndex terminalIndexOrEpsilon
+                        if firstSetOfFollowingPart.Contains(Epsilon) then
+                            for x in accu.[head] do
+                                add nonTerminalIndex x
+                    | TerminalIndex _ -> ()
+                    pos <- pos + 1
+
+        scan()
+        while added do
+            added <- false
+            scan()
 
         accu
     
