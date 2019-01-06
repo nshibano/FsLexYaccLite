@@ -415,8 +415,6 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
                     | _ -> ()
 
         sortedArrayOfHashSet accu
-
-    let computeLR1ClosureOfLR0ItemWithDummy (item : LR0Item) = computeLR1Closure [| { LR0Item = item; Lookahead = dummyLookaheadIdx } |]
         
     let spontaneous, propagate =
 
@@ -426,7 +424,7 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
         for kernelIndex = 0 to kernels.Length - 1 do
             printf "."; stdout.Flush();
             for kernelItem in kernels.[kernelIndex] do  
-                for lr1Item in computeLR1ClosureOfLR0ItemWithDummy kernelItem do
+                for lr1Item in computeLR1Closure [| { LR0Item = kernelItem; Lookahead = dummyLookaheadIdx } |] do
                     let body = productions.[lr1Item.LR0Item.ProductionIndex].BodySymbolIndexes
                     if lr1Item.LR0Item.DotIndex < body.Length then
                         match gotoKernel kernelIndex body.[lr1Item.LR0Item.DotIndex] with 
