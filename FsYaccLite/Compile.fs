@@ -386,9 +386,6 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
             d.Add(kernels.[i], i)
         d
     
-    let startKernelIdxs = Array.map (fun kernel -> indexOfKernel.[kernel]) startKernels
-    let startKernelItemIndexs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIdxs startItems
-
     reportTime(); printf "computing lookahead relations..."; stdout.Flush();
 
     let gotoKernel (kernelIndex : KernelIndex) (symbolIndex : SymbolIndex) : KernelIndex option = 
@@ -439,6 +436,10 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
         spontaneous, propagate
    
     reportTime(); printf  "building lookahead table..."; stdout.Flush();
+
+    let startKernelIndexs = Array.map (fun kernel -> indexOfKernel.[kernel]) startKernels
+    let startKernelItemIndexs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIndexs startItems
+
     let lookaheadTable = 
         let queue = Queue<KernelItemIndex * TerminalIndex>()
 
@@ -657,7 +658,7 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
       Productions = productions
       States = Array.map (fun state -> Array.map (fun (item : LR0Item) -> item.ProductionIndex) state) kernels
       Kernels = kernels
-      StartStates = startKernelIdxs
+      StartStates = startKernelIndexs
       ActionTable = actionTable
       GotoTable = gotoTable
       EndOfInputTerminalIndex = indexOfTerminal.[endOfInputTerminal]
