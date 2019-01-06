@@ -435,10 +435,14 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
 
         spontaneous, propagate
    
-    reportTime(); printf  "building lookahead table..."; stdout.Flush();
+    reportTime()
+    printfn  "%d spontaneous lookaheads, %d lookahead propagation edges" spontaneous.Count (Seq.sumBy (fun (x : HashSet<KernelItemIndex>) -> x.Count) propagate.Values)
+    
+    printf  "building lookahead table..."; stdout.Flush();
 
     let startKernelIndexs = Array.map (fun kernel -> indexOfKernel.[kernel]) startKernels
     let startKernelItemIndexs = Array.map2 (fun kernel item -> { KernelIndex = kernel; Item = item }) startKernelIndexs startItems
+
 
     let lookaheadTable = 
         let queue = Queue<KernelItemIndex * TerminalIndex>()
@@ -646,6 +650,7 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
                 gotoKernel  kernelIndex (NonTerminalIndex nonTerminalIndex)))
 
     reportTime(); printfn  "returning tables."; stdout.Flush();
+
     if !shiftReduceConflicts > 0 then printfn  "%d shift/reduce conflicts" !shiftReduceConflicts; stdout.Flush();
     if !reduceReduceConflicts > 0 then printfn  "%d reduce/reduce conflicts" !reduceReduceConflicts; stdout.Flush();
     if !shiftReduceConflicts > 0 || !reduceReduceConflicts > 0 then printfn  "consider setting precedences explicitly using %%left %%right and %%nonassoc on terminals and/or setting explicit precedence on rules using %%prec"
