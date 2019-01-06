@@ -430,7 +430,7 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
                     let body = productions.[lr1Item.LR0Item.ProductionIndex].BodySymbolIndexes
                     if lr1Item.LR0Item.DotIndex < body.Length then
                         match gotoKernel kernelIndex body.[lr1Item.LR0Item.DotIndex] with 
-                        | None -> ()
+                        | None -> failwith "unreachable"
                         | Some gotoKernelIndex ->
                             let gotoItemIndex = { KernelIndex = gotoKernelIndex; Item = advanceOfItem lr1Item.LR0Item }
                             let lookaheadToken = lr1Item.Lookahead
@@ -645,8 +645,7 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
     let gotoTable = 
          Array.init kernels.Length (fun kernelIndex ->
             Array.init spec.NonTerminals.Length (fun nonTerminalIndex ->
-                let symbolIndex = NonTerminalIndex nonTerminalIndex
-                gotoKernel  kernelIndex (symbolIndex)))
+                gotoKernel  kernelIndex (NonTerminalIndex nonTerminalIndex)))
 
     reportTime(); printfn  "returning tables."; stdout.Flush();
     if !shiftReduceConflicts > 0 then printfn  "%d shift/reduce conflicts" !shiftReduceConflicts; stdout.Flush();
