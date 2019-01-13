@@ -29,7 +29,7 @@ let main() =
         cp @"..\..\Runtime\Parsing.fs" @"."
 
         cmd "dotnet" @"..\..\FsLexLite\bin\Debug\netcoreapp2.1\FsLexLite.dll --unicode Lexer.fsl --lexlib Microsoft.FSharp.Text.Lexing"
-        cmd "dotnet" @"..\..\FsYaccLite\bin\Debug\netcoreapp2.1\FsYaccLite.dll --module Test.Parser --lexlib Microsoft.FSharp.Text.Lexing --parslib Microsoft.FSharp.Text.Parsing -v --newprec --no-recovery Parser.fsy"
+        cmd "dotnet" @"..\..\FsYaccLite\bin\Debug\netcoreapp2.1\FsYaccLite.dll --module Test.Parser --lexlib Microsoft.FSharp.Text.Lexing --parslib Microsoft.FSharp.Text.Parsing -v Parser.fsy"
 
         cmd "dotnet" @"build ."
 
