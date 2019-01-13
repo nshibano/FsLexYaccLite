@@ -6,7 +6,7 @@ open System
 open System.IO 
 open System.Collections.Generic
 open Printf
-open Microsoft.FSharp.Text.Lexing
+open FsLexYaccLite.Lexing
 
 open FsLexYaccLite.Common.Arg
 open Syntax
@@ -16,25 +16,12 @@ open Compile
 //------------------------------------------------------------------
 // This code is duplicated from Microsoft.FSharp.Compiler.UnicodeLexing
 
-type Lexbuf =  LexBuffer<char>
+type Lexbuf =  LexBuffer
 
-/// Standard utility to create a Unicode LexBuffer
-///
-/// One small annoyance is that LexBuffers and not IDisposable. This means 
-/// we can't just return the LexBuffer object, since the file it wraps wouldn't
-/// get closed when we're finished with the LexBuffer. Hence we return the stream,
-/// the reader and the LexBuffer. The caller should dispose the first two when done.
-let UnicodeFileAsLexbuf (filename,codePage : int option) : FileStream * StreamReader * Lexbuf =
-    // Use the .NET functionality to auto-detect the unicode encoding
-    // It also uses Lexing.from_text_reader to present the bytes read to the lexer in UTF8 decoded form
-    let stream  = new FileStream(filename,FileMode.Open,FileAccess.Read,FileShare.Read) 
-    let reader = 
-        match codePage with 
-        | None -> new  StreamReader(stream,true)
-        | Some n -> new  StreamReader(stream,System.Text.Encoding.GetEncoding(n)) 
-    let lexbuf = LexBuffer<char>.FromFunction(reader.Read) 
+let UnicodeFileAsLexbuf (filename,codePage : int option) =
+    let lexbuf = LexBuffer.FromString(File.ReadAllText(filename))
     lexbuf.EndPos <- Position.FirstLine(filename);
-    stream, reader, lexbuf
+    lexbuf
 
 //------------------------------------------------------------------
 // This is the program proper
@@ -93,9 +80,7 @@ let main() =
   let filename = (match !input with Some x -> x | None -> failwith "no input given") in 
 
   let spec = 
-      let stream,reader,lexbuf = UnicodeFileAsLexbuf(filename, !inputCodePage) 
-      use stream = stream
-      use reader = reader
+      let lexbuf = UnicodeFileAsLexbuf(filename, !inputCodePage) 
 
       try 
         if !tokenize then begin 

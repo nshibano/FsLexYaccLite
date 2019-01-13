@@ -1,16 +1,15 @@
 {
 (* (c) Microsoft Corporation 2005-2008.  *)
 
-module internal FsLexYacc.FsYacc.Lexer
   
 open FsLexYacc.FsYacc.Syntax
-open FsLexYacc.FsYacc.Parser
+open Parser
 open System.Text
-//open Internal.Utilities.Text.Lexing
-open Microsoft.FSharp.Text.Lexing
+open FsLexYaccLite.Lexing
 
-let lexeme  (lexbuf : LexBuffer<char>) = new System.String(lexbuf.Lexeme)
-let newline (lexbuf:LexBuffer<_>) = lexbuf.EndPos <- lexbuf.EndPos.NextLine
+let lexeme (lexbuf : LexBuffer) = lexbuf.Lexeme  
+let newline (lexbuf:LexBuffer) = lexbuf.EndPos <- lexbuf.EndPos.NextLine
+
 
 let unexpected_char lexbuf =
   failwith ("Unexpected character '"+(lexeme lexbuf)+"'")

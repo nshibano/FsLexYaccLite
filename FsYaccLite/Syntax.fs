@@ -2,7 +2,7 @@
 module FsLexYacc.FsYacc.Syntax
 
 type Identifier = string
-type Code = string * Microsoft.FSharp.Text.Lexing.Position
+type Code = string * FsLexYaccLite.Lexing.Position
 type Rule = Rule of Identifier list * Identifier option * Code option
 type Associativity = LeftAssoc | RightAssoc | NonAssoc
 

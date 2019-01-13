@@ -21,7 +21,7 @@ open FsLexYacc.FsYacc.Syntax
 %%      
 
 spec: 
-    headeropt decls PERCENT_PERCENT rules 
+    headeropt decls PERCENT_PERCENT rules EOF
     { List.foldBack (fun f x -> f x) $2 { Header=$1;Tokens=[];Types=[];Associativities=[];StartSymbols=[];Rules=$4 } }
 
 headeropt: 
