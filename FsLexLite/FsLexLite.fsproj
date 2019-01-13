@@ -18,8 +18,8 @@
     <Compile Include="fslexast.fs" />
     <Compile Include="fslexlex.fs" />
     <Compile Include="fslex.fs" />
-    <None Include="fslexlex.fsl" />
-    <None Include="fslexpars.fsy" />
+    <None Include="Lexer.fsl" />
+    <None Include="Parser.fsy" />
   </ItemGroup>
 
   <ItemGroup>
