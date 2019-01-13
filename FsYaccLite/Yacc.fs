@@ -174,6 +174,8 @@ let main() =
           cprintfn cos "module internal %s" s;
       | false ->
           cprintfn cos "module %s" s;  
+  
+  cprintfn cos "#nowarn \"64\""
 
   for s in !opens do
       cprintfn cos "open %s" s;
