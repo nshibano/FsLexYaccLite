@@ -52,7 +52,6 @@ let light = ref None
 let inputCodePage = ref None
 let mutable lexlib = "Microsoft.FSharp.Text.Lexing"
 let mutable parslib = "Microsoft.FSharp.Text.Parsing"
-let mutable slr = false
 
 let usage =
   [ ("-o", StringArg (fun s -> out := Some s), "Name the output file.");
@@ -68,8 +67,7 @@ let usage =
     ("--parslib", StringArg (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)");
     ("--codepage", IntArg (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage."); 
     ("--newprec", UnitArg (fun () -> newprec := true), "Use the new precedence resolving behaviour. See: https://github.com/fsprojects/FsLexYacc/pull/51"); 
-    ("--no-recovery", UnitArg (fun () -> norec := true), "Don't try recovering from invalid input")
-    ("--slr", UnitArg (fun () -> slr <- true), "SLR mode")]
+    ("--no-recovery", UnitArg (fun () -> norec := true), "Don't try recovering from invalid input")]
 
 let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> failwith "more than one input given" | None -> input := Some x) "fsyacc <filename>"
 
@@ -154,7 +152,7 @@ let main() =
 
   printfn "building tables"; 
   let preprocessed = processParserSpecAst spec
-  let compiled = compile !newprec !norec slr preprocessed
+  let compiled = compile !newprec !norec preprocessed
   Option.iter (fun f -> Print.outputCompilationReport f preprocessed compiled) logf
   Print.outputTableImages filename preprocessed compiled 
   //let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
