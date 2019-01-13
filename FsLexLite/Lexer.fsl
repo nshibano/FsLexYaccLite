@@ -1,12 +1,7 @@
 {
-(* (c) Microsoft Corporation 2005-2008.  *)
-  
-module internal FsLexYaccLite.Lex.Lexer
-  
 open FsLexYaccLite.Lex.AST
-open FsLexYaccLite.Lex.Parser
-open Microsoft.FSharp.Text
-open Microsoft.FSharp.Text.Lexing
+open Parser
+open FsLexYaccLite.Lexing
 
 open System.Text
 
@@ -20,8 +15,8 @@ let escape c =
   | 'r' -> '\r'
   | c -> c
 
-let lexeme (lexbuf : LexBuffer<char>) = new System.String(lexbuf.Lexeme)
-let newline (lexbuf:LexBuffer<_>) = lexbuf.EndPos <- lexbuf.EndPos.NextLine
+let lexeme (lexbuf : LexBuffer) = lexbuf.Lexeme  
+let newline (lexbuf:LexBuffer) = lexbuf.EndPos <- lexbuf.EndPos.NextLine
 
 let unexpected_char lexbuf =
       failwith ("Unexpected character '"+(lexeme lexbuf)+"'")
@@ -144,7 +139,7 @@ and string p buff = parse
  | (whitespace | letter | digit) +  
    { let _ = buff.Append (lexeme lexbuf) in 
      string p buff lexbuf }
- | eof { failwith (Printf.sprintf "end of file in string started at (%d,%d)" p.pos_lnum (p.pos_cnum - p.pos_bol))  }
+ | eof { failwith (Printf.sprintf "end of file in string started at (%d,%d)" p.Line (p.AbsoluteOffset - p.StartOfLine))  }
  | _ { let _ = buff.Append (lexeme lexbuf).[0] in
        string p buff lexbuf }
 and code p buff = parse
@@ -191,13 +186,13 @@ and codestring buff = parse
 and comment p = parse
  |  char { comment p lexbuf } 
  | '"' { ignore(try string lexbuf.StartPos (new StringBuilder 100) lexbuf 
-                with Failure s -> failwith (s + "\n" + Printf.sprintf "error while processing string nested in comment started at (%d,%d)" p.pos_lnum (p.pos_cnum - p.pos_bol))); 
+                with Failure s -> failwith (s + "\n" + Printf.sprintf "error while processing string nested in comment started at (%d,%d)" p.Line (p.AbsoluteOffset - p.StartOfLine))); 
          comment p lexbuf }
- | "(*" { ignore(try comment p lexbuf with Failure s -> failwith (s + "\n" + Printf.sprintf "error while processing nested comment started at (%d,%d)" p.pos_lnum (p.pos_cnum - p.pos_bol))); 
+ | "(*" { ignore(try comment p lexbuf with Failure s -> failwith (s + "\n" + Printf.sprintf "error while processing nested comment started at (%d,%d)" p.Line (p.AbsoluteOffset - p.StartOfLine))); 
           comment p lexbuf }
  | newline { newline lexbuf; comment p lexbuf }
  | "*)" { () }
- | eof { failwith (Printf.sprintf "end of file in comment started at (%d,%d)" p.pos_lnum (p.pos_cnum - p.pos_bol))  }
+ | eof { failwith (Printf.sprintf "end of file in comment started at (%d,%d)" p.Line (p.AbsoluteOffset - p.StartOfLine))  }
  | [^ '\'' '(' '*' '\n' '\r' '"' ')' ]+  { comment p lexbuf }
  | _  { comment p lexbuf }
 

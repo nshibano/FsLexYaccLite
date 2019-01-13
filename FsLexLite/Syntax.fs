@@ -1,6 +1,6 @@
 ﻿module FsLexYaccLite.Lex.Syntax
 
-open Microsoft.FSharp.Text.Lexing
+open FsLexYaccLite.Lexing
 
 type Ident = string
 type Code = string * Position

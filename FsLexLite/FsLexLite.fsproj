@@ -6,17 +6,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Lexing.fsi" />
     <Compile Include="Lexing.fs" />
-    <Compile Include="Parsing.fsi" />
     <Compile Include="Parsing.fs" />
     <Compile Include="Syntax.fs" />
+    <Compile Include="fslexast.fs" />
+    <Compile Include="Parser.fs" />
+    <Compile Include="Lexer.fs" />
     <Compile Include="Macros.fs" />
     <Compile Include="Alphabet.fs" />
-    <Compile Include="fslexpars.fsi" />
-    <Compile Include="fslexpars.fs" />
-    <Compile Include="fslexast.fs" />
-    <Compile Include="fslexlex.fs" />
     <Compile Include="fslex.fs" />
     <None Include="Lexer.fsl" />
     <None Include="Parser.fsy" />

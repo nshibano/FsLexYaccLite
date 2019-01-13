@@ -9,35 +9,16 @@ open FsLexYaccLite.Lex.AST
 open Printf
 //open Internal.Utilities
 //open Internal.Utilities.Text.Lexing
-open Microsoft.FSharp.Text
-open Microsoft.FSharp.Text.Lexing
+open FsLexYaccLite.Lexing
 open System
 open System.Collections.Generic
 open System.IO
-open FsLexYaccLite.Lex.Alphabet
 
 //------------------------------------------------------------------
 // This code is duplicated from Microsoft.FSharp.Compiler.UnicodeLexing
 
-type Lexbuf =  LexBuffer<char>
+type Lexbuf =  LexBuffer
 
-/// Standard utility to create a Unicode LexBuffer
-///
-/// One small annoyance is that LexBuffers and not IDisposable. This means 
-/// we can't just return the LexBuffer object, since the file it wraps wouldn't
-/// get closed when we're finished with the LexBuffer. Hence we return the stream,
-/// the reader and the LexBuffer. The caller should dispose the first two when done.
-let UnicodeFileAsLexbuf (filename,codePage : int option) : FileStream * StreamReader * Lexbuf =
-    // Use the .NET functionality to auto-detect the unicode encoding
-    // It also presents the bytes read to the lexer in UTF8 decoded form
-    let stream  = new FileStream(filename,FileMode.Open,FileAccess.Read,FileShare.Read) 
-    let reader = 
-        match codePage with 
-        | None -> new  StreamReader(stream,true)
-        | Some n -> new  StreamReader(stream,System.Text.Encoding.GetEncoding(n)) 
-    let lexbuf = LexBuffer.FromFunction(reader.Read) 
-    lexbuf.EndPos <- Position.FirstLine(filename);
-    stream, reader, lexbuf
     
 //------------------------------------------------------------------
 // This is the program proper
@@ -66,9 +47,8 @@ let main() =
   try 
     let filename = (match !input with Some x -> x | None -> failwith "no input given") 
     let spec = 
-      let stream,reader,lexbuf = UnicodeFileAsLexbuf(filename, !inputCodePage) 
-      use stream = stream
-      use reader = reader
+      let lexbuf = LexBuffer.FromString(File.ReadAllText(filename))
+
       try 
           Parser.spec Lexer.token lexbuf 
       with e -> 
