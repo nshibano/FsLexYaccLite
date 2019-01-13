@@ -145,7 +145,8 @@ let main() =
   let preprocessed = processParserSpecAst spec
   let compiled = compile preprocessed
   Option.iter (fun f -> Print.outputCompilationReport f preprocessed compiled) logf
-  Print.outputTableImages filename preprocessed compiled 
+  if !log then
+    Print.outputTableImages filename preprocessed compiled 
   Option.iter (fun f -> fprintfn f "</pre>") logf
 
   let (code,pos) = spec.Header 
