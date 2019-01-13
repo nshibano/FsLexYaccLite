@@ -220,3 +220,16 @@ Net45/FsLexLite/fslexast.fs
 Net45/FsLexLite/fslexlex.fs
 Net45/FsLexLite/fslexpars.fs
 Net45/FsLexLite/fslexpars.fsi
+
+Net45/FsYaccLite/Compile.fs
+Net45/FsYaccLite/Lexer.fs
+Net45/FsYaccLite/Lexing.fs
+Net45/FsYaccLite/Lexing.fsi
+Net45/FsYaccLite/Parser.fs
+Net45/FsYaccLite/Parser.fsi
+Net45/FsYaccLite/Parsing.fs
+Net45/FsYaccLite/Parsing.fsi
+Net45/FsYaccLite/Preprocess.fs
+Net45/FsYaccLite/Print.fs
+Net45/FsYaccLite/Syntax.fs
+Net45/FsYaccLite/Yacc.fs
