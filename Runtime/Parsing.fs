@@ -102,15 +102,6 @@ type AssocTable(elemTab:uint16[], offsetTab:uint16[]) =
         [ for i in firstElemNumber .. (firstElemNumber+numberOfElementsInAssoc-1) -> 
             (int elemTab.[i*2], int elemTab.[i*2+1]) ], defaultValueOfAssoc
 
-type IdxToIdxListTable(elemTab:uint16[], offsetTab:uint16[]) =
-
-    // Read all entries in a row of the table
-    member x.ReadAll(n) =       
-        let headOfTable = int offsetTab.[n]
-        let firstElemNumber = headOfTable + 1           
-        let numberOfElements = int32 elemTab.[headOfTable]           
-        [ for i in firstElemNumber .. (firstElemNumber+numberOfElements-1) -> int elemTab.[i] ]
-
 type ValueInfo = 
     struct
         val value: obj
