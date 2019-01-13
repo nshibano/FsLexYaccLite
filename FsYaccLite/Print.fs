@@ -71,30 +71,44 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
             fprintfn f "%a" outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
         fprintfn f ""
 
-        fprintfn f "  actions:"
-        let rows = ResizeArray()
-        for j = 0 to comp.ActionTable.[i].Length - 1 do
-            let action = comp.ActionTable.[i].[j]
-            if action <> Error then
-                let term, prec = spec.Terminals.[j]
-                let precText = stringOfPrecInfo prec
-                let termText = (if precText.Length = 0 then term else term + " " + precText) + ":"
+        match comp.ActionTable.[i] with
+        | ImmediateAction action ->
+            fprintfn f "  immediate action:"
+            let actionText =
+                match action with 
+                | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
+                | Reduce prodIdx ->
+                    let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(' ', spec.Productions.[prodIdx].Body))
+                    (s, s.Length - 4)
+                | Error -> ("error", 5)
+                | Accept -> ("accept", 6)
+            fprintfn f "    %s" (fst actionText)
+            fprintfn f ""
+        | LookaheadActions actions ->
+            fprintfn f "  actions:"
+            let rows = ResizeArray()
+            for j = 0 to actions.Length - 1 do
+                let action = actions.[j]
+                if action <> Error then
+                    let term, prec = spec.Terminals.[j]
+                    let precText = stringOfPrecInfo prec
+                    let termText = (if precText.Length = 0 then term else term + " " + precText) + ":"
 
-                let actionText =
-                    match action with 
-                    | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
-                    | Reduce prodIdx ->
-                        let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(' ', spec.Productions.[prodIdx].Body))
-                        (s, s.Length - 4)
-                    | Error -> ("error", 5)
-                    | Accept -> ("accept", 6)
+                    let actionText =
+                        match action with 
+                        | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
+                        | Reduce prodIdx ->
+                            let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(' ', spec.Productions.[prodIdx].Body))
+                            (s, s.Length - 4)
+                        | Error -> ("error", 5)
+                        | Accept -> ("accept", 6)
                     
-                rows.Add([| (termText, termText.Length); actionText |])
-        outputTable f 4 (rows.ToArray())
-        let errorActionsInRow = Array.fold (fun count action -> count + (if action = Error then 1 else 0)) 0 comp.ActionTable.[i]
-        if errorActionsInRow > 0 then
-            fprintfn f "    (%d error actions)" errorActionsInRow
-        fprintfn f ""
+                    rows.Add([| (termText, termText.Length); actionText |])
+            outputTable f 4 (rows.ToArray())
+            let errorActionsInRow = Array.fold (fun count action -> count + (if action = Error then 1 else 0)) 0 actions
+            if errorActionsInRow > 0 then
+                fprintfn f "    (%d error actions)" errorActionsInRow
+            fprintfn f ""
 
         fprintfn f "  gotos:"
         for j = 0 to comp.GotoTable.[i].Length - 1 do
@@ -125,7 +139,7 @@ let outputTableImages (path : string) (p : Preprocessed) (c : Compiled)  =
         | Reduce code -> randomLightColor 7199369 code //Color.FromArgb(0xFF000000 ||| (7199369 * code))
     for i = 0 to actionTableBmp.Width - 1 do
         for j = 0 to actionTableBmp.Height - 1 do
-            actionTableBmp.SetPixel(i, j, colorOfAction (c.ActionTable.[j].[i]))
+            actionTableBmp.SetPixel(i, j, colorOfAction (match c.ActionTable.[j] with ImmediateAction action -> action | LookaheadActions actions -> actions.[i]))
     actionTableBmp.Save(path + "-actionTable.png", ImageFormat.Png)
 
     let gotoTableBmp = new Bitmap(p.NonTerminals.Length, c.States.Length)

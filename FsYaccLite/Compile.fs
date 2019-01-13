@@ -40,7 +40,11 @@ type Action =
     | Reduce of productionIndex : ProductionIndex
     | Accept
     | Error
-    
+
+type ActionTableRow =
+    | ImmediateAction of Action
+    | LookaheadActions of Action []
+
 type CompiledProduction =
     {
         HeadNonTerminalIndex : NonTerminalIndex
@@ -54,7 +58,7 @@ type Compiled =
         States : ProductionIndex [] []
         Kernels : LR0Item [] []
         StartStates : int []
-        ActionTable : Action [] []
+        ActionTable : ActionTableRow []
         GotoTable : int option [] [] 
         EndOfInputTerminalIndex : int
         ErrorTerminalIndex : int
@@ -557,10 +561,9 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
           
         // This build the action table for one state. 
         let ComputeActions kernelIdx =
-            let kernel = kernels.[kernelIdx]
-            let arr = Array.create spec.Terminals.Length (None, Error)
-
             if slr then
+                let kernel = kernels.[kernelIdx]
+                let arr = Array.create spec.Terminals.Length (None, Error)
 
                 let items = computeClosure kernel
 
@@ -586,58 +589,69 @@ let compile (newprec:bool) (norec:bool) (slr : bool) (spec : Preprocessed) =
                         let prec = spec.Productions.[item.ProductionIndex].PrecedenceInfo
                         let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Accept)
                         addResolvingPrecedence arr kernelIdx endOfInputTerminalIndex action
+                LookaheadActions (Array.map snd arr)
             else
+                let kernel = kernels.[kernelIdx]
 
-                // Compute the LR(1) items based on lookaheads
-                let items =
-                    let accu = ResizeArray()
-                    for item in kernel do
-                        let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
-                        for lookahead in lookaheadTable.[kernelItemIdx] do
-                            accu.Add({ LR0Item = item; Lookahead = lookahead })
-                    computeLR1Closure (sortedArrayofList accu)
+                if kernel.Length = 1 &&
+                   (let item = kernel.[0]
+                    let body = productions.[item.ProductionIndex].BodySymbolIndexes
+                    item.DotIndex = body.Length)
+                then ImmediateAction (Reduce kernel.[0].ProductionIndex)
+                else
 
-                for item in items do
-                    let body = productions.[item.LR0Item.ProductionIndex].BodySymbolIndexes
-                    if item.LR0Item.DotIndex < body.Length then
-                        let symbol = body.[item.LR0Item.DotIndex]
-                        match symbol with
-                        | TerminalIndex terminalIndex ->
-                            let action =
-                                match gotoKernel kernelIdx symbol with
-                                | None -> failwith "unreachable"
-                                | Some gkernelItemIdx -> Shift gkernelItemIdx
-                            let prec = snd spec.Terminals.[terminalIndex]
-                            addResolvingPrecedence arr kernelIdx terminalIndex (prec, action)
-                        | _ -> ()
-                    elif not (isStartItem1 item) then
-                        let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
-                        let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Reduce item.LR0Item.ProductionIndex)
-                        addResolvingPrecedence arr kernelIdx item.Lookahead action
-                    elif item.Lookahead = endOfInputTerminalIndex then
-                        let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
-                        let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Accept)
-                        addResolvingPrecedence arr kernelIdx item.Lookahead action
-                    else failwith "unreachable?"
+                    let arr = Array.create spec.Terminals.Length (None, Error)
+
+                    // Compute the LR(1) items based on lookaheads
+                    let items =
+                        let accu = ResizeArray()
+                        for item in kernel do
+                            let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
+                            for lookahead in lookaheadTable.[kernelItemIdx] do
+                                accu.Add({ LR0Item = item; Lookahead = lookahead })
+                        computeLR1Closure (sortedArrayofList accu)
+
+                    for item in items do
+                        let body = productions.[item.LR0Item.ProductionIndex].BodySymbolIndexes
+                        if item.LR0Item.DotIndex < body.Length then
+                            let symbol = body.[item.LR0Item.DotIndex]
+                            match symbol with
+                            | TerminalIndex terminalIndex ->
+                                let action =
+                                    match gotoKernel kernelIdx symbol with
+                                    | None -> failwith "unreachable"
+                                    | Some gkernelItemIdx -> Shift gkernelItemIdx
+                                let prec = snd spec.Terminals.[terminalIndex]
+                                addResolvingPrecedence arr kernelIdx terminalIndex (prec, action)
+                            | _ -> ()
+                        elif not (isStartItem1 item) then
+                            let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
+                            let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Reduce item.LR0Item.ProductionIndex)
+                            addResolvingPrecedence arr kernelIdx item.Lookahead action
+                        elif item.Lookahead = endOfInputTerminalIndex then
+                            let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
+                            let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Accept)
+                            addResolvingPrecedence arr kernelIdx item.Lookahead action
+                        else failwith "unreachable?"
             
 
-                // If there is a single item A -> B C . and no Shift or Accept actions (i.e. only Error or Reduce, so the choice of terminal 
-                // cannot affect what we do) then we emit an immediate reduce action for the rule corresponding to that item 
-                // Also do the same for Accept rules. 
-                let closure = (computeClosure kernel)
+                    // If there is a single item A -> B C . and no Shift or Accept actions (i.e. only Error or Reduce, so the choice of terminal 
+                    // cannot affect what we do) then we emit an immediate reduce action for the rule corresponding to that item 
+                    // Also do the same for Accept rules. 
+                    let closure = (computeClosure kernel)
 
-                // A -> B C . rules give rise to reductions in favour of errors 
-                if not norec then
-                    for item in computeClosure kernel do
-                        let body = productions.[item.ProductionIndex].BodySymbolIndexes
-                        if item.DotIndex = body.Length then
-                            for terminalIdx = 0 to spec.Terminals.Length - 1 do
-                                if snd(arr.[terminalIdx]) = Error then 
-                                    let prodIdx = item.ProductionIndex
-                                    let action = (Option.map (fun (x, y, _) -> (x, y)) spec.Productions.[item.ProductionIndex].PrecedenceInfo, (if isStartItem(item) then Accept else Reduce prodIdx))
-                                    addResolvingPrecedence arr kernelIdx terminalIdx action
+                    // A -> B C . rules give rise to reductions in favour of errors 
+                    if not norec then
+                        for item in computeClosure kernel do
+                            let body = productions.[item.ProductionIndex].BodySymbolIndexes
+                            if item.DotIndex = body.Length then
+                                for terminalIdx = 0 to spec.Terminals.Length - 1 do
+                                    if snd(arr.[terminalIdx]) = Error then 
+                                        let prodIdx = item.ProductionIndex
+                                        let action = (Option.map (fun (x, y, _) -> (x, y)) spec.Productions.[item.ProductionIndex].PrecedenceInfo, (if isStartItem(item) then Accept else Reduce prodIdx))
+                                        addResolvingPrecedence arr kernelIdx terminalIdx action
 
-            Array.map snd arr
+                    LookaheadActions (Array.map snd arr)
 
         Array.init kernels.Length ComputeActions
 

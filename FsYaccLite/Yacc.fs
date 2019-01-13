@@ -164,7 +164,7 @@ let main() =
   let (code,pos) = spec.Header 
   printfn "%d states" compiled.States.Length; 
   printfn "%d nonterminals" compiled.GotoTable.[0].Length; 
-  printfn "%d terminals" compiled.ActionTable.[0].Length; 
+  printfn "%d terminals" preprocessed.Terminals.Length
   printfn "%d productions" compiled.Productions.Length; 
   printfn "#rows in action table: %d" compiled.ActionTable.Length; 
 (*
@@ -368,7 +368,7 @@ let main() =
 
   begin 
     let numActionRows = (Array.length compiled.ActionTable) 
-    let maxActionColumns = Array.length compiled.ActionTable.[0] 
+    //let maxActionColumns = Array.length compiled.ActionTable.[0] 
     cprintfn cos "let _fsyacc_action_rows = %d" numActionRows;
     cprintf cos "let _fsyacc_actionTableElements = [|" ;
     let actionIndexes = Array.create numActionRows 0 
@@ -379,8 +379,8 @@ let main() =
         let actions = compiled.ActionTable.[i] 
         let terminalsByAction = new Dictionary<_,int list>(10) 
         let countPerAction = new Dictionary<_,_>(10) 
-        for terminal = 0 to actions.Length - 1 do  
-              let action = actions.[terminal] 
+        for terminal = 0 to preprocessed.Terminals.Length - 1 do  
+              let action = match actions with ImmediateAction actions -> actions | LookaheadActions actions ->  actions.[terminal] 
               if terminalsByAction.ContainsKey action then 
                   terminalsByAction.[action] <- terminal :: terminalsByAction.[action] ;
               else
@@ -411,8 +411,8 @@ let main() =
         
         (* Write the pairs of entries in incremental order by key *)
         (* This lets us implement the lookup by a binary chop. *)
-        for terminal = 0 to Array.length actions-1 do  
-            let action = actions.[terminal] in 
+        for terminal = 0 to preprocessed.Terminals.Length - 1 do  
+            let action = match actions with ImmediateAction actions -> actions | LookaheadActions actions ->  actions.[terminal]
             if action <> mostCommonAction then  (
                 actionTableCurrIndex := !actionTableCurrIndex + 1;
                 outputCodedUInt16 os terminal;
@@ -507,7 +507,7 @@ let main() =
   cprintfn cos "                              | Some f -> f ctxt"
   cprintfn cos "                              | None -> parse_error ctxt.Message);"
   
-  cprintfn cos "    numTerminals = %d;" (Array.length compiled.ActionTable.[0]);
+  cprintfn cos "    numTerminals = %d;" (preprocessed.Terminals.Length);
   cprintfn cos "    productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }"
   cprintfn cos "let engine lexer lexbuf startState = (tables ()).Interpret(lexer, lexbuf, startState)"                                                                                                         
 
