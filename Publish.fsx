@@ -32,8 +32,10 @@ try
     let lexFiles = Array.concat [| Directory.GetFiles("FsLexLite", "*.fs"); Directory.GetFiles("FsLexLite", "*.fsi") |]
     for lexFile in lexFiles do
         cp lexFile @"Net45\FsLexLite"
+    let yaccFiles = Array.concat [| Directory.GetFiles("FsYaccLite", "*.fs"); Directory.GetFiles("FsYaccLite", "*.fsi") |]
+    for yaccFile in yaccFiles do
+        cp yaccFile @"Net45\FsYaccLite"
     cmd "msbuild" @"Net45\Net45.sln"
-        
 
     ()
 with

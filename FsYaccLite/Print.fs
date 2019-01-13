@@ -51,7 +51,7 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
         let rowA = spec.NonTerminals.[nonTerminalIndex] + ":"
         let firstSet = sortedArrayOfHashSet(comp.FirstSets.[NonTerminalIndex nonTerminalIndex])
         let itemStrings = Array.map (fun item -> match item with Epsilon -> "ε" | terminalIndex -> fst spec.Terminals.[terminalIndex]) firstSet
-        let rowB = String.Join(' ', itemStrings)
+        let rowB = String.Join(" ", itemStrings)
         rows.Add([| (rowA, rowA.Length); (rowB, rowB.Length) |])
 
     outputTable f 2 (rows.ToArray())
@@ -67,7 +67,7 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
             let syms = ResizeArray(spec.Productions.[item.ProductionIndex].Body)
             let mark = if item.DotIndex < syms.Count then "\u25CF" else "\u25A0"
             syms.Insert(item.DotIndex, mark)
-            fprintf f "    %s -&gt; %s" (spec.Productions.[item.ProductionIndex].Head) (String.Join(' ', syms))
+            fprintf f "    %s -&gt; %s" (spec.Productions.[item.ProductionIndex].Head) (String.Join(" ", syms))
             fprintfn f "%a" outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
         fprintfn f ""
 
@@ -78,7 +78,7 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
                 match action with 
                 | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
                 | Reduce prodIdx ->
-                    let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(' ', spec.Productions.[prodIdx].Body))
+                    let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(" ", spec.Productions.[prodIdx].Body))
                     (s, s.Length - 4)
                 | Error -> ("error", 5)
                 | Accept -> ("accept", 6)
@@ -98,7 +98,7 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
                         match action with 
                         | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
                         | Reduce prodIdx ->
-                            let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(' ', spec.Productions.[prodIdx].Body))
+                            let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(" ", spec.Productions.[prodIdx].Body))
                             (s, s.Length - 4)
                         | Error -> ("error", 5)
                         | Accept -> ("accept", 6)

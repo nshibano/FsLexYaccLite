@@ -7,6 +7,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsLexLite", "FsLexLite\FsLe
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Common", "Common\Common.fsproj", "{7A4F53DB-68DB-4B91-AC2F-6EC6A9CF0CAA}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsYaccLite", "FsYaccLite\FsYaccLite.fsproj", "{5F8EBDA3-1A00-4E12-9E05-5A78A34FE617}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{7A4F53DB-68DB-4B91-AC2F-6EC6A9CF0CAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7A4F53DB-68DB-4B91-AC2F-6EC6A9CF0CAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7A4F53DB-68DB-4B91-AC2F-6EC6A9CF0CAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F8EBDA3-1A00-4E12-9E05-5A78A34FE617}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F8EBDA3-1A00-4E12-9E05-5A78A34FE617}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F8EBDA3-1A00-4E12-9E05-5A78A34FE617}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F8EBDA3-1A00-4E12-9E05-5A78A34FE617}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
