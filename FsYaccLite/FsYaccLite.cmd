@@ -1,1 +1,0 @@
-@dotnet "%~dp0\FsYaccLite.dll" %*

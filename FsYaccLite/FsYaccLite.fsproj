@@ -20,9 +20,6 @@
     <Compile Include="Yacc.fs" />
     <None Include="Lexer.fsl" />
     <None Include="Parser.fsy" />
-    <Content Include="FsYaccLite.cmd">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>
