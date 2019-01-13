@@ -20,3 +20,9 @@ let cmd name arg =
 let cp pathFrom dirTo =
     Directory.CreateDirectory(dirTo) |> ignore
     File.Copy(pathFrom, Path.Combine(dirTo, Path.GetFileName(pathFrom)), true)
+
+let cpDir origDir newDir =
+    Directory.CreateDirectory(newDir) |> ignore
+    for file in Directory.GetFiles(origDir) do
+        File.Copy(file, Path.Combine(newDir, Path.GetFileName(file)))
+    
