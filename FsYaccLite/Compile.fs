@@ -167,7 +167,7 @@ let MultiDictionary_Add (d : MultiDictionary<'T, 'U>) (k : 'T) (v : 'U) =
 
 let [<Literal>] Epsilon = -1
 
-let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
+let compile (spec : Preprocessed) =
     let total = Stopwatch.StartNew()
 
     let stopWatch = Stopwatch.StartNew()
@@ -517,9 +517,9 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                     if s1 <> s2 then failwith "unreachable"
                     itemSoFar
                 | (((precShift, Shift _) as shiftItem), ((precReduce, Reduce _) as reduceItem))
-                | (((precReduce, Reduce _) as reduceItem), ((precShift,Shift _) as shiftItem)) -> 
+                | (((precReduce, Reduce _) as reduceItem), ((precShift, Shift _) as shiftItem)) -> 
                     match precReduce, precShift with 
-                    | (Some (assocSoFar, p1), Some(assocNew, p2)) -> 
+                    | Some (assocSoFar, p1), Some(assocNew, p2) -> 
                         if p1 < p2 then shiftItem
                         elif p1 > p2 then reduceItem
                         else
@@ -527,20 +527,14 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                             match assocSoFar with 
                             | LeftAssoc ->  reduceItem
                             | RightAssoc -> shiftItem
-                            | NonAssoc -> 
-                                if newprec then
-                                    precReduce, Error
-                                else
-                                    reportConflict shiftItem reduceItem "we preffer shift on equal precedences"
-                                    incr shiftReduceConflicts
-                                    shiftItem
+                            | NonAssoc -> precReduce, Error
                     | _ ->
                         reportConflict shiftItem reduceItem "we preffer shift when unable to compare precedences"
                         incr shiftReduceConflicts
                         shiftItem
-                | ((prec1,Reduce prodIdx1),(prec2, Reduce prodIdx2)) -> 
+                | ((prec1, Reduce prodIdx1), (prec2, Reduce prodIdx2)) -> 
                     match prec1, prec2 with 
-                    | (Some (_,p1), Some(assocNew,p2)) when newprec -> 
+                    | (Some (_, p1), Some(_, p2)) -> 
                         if p1 < p2 then itemNew
                         elif p1 > p2 then itemSoFar
                         else
@@ -565,7 +559,8 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                (let item = kernel.[0]
                 let body = productions.[item.ProductionIndex].BodySymbolIndexes
                 item.DotIndex = body.Length)
-            then ImmediateAction (Reduce kernel.[0].ProductionIndex)
+            then
+                ImmediateAction (Reduce kernel.[0].ProductionIndex)
             else
 
                 let arr = Array.create spec.Terminals.Length (None, Error)
@@ -601,23 +596,6 @@ let compile (newprec:bool) (norec:bool) (spec : Preprocessed) =
                         let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Accept)
                         addResolvingPrecedence arr kernelIdx item.Lookahead action
                     else failwith "unreachable?"
-            
-
-                // If there is a single item A -> B C . and no Shift or Accept actions (i.e. only Error or Reduce, so the choice of terminal 
-                // cannot affect what we do) then we emit an immediate reduce action for the rule corresponding to that item 
-                // Also do the same for Accept rules. 
-                let closure = (computeClosure kernel)
-
-                // A -> B C . rules give rise to reductions in favour of errors 
-                if not norec then
-                    for item in computeClosure kernel do
-                        let body = productions.[item.ProductionIndex].BodySymbolIndexes
-                        if item.DotIndex = body.Length then
-                            for terminalIdx = 0 to spec.Terminals.Length - 1 do
-                                if snd(arr.[terminalIdx]) = Error then 
-                                    let prodIdx = item.ProductionIndex
-                                    let action = (Option.map (fun (x, y, _) -> (x, y)) spec.Productions.[item.ProductionIndex].PrecedenceInfo, (if isStartItem(item) then Accept else Reduce prodIdx))
-                                    addResolvingPrecedence arr kernelIdx terminalIdx action
 
                 LookaheadActions (Array.map snd arr)
 

@@ -46,8 +46,6 @@ let out = ref None
 let tokenize = ref false
 let compat = ref false
 let log = ref false
-let newprec = ref false
-let norec = ref false
 let light = ref None
 let inputCodePage = ref None
 let mutable lexlib = "Microsoft.FSharp.Text.Lexing"
@@ -65,9 +63,7 @@ let usage =
     ("--tokens", UnitArg (fun () -> tokenize := true), "Simply tokenize the specification file itself."); 
     ("--lexlib", StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer (default: Microsoft.FSharp.Text.Lexing)");
     ("--parslib", StringArg (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)");
-    ("--codepage", IntArg (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage."); 
-    ("--newprec", UnitArg (fun () -> newprec := true), "Use the new precedence resolving behaviour. See: https://github.com/fsprojects/FsLexYacc/pull/51"); 
-    ("--no-recovery", UnitArg (fun () -> norec := true), "Don't try recovering from invalid input")]
+    ("--codepage", IntArg (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage.")]
 
 let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> failwith "more than one input given" | None -> input := Some x) "fsyacc <filename>"
 
@@ -94,8 +90,6 @@ let actionCoding action  =
 
 let main() = 
   let filename = (match !input with Some x -> x | None -> failwith "no input given") in 
-  if not <| !newprec then
-      printfn "FSYACC is running in a compatibility mode - consider adding then --newprec argument"
 
   let spec = 
       let stream,reader,lexbuf = UnicodeFileAsLexbuf(filename, !inputCodePage) 
@@ -152,7 +146,7 @@ let main() =
 
   printfn "building tables"; 
   let preprocessed = processParserSpecAst spec
-  let compiled = compile !newprec !norec preprocessed
+  let compiled = compile preprocessed
   Option.iter (fun f -> Print.outputCompilationReport f preprocessed compiled) logf
   Print.outputTableImages filename preprocessed compiled 
   //let (prods,states, startStates,actionTable,immediateActionTable,gotoTable,endOfInputTerminalIdx,errorTerminalIdx,nonTerminals) = 
