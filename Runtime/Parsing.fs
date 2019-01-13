@@ -1,10 +1,7 @@
-// (c) Microsoft Corporation 2005-2009. 
+module FsLexYaccLite.Parsing
 
-namespace Microsoft.FSharp.Text.Parsing
-open Microsoft.FSharp.Text.Lexing
-
-open System
 open System.Collections.Generic
+open FsLexYaccLite.Lexing
 
 /// The information accessible via the <c>parseState</c> value within parser actions.
 type IParseState =

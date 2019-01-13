@@ -48,8 +48,8 @@ let compat = ref false
 let log = ref false
 let light = ref None
 let inputCodePage = ref None
-let mutable lexlib = "Microsoft.FSharp.Text.Lexing"
-let mutable parslib = "Microsoft.FSharp.Text.Parsing"
+let mutable lexlib = "FsLexYaccLite.Parsing"
+let mutable parslib = "FsLexYaccLite.Parsing"
 
 let usage =
   [ ("-o", StringArg (fun s -> out := Some s), "Name the output file.");

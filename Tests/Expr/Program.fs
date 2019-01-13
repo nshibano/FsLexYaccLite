@@ -1,4 +1,4 @@
-﻿open Microsoft.FSharp.Text.Lexing
+﻿open FsLexYaccLite.Lexing
 open System
 open System.Collections.Generic
 open Test

@@ -47,7 +47,7 @@ let out = ref None
 let inputCodePage = ref None
 let light = ref None
 
-let mutable lexlib = "Microsoft.FSharp.Text.Lexing"
+let mutable lexlib = "FsLexYaccLite.Lexing"
 
 let usage =
   [ ("-o", StringArg (fun s -> out := Some s), "Name the output file."); 

@@ -1,5 +1,4 @@
-// (c) Microsoft Corporation 2005-2009.
-namespace Microsoft.FSharp.Text.Lexing 
+module FsLexYaccLite.Lexing 
 
 open System
 open System.Collections.Generic
