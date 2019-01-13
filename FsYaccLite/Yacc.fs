@@ -2,6 +2,7 @@
 
 module internal FsLexYacc.FsYacc.Driver 
 
+open System
 open System.IO 
 open System.Collections.Generic
 open Printf
@@ -164,10 +165,10 @@ let main() =
 
   match !modname with 
   | None ->
-        let name = Path.GetFileNameWithoutExtension(filename)
-        let ary = name.ToCharArray()
-        ary.[0] <- System.Char.ToUpperInvariant(ary.[0])
-        cprintfn cos "module %s" (System.String(ary))
+        let moduleName =
+            let s = Path.GetFileNameWithoutExtension(filename)
+            String(Char.ToUpperInvariant s.[0], 1) + s.Substring(1)
+        cprintfn cos "module %s" moduleName
   | Some s -> 
       match !internal_module with
       | true ->
