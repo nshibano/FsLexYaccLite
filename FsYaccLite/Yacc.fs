@@ -452,12 +452,7 @@ let main() =
   cprintfn cos "    reductionSymbolCounts = _fsyacc_reductionSymbolCounts;"
   cprintfn cos "    gotos = _fsyacc_gotos;"
   cprintfn cos "    sparseGotoTableRowOffsets = _fsyacc_sparseGotoTableRowOffsets;"
-  cprintfn cos "    tagOfErrorTerminal = _fsyacc_tagOfErrorTerminal;"
-  cprintfn cos "    parseError = (fun (ctxt:%s.ParseErrorContext<_>) -> " parslib
-  cprintfn cos "                              match parse_error_rich with "
-  cprintfn cos "                              | Some f -> f ctxt"
-  cprintfn cos "                              | None -> parse_error ctxt.Message);"
-  
+  cprintfn cos "    tagOfErrorTerminal = _fsyacc_tagOfErrorTerminal;"  
   cprintfn cos "    numTerminals = %d;" (preprocessed.Terminals.Length);
   cprintfn cos "    productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }"
   cprintfn cos "let engine lexer lexbuf startState = (tables ()).Interpret(lexer, lexbuf, startState)"                                                                                                         
