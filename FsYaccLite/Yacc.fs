@@ -173,15 +173,12 @@ let main() =
       | true ->
           cprintfn cos "module internal %s" s;
       | false ->
-          cprintfn cos "module %s" s;
-  
-  cprintfn cos "#nowarn \"64\";; // turn off warnings that type variables used in production annotations are instantiated to concrete type";
+          cprintfn cos "module %s" s;  
 
   for s in !opens do
       cprintfn cos "open %s" s;
 
   cprintfn cos "open %s" lexlib;
-  cprintfn cos "open %s.ParseHelpers" parslib;
   if !compat then 
       cprintfn cos "open Microsoft.FSharp.Compatibility.OCaml.Parsing";
 

@@ -254,6 +254,3 @@ type Tables<'tok> with
     /// Returns an object indicating the final synthesized value for the parse.
     member tables.Interpret (lexer,lexbuf,initialState) = 
         Implementation.interpret tables lexer lexbuf initialState
-
-module ParseHelpers =
-    let foo = ()
