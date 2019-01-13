@@ -163,7 +163,11 @@ let main() =
       cprintfn cos "#light \"off\"";
 
   match !modname with 
-  | None -> ()
+  | None ->
+        let name = Path.GetFileNameWithoutExtension(filename)
+        let ary = name.ToCharArray()
+        ary.[0] <- System.Char.ToUpperInvariant(ary.[0])
+        cprintfn cos "module %s" (System.String(ary))
   | Some s -> 
       match !internal_module with
       | true ->

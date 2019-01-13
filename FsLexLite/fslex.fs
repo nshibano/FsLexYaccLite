@@ -98,7 +98,7 @@ let main() =
         | _ -> 
             Path.Combine (Path.GetDirectoryName filename,Path.GetFileNameWithoutExtension(filename)) + ".fs"
     use os = System.IO.File.CreateText output
-
+    fprintf os "module %s" (Path.GetFileNameWithoutExtension(filename))
     if (!light = Some(false)) || (!light = None && (Path.HasExtension(output) && Path.GetExtension(output) = ".ml")) then
         fprintfn os "#light \"off\"";
     

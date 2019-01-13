@@ -1,7 +1,6 @@
 ﻿{
-module Test.Lexer
 open System
-open Test.Parser
+open Parser
 }
 let digit = ['0' - '9']
 let letter = ['a' - 'z' 'A' - 'Z']
