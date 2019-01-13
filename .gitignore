@@ -206,3 +206,17 @@ FsLexYaccLite-*.zip
 Tests/ABC/Parser.fs
 Tests/ABC/Parser.fsi
 Tests/ABC/Parser.fsyacc.html
+
+Net45/Common/Arg.fs
+Net45/FsLexLite/Alphabet.fs
+Net45/FsLexLite/Lexing.fs
+Net45/FsLexLite/Lexing.fsi
+Net45/FsLexLite/Macros.fs
+Net45/FsLexLite/Parsing.fs
+Net45/FsLexLite/Parsing.fsi
+Net45/FsLexLite/Syntax.fs
+Net45/FsLexLite/fslex.fs
+Net45/FsLexLite/fslexast.fs
+Net45/FsLexLite/fslexlex.fs
+Net45/FsLexLite/fslexpars.fs
+Net45/FsLexLite/fslexpars.fsi

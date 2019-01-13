@@ -21,11 +21,20 @@ try
     cp @"Runtime\Lexing.fs"   @"Publish\core21\Runtime"
     cp @"Runtime\Parsing.fs"  @"Publish\core21\Runtime"
     
-    let zipFileName = sprintf "FsLexYaccLite-core21-%s.zip" buildVersion
-    if File.Exists(zipFileName) then
-        File.Delete(zipFileName)
-    ZipFile.CreateFromDirectory("Publish\core21", zipFileName)
-    try cmd "appveyor" ("PushArtifact " + zipFileName)
+    let core21ZipFileName = sprintf "FsLexYaccLite-core21-%s.zip" buildVersion
+    if File.Exists(core21ZipFileName) then
+        File.Delete(core21ZipFileName)
+    ZipFile.CreateFromDirectory("Publish\core21", core21ZipFileName)
+    try cmd "appveyor" ("PushArtifact " + core21ZipFileName)
     with _ -> printfn "failed to run appveyor.exe"
+
+    cp @"Common\Arg.fs" @"Net45\Common"
+    let lexFiles = Array.concat [| Directory.GetFiles("FsLexLite", "*.fs"); Directory.GetFiles("FsLexLite", "*.fsi") |]
+    for lexFile in lexFiles do
+        cp lexFile @"Net45\FsLexLite"
+    cmd "msbuild" @"Net45\Net45.sln"
+        
+
+    ()
 with
     Failure msg -> Console.Error.WriteLine(msg)
