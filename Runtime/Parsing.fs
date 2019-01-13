@@ -103,7 +103,7 @@ exception Accept of obj
 // Read the tables written by FSYACC.  
 
 type AssocTable(elemTab:uint16[], offsetTab:uint16[]) =
-    let cache = new Dictionary<_,_>(2000)
+    let cache = Dictionary()
 
     member t.readAssoc (minElemNum,maxElemNum,defaultValueOfAssoc,keyToFind) =     
         // do a binary chop on the table 
@@ -184,9 +184,9 @@ module Implementation =
     let interpret (tables: Tables<'tok>) lexer (lexbuf : LexBuffer) initialState =                                                                      
         let localStore = new Dictionary<string,obj>() in
         localStore.["LexBuffer"] <- lexbuf;
-        let stateStack : Stack<int> = new Stack<_>(100)
+        let stateStack : Stack<int> = new Stack<_>()
         stateStack.Push(initialState);
-        let valueStack = new Stack<ValueInfo>(100)
+        let valueStack = new Stack<ValueInfo>()
         let mutable haveLookahead = false                                                                              
         let mutable lookaheadToken = Unchecked.defaultof<'tok>
         let mutable lookaheadEndPos = Unchecked.defaultof<Position>
