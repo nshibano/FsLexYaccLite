@@ -447,13 +447,10 @@ let main() =
   cprintfn cos "    dataOfToken = _fsyacc_dataOfToken; "
   cprintfn cos "    actionTableElements = _fsyacc_actionTableElements;"
   cprintfn cos "    actionTableRowOffsets = _fsyacc_actionTableRowOffsets;"
-  cprintfn cos "    stateToProdIdxsTableElements = _fsyacc_stateToProdIdxsTableElements;"
-  cprintfn cos "    stateToProdIdxsTableRowOffsets = _fsyacc_stateToProdIdxsTableRowOffsets;"
   cprintfn cos "    reductionSymbolCounts = _fsyacc_reductionSymbolCounts;"
   cprintfn cos "    gotos = _fsyacc_gotos;"
   cprintfn cos "    sparseGotoTableRowOffsets = _fsyacc_sparseGotoTableRowOffsets;"
   cprintfn cos "    tagOfErrorTerminal = _fsyacc_tagOfErrorTerminal;"  
-  cprintfn cos "    numTerminals = %d;" (preprocessed.Terminals.Length);
   cprintfn cos "    productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }"
   cprintfn cos "let engine lexer lexbuf startState = (tables ()).Interpret(lexer, lexbuf, startState)"                                                                                                         
 

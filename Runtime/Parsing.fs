@@ -19,7 +19,6 @@ type IParseState =
     /// Get the value produced by the terminal or non-terminal at the given position
     abstract GetInput: int -> obj 
     /// Get the store of local values associated with this parser
-    // Dynamically typed, non-lexically scoped local store
     abstract ParserLocalStore : IDictionary<string,obj>
 
 //-------------------------------------------------------------------------
@@ -45,14 +44,8 @@ type Tables<'tok> =
       gotos: uint16[];
       /// The sparse goto table row offsets
       sparseGotoTableRowOffsets: uint16[];
-      /// The sparse table for the productions active for each state
-      stateToProdIdxsTableElements: uint16[];  
-      /// The sparse table offsets for the productions active for each state
-      stateToProdIdxsTableRowOffsets: uint16[];  
       /// This table is logically part of the Goto table
       productionToNonTerminalTable: uint16[];
-      /// The total number of terminals 
-      numTerminals: int;
       /// The tag of the error terminal
       tagOfErrorTerminal: int }
 
@@ -159,9 +152,8 @@ module Implementation =
         let ruleValues    = (Array.zeroCreate 100 : obj array)              
         let lhsPos        = (Array.zeroCreate 2 : Position array)                                            
         let reductions = tables.reductions
-        let actionTable = new AssocTable(tables.actionTableElements, tables.actionTableRowOffsets)
-        let gotoTable = new AssocTable(tables.gotos, tables.sparseGotoTableRowOffsets)
-        let stateToProdIdxsTable = new IdxToIdxListTable(tables.stateToProdIdxsTableElements, tables.stateToProdIdxsTableRowOffsets)
+        let actionTable = AssocTable(tables.actionTableElements, tables.actionTableRowOffsets)
+        let gotoTable = AssocTable(tables.gotos, tables.sparseGotoTableRowOffsets)
 
         let parseState =                                                                                            
             { new IParseState with 
