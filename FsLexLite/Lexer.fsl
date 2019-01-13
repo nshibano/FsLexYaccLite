@@ -121,8 +121,8 @@ rule token = parse
  | '-' { DASH }
  | "(*" { ignore(comment lexbuf.StartPos lexbuf); token lexbuf }
  | "//" [^'\n''\r']* { token lexbuf }
- | _ { unexpected_char lexbuf }     
- | eof { EOF  }                                     
+ | _ { unexpected_char lexbuf }
+ | eof { ENDE }
 and string p buff = parse
  |  '\\' newline { newline lexbuf; string p buff lexbuf }
  |  '\\' ( '"' | '\\' | '\'' | 'n' | 't' | 'b' | 'r')
@@ -163,7 +163,7 @@ and code p buff = parse
  | "//" [^'\n''\r']*
    { let _ = buff.Append (lexeme lexbuf) in
      code p buff lexbuf }
- | eof { EOF }
+ | eof { failwith (Printf.sprintf "end of file in code started at (%d,%d)" p.Line (p.AbsoluteOffset - p.StartOfLine))  }
  | _ { let _ = buff.Append (lexeme lexbuf).[0] in
        code p buff lexbuf }
 

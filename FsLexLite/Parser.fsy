@@ -4,12 +4,14 @@ open FsLexYaccLite.Lex
 open FsLexYaccLite.Lex.Syntax
 %} 
 
-%type <FsLexYaccLite.Lex.Syntax.Spec> spec
 %token <string> STRING IDENT
 %token <FsLexYaccLite.Lex.Syntax.Code> CODE 
 %token <char> CHAR
 %token RULE PARSE LET  AND LPAREN RPAREN
 %token EOF BAR DOT PLUS STAR QMARK EQUALS UNDERSCORE LBRACK RBRACK HAT DASH
+%token ENDE
+
+%type <FsLexYaccLite.Lex.Syntax.Spec> spec
 %start spec
 
 %left BAR
@@ -19,7 +21,7 @@ open FsLexYaccLite.Lex.Syntax
 %nonassoc regexp_plus regexp_star
 %%      
 
-spec: codeopt Macros RULE Rules codeopt { { TopCode=$1;Macros=$2;Rules=$4;BottomCode=$5 } }
+spec: codeopt Macros RULE Rules codeopt ENDE { { TopCode=$1;Macros=$2;Rules=$4;BottomCode=$5 } }
 codeopt: CODE { $1 } | { "", (parseState.ResultRange |> fst) }
 Macros:  { [] } | macro Macros { $1 :: $2 }
 macro: LET IDENT EQUALS regexp { ($2, $4) }

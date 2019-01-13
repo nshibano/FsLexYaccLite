@@ -303,7 +303,7 @@ let rec token lexbuf =
     | 30 ->
         unexpected_char lexbuf 
     | 31 ->
-        EOF  
+        ENDE 
     | _ -> failwith "token"
 and string p buff lexbuf =
     match string_tables.Interpret(lexbuf) with
@@ -358,7 +358,7 @@ and code p buff lexbuf =
         let _ = buff.Append (lexeme lexbuf) in
         code p buff lexbuf 
     | 7 ->
-        EOF 
+        failwith (Printf.sprintf "end of file in code started at (%d,%d)" p.Line (p.AbsoluteOffset - p.StartOfLine))  
     | 8 ->
         let _ = buff.Append (lexeme lexbuf).[0] in
         code p buff lexbuf 

@@ -48,7 +48,7 @@ let main() =
     let filename = (match !input with Some x -> x | None -> failwith "no input given") 
     let spec = 
       let lexbuf = LexBuffer.FromString(File.ReadAllText(filename))
-
+      lexbuf.EndPos <- Position.FirstLine(filename)
       try 
           Parser.spec Lexer.token lexbuf 
       with e -> 
@@ -81,7 +81,7 @@ let main() =
     let moduleName =
         let s = Path.GetFileNameWithoutExtension(filename)
         String(Char.ToUpperInvariant s.[0], 1) + s.Substring(1)
-    fprintf os "module %s" moduleName
+    fprintfn os "module %s" moduleName
     if (!light = Some(false)) || (!light = None && (Path.HasExtension(output) && Path.GetExtension(output) = ".ml")) then
         fprintfn os "#light \"off\"";
     
