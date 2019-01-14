@@ -1,8 +1,6 @@
-module AST
+module Compile
 
-open System
 open System.Collections.Generic
-
 open Syntax
 
 type MultiMap<'a, 'b> = Dictionary<'a, List<'b>>

@@ -1,5 +1,5 @@
 module Lexer 
-open AST
+open Compile
 open Parser
 open FsLexYaccLite.Lexing
 

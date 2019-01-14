@@ -1,6 +1,6 @@
 open FsLexYaccLite.Common.Arg
 open Syntax
-open AST
+open Compile
 open Printf
 //open Internal.Utilities
 //open Internal.Utilities.Text.Lexing
@@ -60,7 +60,7 @@ let main() =
         let alphabetTable = Alphabet.createTable true expanded
         printfn "%d alphabets" alphabetTable.AlphabetCount
         let translated = Alphabet.translate alphabetTable expanded
-        let dfaNodes = AST.Compile translated
+        let dfaNodes = Compile translated
         printfn "%d states" dfaNodes.Length
         let actions = List.map snd clauses
         (name, args, alphabetTable, dfaNodes, actions)) spec.Rules

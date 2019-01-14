@@ -9,7 +9,7 @@
     <Compile Include="Lexing.fs" />
     <Compile Include="Parsing.fs" />
     <Compile Include="Syntax.fs" />
-    <Compile Include="fslexast.fs" />
+    <Compile Include="Compile.fs" />
     <Compile Include="Parser.fs" />
     <Compile Include="Lexer.fs" />
     <Compile Include="Macros.fs" />
