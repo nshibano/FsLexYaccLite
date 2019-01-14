@@ -8,47 +8,21 @@ open Syntax
 open Preprocess
 open Compile
 
-//------------------------------------------------------------------
-// This code is duplicated from Microsoft.FSharp.Compiler.UnicodeLexing
-
-type Lexbuf =  LexBuffer
-
-let UnicodeFileAsLexbuf (filename,codePage : int option) =
-    let lexbuf = LexBuffer.FromString(File.ReadAllText(filename))
-    lexbuf.EndPos <- Position.FirstLine(filename);
-    lexbuf
-
-//------------------------------------------------------------------
-// This is the program proper
-
-let input = ref None
-let modname= ref None
-let internal_module = ref false
-let opens= ref []
-let out = ref None
-let tokenize = ref false
-let compat = ref false
-let log = ref false
-let light = ref None
-let inputCodePage = ref None
+let mutable input = None
+let mutable modname= None
+let mutable out = None
+let mutable log = false
 let mutable lexlib = "FsLexYaccLite.Parsing"
 let mutable parslib = "FsLexYaccLite.Parsing"
 
 let usage =
-  [ ("-o", StringArg (fun s -> out := Some s), "Name the output file.");
-    ("-v", UnitArg (fun () -> log := true), "Produce a listing file."); 
-    ("--module", StringArg (fun s -> modname := Some s), "Define the F# module name to host the generated parser."); 
-    ("--internal", UnitArg (fun () -> internal_module := true), "Generate an internal module");
-    ("--open", StringArg (fun s -> opens := !opens @ [s]), "Add the given module to the list of those to open in both the generated signature and implementation."); 
-    ("--light", UnitArg (fun () ->  light := Some true), "(ignored)");
-    ("--light-off", UnitArg (fun () ->  light := Some false), "Add #light \"off\" to the top of the generated file");
-    ("--ml-compatibility", UnitArg (fun () -> compat := true), "Support the use of the global state from the 'Parsing' module in FSharp.PowerPack.dll."); 
-    ("--tokens", UnitArg (fun () -> tokenize := true), "Simply tokenize the specification file itself."); 
+  [ ("-o", StringArg (fun s -> out <- Some s), "Name the output file.");
+    ("-v", UnitArg (fun () -> log <- true), "Produce a listing file."); 
+    ("--module", StringArg (fun s -> modname <- Some s), "Define the F# module name to host the generated parser."); 
     ("--lexlib", StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer (default: Microsoft.FSharp.Text.Lexing)");
-    ("--parslib", StringArg (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)");
-    ("--codepage", IntArg (fun i -> inputCodePage := Some i), "Assume input lexer specification file is encoded with the given codepage.")]
+    ("--parslib", StringArg (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)")]
 
-let _ = parseCommandLineArgs usage (fun x -> match !input with Some _ -> failwith "more than one input given" | None -> input := Some x) "fsyacc <filename>"
+let _ = parseCommandLineArgs usage (fun x -> match input with Some _ -> failwith "more than one input given" | None -> input <- Some x) "fsyacc <filename>"
 
 let output_int (os: #TextWriter) (n:int) = os.Write(string n)
 
@@ -72,21 +46,13 @@ let actionCoding action  =
   | Error -> errorFlag 
 
 let main() = 
-  let filename = (match !input with Some x -> x | None -> failwith "no input given") in 
+  let filename = (match input with Some x -> x | None -> failwith "no input given") in 
 
   let spec = 
-      let lexbuf = UnicodeFileAsLexbuf(filename, !inputCodePage) 
+      let lexbuf = LexBuffer.FromString(File.ReadAllText(filename))
+      lexbuf.EndPos <- Position.FirstLine(filename)
 
       try 
-        if !tokenize then begin 
-          while true do 
-            printf "tokenize - getting one token";
-            let t = Lexer.token lexbuf in 
-            (*F# printf "tokenize - got %s" (Parser.token_to_string t); F#*)
-            if t = Parser.EOF then exit 0;
-          done;
-        end;
-    
         Parser.spec Lexer.token lexbuf 
       with e -> 
          eprintf "%s(%d,%d): error: %s" filename lexbuf.StartPos.Line lexbuf.StartPos.Column e.Message;
@@ -104,10 +70,10 @@ let main() =
   
   let checkSuffix (x:string) (y:string) = x.EndsWith(y)
 
-  let output = match !out with Some x -> x | _ -> chop_extension filename + (if checkSuffix filename ".mly" then ".ml" else ".fs") in
-  let outputi = match !out with Some x -> chop_extension x + (if checkSuffix x ".ml" then ".mli" else ".fsi") | _ -> chop_extension filename + (if checkSuffix filename ".mly" then ".mli" else ".fsi") in
+  let output = match out with Some x -> x | _ -> chop_extension filename + (if checkSuffix filename ".mly" then ".ml" else ".fs") in
+  let outputi = match out with Some x -> chop_extension x + (if checkSuffix x ".ml" then ".mli" else ".fsi") | _ -> chop_extension filename + (if checkSuffix filename ".mly" then ".mli" else ".fsi") in
   let outputo = 
-      if !log then Some (match !out with Some x -> chop_extension x + ".fsyacc.html" | _ -> chop_extension filename + ".fsyacc.html") 
+      if log then Some (match out with Some x -> chop_extension x + ".fsyacc.html" | _ -> chop_extension filename + ".fsyacc.html") 
       else None 
 
   use os = (File.CreateText output :> TextWriter)
@@ -126,7 +92,7 @@ let main() =
   let preprocessed = processParserSpecAst spec
   let compiled = compile preprocessed
   Option.iter (fun f -> Print.outputCompilationReport f preprocessed compiled) logf
-  if !log then
+  if log then
     Print.outputTableImages filename preprocessed compiled 
   Option.iter (fun f -> fprintfn f "</pre>") logf
 
@@ -140,30 +106,18 @@ let main() =
 
   cprintfn cos "// Implementation file for parser generated by fsyacc";
 
-  if (!light = Some(false)) || (!light = None && checkSuffix output ".ml") then
-      cprintfn cos "#light \"off\"";
-
-  match !modname with 
+  match modname with 
   | None ->
         let moduleName =
             let s = Path.GetFileNameWithoutExtension(filename)
             String(Char.ToUpperInvariant s.[0], 1) + s.Substring(1)
         cprintfn cos "module %s" moduleName
   | Some s -> 
-      match !internal_module with
-      | true ->
-          cprintfn cos "module internal %s" s;
-      | false ->
           cprintfn cos "module %s" s;  
   
   cprintfn cos "#nowarn \"64\""
 
-  for s in !opens do
-      cprintfn cos "open %s" s;
-
   cprintfn cos "open %s" lexlib;
-  if !compat then 
-      cprintfn cos "open Microsoft.FSharp.Compatibility.OCaml.Parsing";
 
   cprintfn cos "%s" code;
   lineCountOutput := !lineCountOutput + code.Replace("\r","").Split([| '\n' |]).Length;
@@ -389,8 +343,6 @@ let main() =
       for prod in preprocessed.Productions do 
           //cprintfn cos "# %d \"%s\"" !lineCountOutput output;
           cprintfn cos "        (fun (parseState : %s.IParseState) ->"  parslib
-          if !compat then 
-              cprintfn cos "            Parsing.set_parse_state parseState;"
           prod.Body |> Array.iteri (fun i sym -> 
               let tyopt =
                   if Array.contains sym preprocessed.NonTerminals then
