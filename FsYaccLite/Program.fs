@@ -171,7 +171,7 @@ let main() =
   cprintfn cos "    | _ -> failwith \"prodIdxToNonTerminal: bad production index\""
 
   cprintfn cos "";
-  cprintfn cos "let _fsyacc_endOfInputTag = %d " compiled.EndOfInputTerminalIndex;
+  cprintfn cos "let endOfInputTag = %d " compiled.EndOfInputTerminalIndex;
   cprintfn cos "";
   cprintfn cos "// This function gets the name of a token as a string";
   cprintfn cos "let token_to_string (t:token) = ";
@@ -181,14 +181,14 @@ let main() =
 
   cprintfn cos "";
   cprintfn cos "// This function gets the data carried by a token as an object";
-  cprintfn cos "let _fsyacc_dataOfToken (t:token) = ";
+  cprintfn cos "let dataOfToken (t:token) = ";
   cprintfn cos "  match t with ";
 
   for (id,typ) in spec.Tokens do
       cprintfn cos "  | %s %s -> %s " 
         id
-        (match typ with Some _ -> "_fsyacc_x" | None -> "")
-        (match typ with Some _ -> "Microsoft.FSharp.Core.Operators.box _fsyacc_x" | None -> "(null : System.Object)")
+        (match typ with Some _ -> "x" | None -> "")
+        (match typ with Some _ -> "Microsoft.FSharp.Core.Operators.box x" | None -> "(null : System.Object)")
 
   for (key,_) in spec.Types |> Seq.countBy fst |> Seq.filter (fun (_,n) -> n > 1)  do
         failwithf "%s is given multiple %%type declarations" key;
@@ -201,7 +201,7 @@ let main() =
   
   let nStates = compiled.States.Length 
   begin 
-      cprintf cos "let _fsyacc_gotos = [| " ;
+      cprintf cos "let gotos = [| " ;
       let numGotoNonTerminals = compiled.GotoTable.[0].Length 
       let gotoIndexes = Array.create numGotoNonTerminals 0 
       let gotoTableCurrIndex = ref 0 in 
@@ -233,14 +233,14 @@ let main() =
                 outputCodedUInt16 os n;
       cprintfn cos "|]" ;
       (* Output offsets into gotos table where the gotos for a particular nonterminal begin *)
-      cprintf cos "let _fsyacc_sparseGotoTableRowOffsets = [|" ;
+      cprintf cos "let sparseGotoTableRowOffsets = [|" ;
       for j = 0 to numGotoNonTerminals-1 do  
           outputCodedUInt16 os gotoIndexes.[j];
       cprintfn cos "|]" ;
   end;
 
   begin 
-      cprintf cos "let _fsyacc_stateToProdIdxsTableElements = [| " ;
+      cprintf cos "let stateToProdIdxsTableElements = [| " ;
       let indexes = Array.create compiled.States.Length 0 
       let currIndex = ref 0 
       for j = 0 to compiled.States.Length - 1 do
@@ -257,7 +257,7 @@ let main() =
                 outputCodedUInt16 os prodIdx;
       cprintfn cos "|]" ;
       (* Output offsets into gotos table where the gotos for a particular nonterminal begin *)
-      cprintf cos "let _fsyacc_stateToProdIdxsTableRowOffsets = [|" ;
+      cprintf cos "let stateToProdIdxsTableRowOffsets = [|" ;
       for idx in indexes do 
           outputCodedUInt16 os idx;
       cprintfn cos "|]" ;
@@ -266,8 +266,8 @@ let main() =
   begin 
     let numActionRows = (Array.length compiled.ActionTable) 
     //let maxActionColumns = Array.length compiled.ActionTable.[0] 
-    cprintfn cos "let _fsyacc_action_rows = %d" numActionRows;
-    cprintf cos "let _fsyacc_actionTableElements = [|" ;
+    cprintfn cos "let action_rows = %d" numActionRows;
+    cprintf cos "let actionTableElements = [|" ;
     let actionIndexes = Array.create numActionRows 0 
     
     let actionTableCurrIndex = ref 0 
@@ -317,20 +317,20 @@ let main() =
             );
     cprintfn cos "|]" ;
     (* Output offsets into actions table where the actions for a particular nonterminal begin *)
-    cprintf cos "let _fsyacc_actionTableRowOffsets = [|" ;
+    cprintf cos "let actionTableRowOffsets = [|" ;
     for j = 0 to numActionRows-1 do  
         cprintf cos "%a" outputCodedUInt16 actionIndexes.[j];
     cprintfn cos "|]" ;
 
   end;
   begin 
-      cprintf cos "let _fsyacc_reductionSymbolCounts = [|" ;
+      cprintf cos "let reductionSymbolCounts = [|" ;
       for prod in preprocessed.Productions do 
           cprintf cos "%a" outputCodedUInt16 prod.Body.Length;
       cprintfn cos "|]" ;
   end;
   begin 
-      cprintf cos "let _fsyacc_productionToNonTerminalTable = [|" ;
+      cprintf cos "let productionToNonTerminalTable = [|" ;
       for prod in compiled.Productions do 
           cprintf cos "%a" outputCodedUInt16 prod.HeadNonTerminalIndex;
       cprintfn cos "|]" ;
@@ -338,7 +338,7 @@ let main() =
   
   let getType nt = if types.ContainsKey nt then  types.[nt] else "'"+nt 
   begin 
-      cprintf cos "let _fsyacc_reductions =" ;
+      cprintf cos "let reductions =" ;
       cprintfn cos "    [| " ;
       for prod in preprocessed.Productions do 
           //cprintfn cos "# %d \"%s\"" !lineCountOutput output;
@@ -376,7 +376,7 @@ let main() =
       done;
       cprintfn cos "|]" ;
   end;
-  cprintfn cos "let tables = %s.Tables(_fsyacc_reductions, _fsyacc_endOfInputTag, tagOfToken, _fsyacc_dataOfToken, _fsyacc_actionTableElements, _fsyacc_actionTableRowOffsets, _fsyacc_reductionSymbolCounts, _fsyacc_gotos, _fsyacc_sparseGotoTableRowOffsets, _fsyacc_productionToNonTerminalTable)" parslib
+  cprintfn cos "let tables = %s.Tables(reductions, endOfInputTag, tagOfToken, dataOfToken, actionTableElements, actionTableRowOffsets, reductionSymbolCounts, gotos, sparseGotoTableRowOffsets, productionToNonTerminalTable)" parslib
 
   for (id,startState) in Seq.zip spec.StartSymbols compiled.StartStates do
         if not (types.ContainsKey id) then 
