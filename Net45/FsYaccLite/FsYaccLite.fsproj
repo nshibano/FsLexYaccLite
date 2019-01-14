@@ -56,7 +56,7 @@
     <Compile Include="Preprocess.fs" />
     <Compile Include="Compile.fs" />
     <Compile Include="Print.fs" />
-    <Compile Include="Yacc.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">
