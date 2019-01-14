@@ -26,7 +26,15 @@ let output_int (os : TextWriter) (n:int) = os.Write(string n)
 
 let outputCodedUInt16 (os: TextWriter) (n:int) = 
   os.Write n;
-  os.Write "us; ";
+  os.Write "us; "
+
+let outputUInt16Array (os : TextWriter) (name : string) (ary : int array) =
+    fprintf os "let %s = [|" name
+    for i = 0 to ary.Length - 1 do  
+        if i <> 0 then
+            fprintf os "; "
+        fprintf os "%dus" ary.[i]
+    fprintfn os "|]"
 
 let shiftFlag = 0x0000
 let reduceFlag = 0x4000
@@ -177,11 +185,7 @@ let main() =
                 outputCodedUInt16 os i;
                 outputCodedUInt16 os n;
       fprintfn os "|]" ;
-      (* Output offsets into gotos table where the gotos for a particular nonterminal begin *)
-      fprintf os "let sparseGotoTableRowOffsets = [|" ;
-      for j = 0 to numGotoNonTerminals-1 do  
-          outputCodedUInt16 os gotoIndexes.[j];
-      fprintfn os "|]" ;
+      outputUInt16Array os "sparseGotoTableRowOffsets" gotoIndexes
   end;
 
   begin 
@@ -241,18 +245,8 @@ let main() =
     fprintfn os "|]" ;
 
   end;
-  begin 
-      fprintf os "let reductionSymbolCounts = [|" ;
-      for prod in preprocessed.Productions do 
-          fprintf os "%a" outputCodedUInt16 prod.Body.Length;
-      fprintfn os "|]" ;
-  end;
-  begin 
-      fprintf os "let productionToNonTerminalTable = [|" ;
-      for prod in compiled.Productions do 
-          fprintf os "%a" outputCodedUInt16 prod.HeadNonTerminalIndex;
-      fprintfn os "|]" ;
-  end;
+  outputUInt16Array os "reductionSymbolCounts" (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions)
+  outputUInt16Array os "productionToNonTerminalTable" (Array.map (fun (prod : CompiledProduction) -> prod.HeadNonTerminalIndex) compiled.Productions)
   
   let getType nt = if types.ContainsKey nt then  types.[nt] else "'"+nt 
   begin 
