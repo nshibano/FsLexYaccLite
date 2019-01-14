@@ -431,9 +431,9 @@ let compile (spec : Preprocessed) =
         | TerminalIndex i -> fst spec.Terminals.[i]
         | NonTerminalIndex i -> spec.NonTerminals.[i]
     
-    let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productions.[item.ProductionIndex].HeadNonTerminalIndex]) spec.StartSymbols
-    let isStartItem1 (item : LR1Item) = isStartItem item.LR0Item    
     let startNonTerminalIndexes = HashSet(Array.map (fun startSymbol -> indexOfNonTerminal.[startSymbol]) spec.StartSymbols)
+    let isStartItem (item : LR0Item) =  startNonTerminalIndexes.Contains(productions.[item.ProductionIndex].HeadNonTerminalIndex)
+    let isStartItem1 (item : LR1Item) = isStartItem item.LR0Item    
 
     reportTime(); printf "building action table..."; stdout.Flush();
     let shiftReduceConflicts = ref 0
