@@ -14,7 +14,7 @@
     <Compile Include="Lexer.fs" />
     <Compile Include="Macros.fs" />
     <Compile Include="Alphabet.fs" />
-    <Compile Include="fslex.fs" />
+    <Compile Include="Program.fs" />
     <None Include="Lexer.fsl" />
     <None Include="Parser.fsy" />
   </ItemGroup>
