@@ -1,6 +1,5 @@
 module FsLexYaccLite.Lexing 
 
-open System
 open System.Collections.Generic
 
 /// Position information stored for lexing tokens
