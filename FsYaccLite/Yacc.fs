@@ -429,18 +429,7 @@ let main() =
       done;
       cprintfn cos "|]" ;
   end;
-  cprintfn cos "let tables () : %s.Tables<_> = " parslib
-  cprintfn cos "  { reductions= _fsyacc_reductions ();"
-  cprintfn cos "    endOfInputTag = _fsyacc_endOfInputTag;"
-  cprintfn cos "    tagOfToken = tagOfToken;"
-  cprintfn cos "    dataOfToken = _fsyacc_dataOfToken; "
-  cprintfn cos "    actionTableElements = _fsyacc_actionTableElements;"
-  cprintfn cos "    actionTableRowOffsets = _fsyacc_actionTableRowOffsets;"
-  cprintfn cos "    reductionSymbolCounts = _fsyacc_reductionSymbolCounts;"
-  cprintfn cos "    gotos = _fsyacc_gotos;"
-  cprintfn cos "    sparseGotoTableRowOffsets = _fsyacc_sparseGotoTableRowOffsets;"
-  cprintfn cos "    productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }"
-  cprintfn cos "let engine lexer lexbuf startState = (tables ()).Interpret(lexer, lexbuf, startState)"                                                                                                         
+  cprintfn cos "let tables () : %s.Tables<token> = %s.Tables(_fsyacc_reductions (), _fsyacc_endOfInputTag, tagOfToken, _fsyacc_dataOfToken, _fsyacc_actionTableElements, _fsyacc_actionTableRowOffsets, _fsyacc_reductionSymbolCounts, _fsyacc_gotos, _fsyacc_sparseGotoTableRowOffsets,  _fsyacc_productionToNonTerminalTable )" parslib parslib
 
   for (id,startState) in Seq.zip spec.StartSymbols compiled.StartStates do
         if not (types.ContainsKey id) then 

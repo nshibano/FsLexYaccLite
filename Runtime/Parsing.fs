@@ -18,32 +18,6 @@ type IParseState =
     /// Get the store of local values associated with this parser
     abstract ParserLocalStore : IDictionary<string,obj>
 
-//-------------------------------------------------------------------------
-// This is the data structure emitted as code by FSYACC.  
-
-type Tables<'tok> = 
-    { 
-      /// The reduction table
-      reductions: (IParseState -> obj) array;
-      /// The token number indicating the end of input
-      endOfInputTag: int;
-      /// A function to compute the tag of a token
-      tagOfToken: 'tok -> int;
-      /// A function to compute the data carried by a token
-      dataOfToken: 'tok -> obj; 
-      /// The sparse action table elements
-      actionTableElements: uint16[];  
-      /// The sparse action table row offsets
-      actionTableRowOffsets: uint16[];
-      /// The number of symbols for each reduction
-      reductionSymbolCounts: uint16[];
-      /// The sparse goto table
-      gotos: uint16[];
-      /// The sparse goto table row offsets
-      sparseGotoTableRowOffsets: uint16[];
-      /// This table is logically part of the Goto table
-      productionToNonTerminalTable: uint16[] }
-
 exception Accept of obj
 
 type AssocTable(elemTab:uint16[], offsetTab:uint16[]) =
@@ -83,18 +57,17 @@ type ValueInfo =
         new (value, startPos, endPos) = { value = value; startPos = startPos; endPos = endPos }
     end
 
-module Implementation =   
-    let anyMarker = 0xffff
-    let shiftFlag = 0x0000
-    let reduceFlag = 0x4000
-    let errorFlag = 0x8000
-    let acceptFlag = 0xc000
-    let actionMask = 0xc000
+type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, actionTableElements : uint16[], actionTableRowOffsets : uint16[], reductionSymbolCounts : uint16[], gotos: uint16[], sparseGotoTableRowOffsets : uint16[], productionToNonTerminalTable : uint16[]) =
+    let [<Literal>] shiftFlag = 0x0000
+    let [<Literal>] reduceFlag = 0x4000
+    let [<Literal>] errorFlag = 0x8000
+    let [<Literal>] acceptFlag = 0xc000
+    let [<Literal>] actionMask = 0xc000
 
     let actionValue action = action &&& (~~~ actionMask)                                    
     let actionKind action = action &&& actionMask
 
-    let interpret (tables: Tables<'tok>) lexer (lexbuf : LexBuffer) initialState =                                                                      
+    member this.Interpret(lexer : LexBuffer -> 'tok, lexbuf : LexBuffer, initialState : int) =                                                                      
         let localStore = new Dictionary<string,obj>() in
         localStore.["LexBuffer"] <- lexbuf
         let stateStack : Stack<int> = new Stack<_>()
@@ -110,9 +83,9 @@ module Implementation =
         let ruleEndPoss   = (Array.zeroCreate 100 : Position array)              
         let ruleValues    = (Array.zeroCreate 100 : obj array)              
         let lhsPos        = (Array.zeroCreate 2 : Position array)                                            
-        let reductions = tables.reductions
-        let actionTable = AssocTable(tables.actionTableElements, tables.actionTableRowOffsets)
-        let gotoTable = AssocTable(tables.gotos, tables.sparseGotoTableRowOffsets)
+        let reductions = reductions
+        let actionTable = AssocTable(actionTableElements, actionTableRowOffsets)
+        let gotoTable = AssocTable(gotos, sparseGotoTableRowOffsets)
 
         let parseState =                                                                                            
             { new IParseState with 
@@ -139,8 +112,8 @@ module Implementation =
                             lookaheadEndPos <- lexbuf.EndPos
                             haveLookahead <- true
                     let tag = 
-                        if haveLookahead then tables.tagOfToken lookaheadToken 
-                        else tables.endOfInputTag   
+                        if haveLookahead then tagOfToken lookaheadToken 
+                        else endOfInputTag   
                                     
                     actionTable.Read(state,tag)
                         
@@ -148,7 +121,7 @@ module Implementation =
                 if kind = shiftFlag then
                     let nextState = actionValue action                                     
                     if not haveLookahead then failwith "unreachable"
-                    let data = tables.dataOfToken lookaheadToken
+                    let data = dataOfToken lookaheadToken
                     valueStack.Push(ValueInfo(data, lookaheadStartPos, lookaheadEndPos));
                     stateStack.Push(nextState);                                                                
                     haveLookahead <- false
@@ -156,7 +129,7 @@ module Implementation =
                 elif kind = reduceFlag then
                     let prod = actionValue action                                     
                     let reduction = reductions.[prod]                                                             
-                    let n = int tables.reductionSymbolCounts.[prod]
+                    let n = int reductionSymbolCounts.[prod]
                     lhsPos.[0] <- Position_Empty                                                                     
                     lhsPos.[1] <- Position_Empty
                     for i = 0 to n - 1 do                                                                             
@@ -173,7 +146,7 @@ module Implementation =
                         let redResult = reduction parseState                                                          
                         valueStack.Push(ValueInfo(redResult, lhsPos.[0], lhsPos.[1]));
                         let currState = stateStack.Peek()
-                        let newGotoState = gotoTable.Read(int tables.productionToNonTerminalTable.[prod], currState)
+                        let newGotoState = gotoTable.Read(int productionToNonTerminalTable.[prod], currState)
                         stateStack.Push(newGotoState)
                     with                                                                                              
                     | Accept res ->                                                                            
@@ -188,6 +161,3 @@ module Implementation =
 
         valueStack.Peek().value
 
-type Tables<'tok> with
-    member tables.Interpret (lexer,lexbuf,initialState) = 
-        Implementation.interpret tables lexer lexbuf initialState
