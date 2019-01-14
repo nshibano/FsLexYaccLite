@@ -15,8 +15,8 @@
     <Compile Include="Macros.fs" />
     <Compile Include="Alphabet.fs" />
     <Compile Include="Program.fs" />
-    <None Include="Lexer.fsl" />
     <None Include="Parser.fsy" />
+    <None Include="Lexer.fsl" />
   </ItemGroup>
 
   <ItemGroup>
