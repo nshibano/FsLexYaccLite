@@ -1,11 +1,6 @@
-// (c) Microsoft Corporation 2005-2009.  
-
-module internal FsLexYacc.Lex.Driver 
-
 open FsLexYaccLite.Common.Arg
-open FsLexYaccLite.Lex
-open FsLexYaccLite.Lex.Syntax
-open FsLexYaccLite.Lex.AST
+open Syntax
+open AST
 open Printf
 //open Internal.Utilities
 //open Internal.Utilities.Text.Lexing

@@ -1,4 +1,4 @@
-﻿module FsLexYaccLite.Lex.Macros
+﻿module Macros
 
 open System.Collections.Generic
 

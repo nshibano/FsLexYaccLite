@@ -1,4 +1,4 @@
-﻿module FsLexYaccLite.Lex.Syntax
+﻿module Syntax
 
 open FsLexYaccLite.Lexing
 

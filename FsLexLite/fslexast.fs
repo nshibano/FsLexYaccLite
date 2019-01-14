@@ -1,11 +1,9 @@
-(* (c) Microsoft Corporation 2005-2008.  *)
-
-module FsLexYaccLite.Lex.AST
+module AST
 
 open System
 open System.Collections.Generic
 
-open FsLexYaccLite.Lex.Syntax
+open Syntax
 
 type MultiMap<'a, 'b> = Dictionary<'a, List<'b>>
 

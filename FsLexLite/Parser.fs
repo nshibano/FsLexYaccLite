@@ -3,15 +3,13 @@ module Parser
 #nowarn "64"
 open FsLexYaccLite.Parsing
 
-(* (c) Microsoft Corporation 2005-2008.  *)
-open FsLexYaccLite.Lex
-open FsLexYaccLite.Lex.Syntax
+open Syntax
 
 // This type is the type of tokens accepted by the parser
 type token = 
   | IDENT of (string)
   | STRING of (string)
-  | CODE of (FsLexYaccLite.Lex.Syntax.Code)
+  | CODE of (Syntax.Code)
   | CHAR of (char)
   | RPAREN
   | LPAREN
@@ -237,7 +235,7 @@ let _fsyacc_reductionSymbolCounts = [|1us; 6us; 1us; 0us; 0us; 2us; 4us; 3us; 1u
 let _fsyacc_productionToNonTerminalTable = [|0us; 1us; 2us; 2us; 3us; 3us; 4us; 5us; 5us; 6us; 7us; 7us; 8us; 8us; 9us; 9us; 10us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 12us; 12us; 12us; |]
 let _fsyacc_reductions ()  =    [| 
         (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : FsLexYaccLite.Lex.Syntax.Spec)) in
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.Spec)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
@@ -254,9 +252,9 @@ let _fsyacc_reductions ()  =    [|
                    (
                                                                     { TopCode=_1;Macros=_2;Rules=_4;BottomCode=_5 } 
                    )
-                 : FsLexYaccLite.Lex.Syntax.Spec));
+                 : Syntax.Spec));
         (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : FsLexYaccLite.Lex.Syntax.Code)) in
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.Code)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
@@ -372,7 +370,7 @@ let _fsyacc_reductions ()  =    [|
                  : 'clauses));
         (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : FsLexYaccLite.Lex.Syntax.Code)) in
+            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.Code)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
@@ -523,5 +521,5 @@ let tables () : FsLexYaccLite.Parsing.Tables<_> =
     tagOfErrorTerminal = _fsyacc_tagOfErrorTerminal;
     productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }
 let engine lexer lexbuf startState = (tables ()).Interpret(lexer, lexbuf, startState)
-let spec lexer lexbuf : FsLexYaccLite.Lex.Syntax.Spec =
+let spec lexer lexbuf : Syntax.Spec =
     Microsoft.FSharp.Core.Operators.unbox ((tables ()).Interpret(lexer, lexbuf, 0))

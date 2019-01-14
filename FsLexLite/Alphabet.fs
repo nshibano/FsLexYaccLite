@@ -1,7 +1,7 @@
-﻿module FsLexYaccLite.Lex.Alphabet
+﻿module Alphabet
 
 open System.Collections.Generic
-open FsLexYaccLite.Lex.Syntax
+open Syntax
 
 /// Returns index of the highest item of the items which is equal to or lower than the key.
 /// If there is no such item returns -1.

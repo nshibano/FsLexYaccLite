@@ -1,17 +1,15 @@
 %{
-(* (c) Microsoft Corporation 2005-2008.  *)
-open FsLexYaccLite.Lex
-open FsLexYaccLite.Lex.Syntax
+open Syntax
 %} 
 
 %token <string> STRING IDENT
-%token <FsLexYaccLite.Lex.Syntax.Code> CODE 
+%token <Syntax.Code> CODE 
 %token <char> CHAR
 %token RULE PARSE LET  AND LPAREN RPAREN
 %token EOF BAR DOT PLUS STAR QMARK EQUALS UNDERSCORE LBRACK RBRACK HAT DASH
 %token ENDE
 
-%type <FsLexYaccLite.Lex.Syntax.Spec> spec
+%type <Syntax.Spec> spec
 %start spec
 
 %left BAR
