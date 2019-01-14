@@ -1,8 +1,5 @@
 module Lexer 
-(* (c) Microsoft Corporation 2005-2008.  *)
-
-  
-open FsLexYacc.FsYacc.Syntax
+open Syntax
 open Parser
 open System.Text
 open FsLexYaccLite.Lexing

@@ -1,11 +1,9 @@
-﻿module FsLexYacc.FsYacc.Compile
+﻿module Compile
 
 open System
 open System.Collections.Generic
 open System.Diagnostics
-
 open Printf
-
 open Syntax
 open Preprocess
 

@@ -1,13 +1,11 @@
-﻿module FsLexYacc.FsYacc.Print
+﻿module Print
 
 open System
 open System.Collections.Generic
 open System.IO
 open System.Drawing
 open System.Drawing.Imaging
-
 open Printf
-
 open Syntax
 open Preprocess
 open Compile

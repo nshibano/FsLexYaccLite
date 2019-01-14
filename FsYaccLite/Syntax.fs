@@ -1,5 +1,4 @@
-// (c) Microsoft Corporation 2005-2007.
-module FsLexYacc.FsYacc.Syntax
+module Syntax
 
 type Identifier = string
 type Code = string * FsLexYaccLite.Lexing.Position

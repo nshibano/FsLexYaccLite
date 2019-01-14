@@ -1,13 +1,8 @@
-(* (c) Microsoft Corporation 2005-2008.  *)
-
-module internal FsLexYacc.FsYacc.Driver 
-
 open System
 open System.IO 
 open System.Collections.Generic
 open Printf
 open FsLexYaccLite.Lexing
-
 open FsLexYaccLite.Common.Arg
 open Syntax
 open Preprocess
@@ -389,7 +384,7 @@ let main() =
   
   let getType nt = if types.ContainsKey nt then  types.[nt] else "'"+nt 
   begin 
-      cprintf cos "let _fsyacc_reductions ()  =" ;
+      cprintf cos "let _fsyacc_reductions =" ;
       cprintfn cos "    [| " ;
       for prod in preprocessed.Productions do 
           //cprintfn cos "# %d \"%s\"" !lineCountOutput output;
@@ -429,14 +424,14 @@ let main() =
       done;
       cprintfn cos "|]" ;
   end;
-  cprintfn cos "let tables () : %s.Tables<token> = %s.Tables(_fsyacc_reductions (), _fsyacc_endOfInputTag, tagOfToken, _fsyacc_dataOfToken, _fsyacc_actionTableElements, _fsyacc_actionTableRowOffsets, _fsyacc_reductionSymbolCounts, _fsyacc_gotos, _fsyacc_sparseGotoTableRowOffsets,  _fsyacc_productionToNonTerminalTable )" parslib parslib
+  cprintfn cos "let tables = %s.Tables(_fsyacc_reductions, _fsyacc_endOfInputTag, tagOfToken, _fsyacc_dataOfToken, _fsyacc_actionTableElements, _fsyacc_actionTableRowOffsets, _fsyacc_reductionSymbolCounts, _fsyacc_gotos, _fsyacc_sparseGotoTableRowOffsets, _fsyacc_productionToNonTerminalTable)" parslib
 
   for (id,startState) in Seq.zip spec.StartSymbols compiled.StartStates do
         if not (types.ContainsKey id) then 
           failwith ("a %type declaration is required for for start token "+id);
         let ty = types.[id] in 
         cprintfn cos "let %s lexer lexbuf : %s =" id ty;
-        cprintfn cos "    Microsoft.FSharp.Core.Operators.unbox ((tables ()).Interpret(lexer, lexbuf, %d))" startState
+        cprintfn cos "    Microsoft.FSharp.Core.Operators.unbox (tables.Interpret(lexer, lexbuf, %d))" startState
 
   for id in spec.StartSymbols do
       if not (types.ContainsKey id) then 

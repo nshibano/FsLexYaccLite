@@ -1,13 +1,5 @@
 %{
-(* (c) Microsoft Corporation 2005-2008.  *)
-
-// FsLexYacc.FsYacc.Parser
-
-open FsLexYacc.FsYacc
-open FsLexYacc.FsYacc.Syntax
-
-#nowarn "62" // This construct is for ML compatibility
-
+open Syntax
 %} 
 
 %type <Syntax.ParserSpec> spec
@@ -18,6 +10,7 @@ open FsLexYacc.FsYacc.Syntax
 %token <string option> TOKEN
 %start spec
 %left BAR
+
 %%      
 
 spec: 

@@ -3,15 +3,7 @@ module Parser
 #nowarn "64"
 open FsLexYaccLite.Parsing
 
-(* (c) Microsoft Corporation 2005-2008.  *)
-
-// FsLexYacc.FsYacc.Parser
-
-open FsLexYacc.FsYacc
-open FsLexYacc.FsYacc.Syntax
-
-#nowarn "62" // This construct is for ML compatibility
-
+open Syntax
 
 // This type is the type of tokens accepted by the parser
 type token = 

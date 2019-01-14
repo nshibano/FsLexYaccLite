@@ -1,7 +1,6 @@
-﻿module FsLexYacc.FsYacc.Preprocess
+﻿module Preprocess
 
 open System.Collections.Generic
-
 open Syntax
 
 type Production =
