@@ -55,7 +55,7 @@ type ValueInfo =
         new (value, startPos, endPos) = { value = value; startPos = startPos; endPos = endPos }
     end
 
-type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, actionTableElements : uint16[], actionTableRowOffsets : uint16[], reductionSymbolCounts : uint16[], gotos: uint16[], sparseGotoTableRowOffsets : uint16[], productionToNonTerminalTable : uint16[]) =
+type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, actionTableElements : uint16[], actionTableRowOffsets : uint16[], reductionSymbolCounts : uint16[], gotos: uint16[], sparseGotoTableRowOffsets : uint16[], productionToNonTerminalTable : uint16[], maxProductionBodyLength) =
     let [<Literal>] shiftFlag = 0x0000
     let [<Literal>] reduceFlag = 0x4000
     let [<Literal>] errorFlag = 0x8000
@@ -77,22 +77,22 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
         let mutable lookaheadStartPos = Unchecked.defaultof<Position>
         let mutable finished = false
 
-        let ruleStartPoss = (Array.zeroCreate 100 : Position array)              
-        let ruleEndPoss   = (Array.zeroCreate 100 : Position array)              
-        let ruleValues    = (Array.zeroCreate 100 : obj array)              
-        let lhsPos        = (Array.zeroCreate 2 : Position array)                                            
+        let ruleStartPoss = Array.zeroCreate<Position> maxProductionBodyLength
+        let ruleEndPoss   = Array.zeroCreate<Position> maxProductionBodyLength
+        let ruleValues    = Array.zeroCreate<obj> maxProductionBodyLength
+        let lhsPos        = Array.zeroCreate<Position> 2
         let reductions = reductions
         let actionTable = AssocTable(actionTableElements, actionTableRowOffsets)
         let gotoTable = AssocTable(gotos, sparseGotoTableRowOffsets)
 
-        let parseState =                                                                                            
+        let parseState =
             { new IParseState with 
-                member p.InputRange(n) = ruleStartPoss.[n-1], ruleEndPoss.[n-1]; 
+                member p.InputRange(n) = ruleStartPoss.[n-1], ruleEndPoss.[n-1]
                 member p.InputStartPosition(n) = ruleStartPoss.[n-1]
-                member p.InputEndPosition(n) = ruleEndPoss.[n-1]; 
-                member p.GetInput(n)    = ruleValues.[n-1];        
-                member p.ResultRange    = (lhsPos.[0], lhsPos.[1]);  
-                member p.ParserLocalStore = (localStore :> IDictionary<_,_>); 
+                member p.InputEndPosition(n) = ruleEndPoss.[n-1]
+                member p.GetInput(n)    = ruleValues.[n-1] 
+                member p.ResultRange    = (lhsPos.[0], lhsPos.[1])
+                member p.ParserLocalStore = (localStore :> IDictionary<_,_>)
             }       
 
         while not finished do                                                                                    

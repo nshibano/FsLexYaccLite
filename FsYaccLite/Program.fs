@@ -248,6 +248,8 @@ let main() =
   outputUInt16Array os "reductionSymbolCounts" (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions)
   outputUInt16Array os "productionToNonTerminalTable" (Array.map (fun (prod : CompiledProduction) -> prod.HeadNonTerminalIndex) compiled.Productions)
   
+  fprintfn os "let maxProductionBodyLength = %d" (Array.max (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions))
+
   let getType nt = if types.ContainsKey nt then  types.[nt] else "'"+nt 
   begin 
       fprintf os "let reductions =" ;
@@ -287,7 +289,7 @@ let main() =
       done;
       fprintfn os "|]" ;
   end;
-  fprintfn os "let tables = %s.Tables(reductions, endOfInputTag, tagOfToken, dataOfToken, actionTableElements, actionTableRowOffsets, reductionSymbolCounts, gotos, sparseGotoTableRowOffsets, productionToNonTerminalTable)" parslib
+  fprintfn os "let tables = %s.Tables(reductions, endOfInputTag, tagOfToken, dataOfToken, actionTableElements, actionTableRowOffsets, reductionSymbolCounts, gotos, sparseGotoTableRowOffsets, productionToNonTerminalTable, maxProductionBodyLength)" parslib
 
   for (id,startState) in Seq.zip spec.StartSymbols compiled.StartStates do
         if not (types.ContainsKey id) then 
