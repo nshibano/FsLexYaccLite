@@ -130,20 +130,6 @@ let main() =
           | None -> cprintfn out "  | %s" id
           | Some ty -> cprintfn out "  | %s of (%s)" id ty; 
 
-  cprintfn cos "// This type is used to give symbolic names to token indexes, useful for error messages";
-  for out in [cos] do
-      cprintfn out "type tokenId = ";
-      for id,typ in spec.Tokens do 
-          cprintfn out "    | TOKEN_%s" id;
-      cprintfn out "    | TOKEN_end_of_input";
-      cprintfn out "    | TOKEN_error";
-
-  cprintfn cos "// This type is used to give symbolic names to token indexes, useful for error messages";
-  for out in [cos] do
-      cprintfn out "type nonTerminalId = ";
-      for nt in preprocessed.NonTerminals do 
-          cprintfn out "    | NONTERM_%s" nt;
-
   cprintfn cos "";
   cprintfn cos "// This function maps tokens to integer indexes";
   cprintfn cos "let tagOfToken (t:token) = ";
@@ -152,32 +138,8 @@ let main() =
       cprintfn cos "  | %s %s -> %d " id (match typ with Some _ -> "_" | None -> "") i);
 
   cprintfn cos "";
-  cprintfn cos "// This function maps integer indexes to symbolic token ids";
-  cprintfn cos "let tokenTagToTokenId (tokenIdx:int) = ";
-  cprintfn cos "  match tokenIdx with";
-  spec.Tokens |> List.iteri (fun i (id,typ) -> 
-      cprintfn cos "  | %d -> TOKEN_%s " i id)
-  cprintfn cos "  | %d -> TOKEN_end_of_input" compiled.EndOfInputTerminalIndex
-  cprintfn cos "  | %d -> TOKEN_error" compiled.ErrorTerminalIndex
-  cprintfn cos "  | _ -> failwith \"tokenTagToTokenId: bad token\""
-
-
-  cprintfn cos "";
-  cprintfn cos "/// This function maps production indexes returned in syntax errors to strings representing the non terminal that would be produced by that production";
-  cprintfn cos "let prodIdxToNonTerminal (prodIdx:int) = ";
-  cprintfn cos "  match prodIdx with";
-  preprocessed.Productions |> Array.iteri (fun i prod -> 
-      cprintfn cos "    | %d -> NONTERM_%s " i prod.Head);
-  cprintfn cos "    | _ -> failwith \"prodIdxToNonTerminal: bad production index\""
-
-  cprintfn cos "";
   cprintfn cos "let endOfInputTag = %d " compiled.EndOfInputTerminalIndex;
   cprintfn cos "";
-  cprintfn cos "// This function gets the name of a token as a string";
-  cprintfn cos "let token_to_string (t:token) = ";
-  cprintfn cos "  match t with ";
-  spec.Tokens |> List.iteri (fun i (id,typ) -> 
-      cprintfn cos "  | %s %s -> \"%s\" " id (match typ with Some _ -> "_" | None -> "") id);
 
   cprintfn cos "";
   cprintfn cos "// This function gets the data carried by a token as an object";
