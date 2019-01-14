@@ -16,10 +16,10 @@ type IParseState =
     /// Get the value produced by the terminal or non-terminal at the given position
     abstract GetInput: int -> obj 
     /// Get the store of local values associated with this parser
-    abstract ParserLocalStore : IDictionary<string,obj>
+    abstract ParserLocalStore : IDictionary<string, obj>
 
 type AssocTable(elemTab:uint16[], offsetTab:uint16[]) =
-    let cache = Dictionary()
+    let cache = Dictionary<int, int>()
 
     member t.readAssoc (minElemNum,maxElemNum,defaultValueOfAssoc,keyToFind) =     
         let elemNumber : int = (minElemNum+maxElemNum)/2
@@ -32,7 +32,7 @@ type AssocTable(elemTab:uint16[], offsetTab:uint16[]) =
             elif keyToFind < x then t.readAssoc (minElemNum ,elemNumber,defaultValueOfAssoc,keyToFind)
             else                    t.readAssoc (elemNumber+1,maxElemNum,defaultValueOfAssoc,keyToFind)
 
-    member t.Read(rowNumber ,keyToFind) =
+    member t.Read(rowNumber, keyToFind) =
         
         let mutable res = 0 
         let cacheKey = (rowNumber <<< 16) ||| keyToFind
@@ -66,11 +66,11 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
     let actionKind action = action &&& actionMask
 
     member this.Interpret(lexer : LexBuffer -> 'tok, lexbuf : LexBuffer, initialState : int) =                                                                      
-        let localStore = new Dictionary<string,obj>() in
+        let localStore = Dictionary<string, obj>()
         localStore.["LexBuffer"] <- lexbuf
-        let stateStack : Stack<int> = new Stack<_>()
-        stateStack.Push(initialState);
-        let valueStack = new Stack<ValueInfo>()
+        let stateStack = Stack<int>()
+        stateStack.Push(initialState)
+        let valueStack = Stack<ValueInfo>()
         let mutable haveLookahead = false                                                                              
         let mutable lookaheadToken = Unchecked.defaultof<'tok>
         let mutable lookaheadEndPos = Unchecked.defaultof<Position>
@@ -81,18 +81,17 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
         let ruleEndPoss   = Array.zeroCreate<Position> maxProductionBodyLength
         let ruleValues    = Array.zeroCreate<obj> maxProductionBodyLength
         let lhsPos        = Array.zeroCreate<Position> 2
-        let reductions = reductions
         let actionTable = AssocTable(actionTableElements, actionTableRowOffsets)
         let gotoTable = AssocTable(gotos, sparseGotoTableRowOffsets)
 
         let parseState =
             { new IParseState with 
-                member p.InputRange(n) = ruleStartPoss.[n-1], ruleEndPoss.[n-1]
+                member p.InputRange(n) = (ruleStartPoss.[n-1], ruleEndPoss.[n-1])
                 member p.InputStartPosition(n) = ruleStartPoss.[n-1]
                 member p.InputEndPosition(n) = ruleEndPoss.[n-1]
-                member p.GetInput(n)    = ruleValues.[n-1] 
+                member p.GetInput(n)    = ruleValues.[n-1]
                 member p.ResultRange    = (lhsPos.[0], lhsPos.[1])
-                member p.ParserLocalStore = (localStore :> IDictionary<_,_>)
+                member p.ParserLocalStore = localStore :> IDictionary<_,_>
             }       
 
         while not finished do                                                                                    
@@ -113,15 +112,15 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
                         if haveLookahead then tagOfToken lookaheadToken 
                         else endOfInputTag   
                                     
-                    actionTable.Read(state,tag)
+                    actionTable.Read(state, tag)
                         
                 let kind = actionKind action 
                 if kind = shiftFlag then
                     let nextState = actionValue action                                     
                     if not haveLookahead then failwith "unreachable"
                     let data = dataOfToken lookaheadToken
-                    valueStack.Push(ValueInfo(data, lookaheadStartPos, lookaheadEndPos));
-                    stateStack.Push(nextState);                                                                
+                    valueStack.Push(ValueInfo(data, lookaheadStartPos, lookaheadEndPos))
+                    stateStack.Push(nextState)                                                           
                     haveLookahead <- false
 
                 elif kind = reduceFlag then
