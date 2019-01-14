@@ -46,17 +46,13 @@ type Tables<'tok> =
       /// The tag of the error terminal
       tagOfErrorTerminal: int }
 
-/// Indicates an accept action has occured
 exception Accept of obj
 
-//-------------------------------------------------------------------------
-// Read the tables written by FSYACC.  
 
 type AssocTable(elemTab:uint16[], offsetTab:uint16[]) =
     let cache = Dictionary()
 
     member t.readAssoc (minElemNum,maxElemNum,defaultValueOfAssoc,keyToFind) =     
-        // do a binary chop on the table 
         let elemNumber : int = (minElemNum+maxElemNum)/2
         if elemNumber = maxElemNum 
         then defaultValueOfAssoc
@@ -69,13 +65,6 @@ type AssocTable(elemTab:uint16[], offsetTab:uint16[]) =
 
     member t.Read(rowNumber ,keyToFind) =
         
-        // First check the sparse lookaside table
-        // Performance note: without this lookaside table the binary chop in readAssoc
-        // takes up around 10% of of parsing time 
-        // for parsing intensive samples such as the bootstrapped F# compiler.
-        //
-        // Note: using a .NET Dictionary for this int -> int table looks like it could be sub-optimal.
-        // Some other better sparse lookup table may be better.
         let mutable res = 0 
         let cacheKey = (rowNumber <<< 16) ||| keyToFind
         let ok = cache.TryGetValue(cacheKey, &res) 
@@ -89,16 +78,6 @@ type AssocTable(elemTab:uint16[], offsetTab:uint16[]) =
             cache.[cacheKey] <- res
             res
 
-    // Read all entries in the association table
-    // Used during error recovery to find all valid entries in the table
-    member x.ReadAll(n) =       
-        let headOfTable = int offsetTab.[n]
-        let firstElemNumber = headOfTable + 1           
-        let numberOfElementsInAssoc = int32 elemTab.[headOfTable*2]           
-        let defaultValueOfAssoc = int elemTab.[headOfTable*2+1]          
-        [ for i in firstElemNumber .. (firstElemNumber+numberOfElementsInAssoc-1) -> 
-            (int elemTab.[i*2], int elemTab.[i*2+1]) ], defaultValueOfAssoc
-
 type ValueInfo = 
     struct
         val value: obj
@@ -108,7 +87,6 @@ type ValueInfo =
     end
 
 module Implementation =   
-    // Definitions shared with fsyacc 
     let anyMarker = 0xffff
     let shiftFlag = 0x0000
     let reduceFlag = 0x4000
@@ -118,9 +96,6 @@ module Implementation =
 
     let actionValue action = action &&& (~~~ actionMask)                                    
     let actionKind action = action &&& actionMask
-
-    //-------------------------------------------------------------------------
-    // interpret the tables emitted by FSYACC.  
 
     let interpret (tables: Tables<'tok>) lexer (lexbuf : LexBuffer) initialState =                                                                      
         let localStore = new Dictionary<string,obj>() in
@@ -134,7 +109,6 @@ module Implementation =
         let mutable lookaheadStartPos = Unchecked.defaultof<Position>
         let mutable finished = false
 
-        // The 100 here means a maximum of 100 elements for each rule
         let ruleStartPoss = (Array.zeroCreate 100 : Position array)              
         let ruleEndPoss   = (Array.zeroCreate 100 : Position array)              
         let ruleValues    = (Array.zeroCreate 100 : obj array)              
@@ -152,37 +126,6 @@ module Implementation =
                 member p.ResultRange    = (lhsPos.[0], lhsPos.[1]);  
                 member p.ParserLocalStore = (localStore :> IDictionary<_,_>); 
             }       
-
-        // Pop the stack until we can shift the 'error' token. If 'tokenOpt' is given
-        // then keep popping until we can shift both the 'error' token and the token in 'tokenOpt'.
-        // This is used at end-of-file to make sure we can shift both the 'error' token and the 'EOF' token.
-        let rec popStackUntilErrorShifted(tokenOpt) =
-            // Keep popping the stack until the "error" terminal is shifted
-            if stateStack.Count = 0 then 
-                failwith "parse error";
-            
-            let currState = stateStack.Peek()
-            
-            let action = actionTable.Read(currState, tables.tagOfErrorTerminal)
-            
-            if actionKind action = shiftFlag &&  
-                (match tokenOpt with 
-                 | None -> true
-                 | Some(token) -> 
-                    let nextState = actionValue action 
-                    actionKind (actionTable.Read(nextState, tables.tagOfToken(token))) = shiftFlag) then
-
-                let nextState = actionValue action 
-                // The "error" non terminal needs position information, though it tends to be unreliable.
-                // Use the StartPos/EndPos from the lex buffer
-                valueStack.Push(ValueInfo(box (), lexbuf.StartPos, lexbuf.EndPos));
-                stateStack.Push(nextState)
-            else
-                if valueStack.Count = 0 then 
-                    failwith "parse error";
-                valueStack.Pop() |> ignore
-                stateStack.Pop() |> ignore
-                popStackUntilErrorShifted(tokenOpt)
 
         while not finished do                                                                                    
             if stateStack.Count = 0 then 
@@ -202,7 +145,6 @@ module Implementation =
                         if haveLookahead then tables.tagOfToken lookaheadToken 
                         else tables.endOfInputTag   
                                     
-                    // Printf.printf "state %d\n" state  
                     actionTable.Read(state,tag)
                         
                 let kind = actionKind action 
@@ -250,7 +192,5 @@ module Implementation =
         valueStack.Peek().value
 
 type Tables<'tok> with
-    /// Interpret the parser table taking input from the given lexer, using the given lex buffer, and the given start state.
-    /// Returns an object indicating the final synthesized value for the parse.
     member tables.Interpret (lexer,lexbuf,initialState) = 
         Implementation.interpret tables lexer lexbuf initialState
