@@ -1,3 +1,5 @@
+(c) Microsoft Corporation 2005-2008.
+
 Apache License
 Version 2.0, January 2004
 http://www.apache.org/licenses/
