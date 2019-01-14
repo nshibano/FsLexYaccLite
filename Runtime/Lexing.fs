@@ -1,5 +1,6 @@
 module FsLexYaccLite.Lexing 
 
+open System
 open System.Collections.Generic
 
 /// Position information stored for lexing tokens
@@ -12,14 +13,8 @@ type Position =
         /// using AsNewLinePos() and by modifying the EndPos property of the LexBuffer.
         Line : int
 
-        /// The line number for the position in the original source file
-        OriginalLine : int
-
         /// The absolute offset of the beginning of the line
         StartOfLine : int
-
-        /// The file name associated with the input stream.
-        FileName : string
     }
 
     /// Return the column number marked by the position, i.e. the difference between the AbsoluteOffset and the StartOfLineAbsoluteOffset
@@ -27,28 +22,26 @@ type Position =
     /// Given a position just beyond the end of a line, return a position at the start of the next line
     member pos.NextLine = 
         { pos with 
-                OriginalLine = pos.OriginalLine + 1
                 Line = pos.Line + 1 
                 StartOfLine = pos.AbsoluteOffset }
     /// Given a position at the start of a token of length n, return a position just beyond the end of the token
     member pos.EndOfToken(n) = { pos with AbsoluteOffset = pos.AbsoluteOffset + n }
     /// Gives a position shifted by specified number of characters
     member pos.ShiftColumnBy(by) = {pos with AbsoluteOffset = pos.AbsoluteOffset + by }
-    /// Get an arbitrary position, with the empty string as filename, and  
-    static member Empty = 
-        { FileName = ""
-          Line = 0
-          OriginalLine = 0
-          StartOfLine = 0
-          AbsoluteOffset = 0 }
-    /// Get a position corresponding to the first line (line number 1) in a given file
-    static member FirstLine(filename) = 
-        { FileName = filename
-          OriginalLine = 1
-          Line = 1
-          StartOfLine = 0
-          AbsoluteOffset = 0 }
-    
+    member pos.IsEmpty = pos.AbsoluteOffset = System.Int32.MinValue
+
+/// Dummy position value which represents an absence of position information.
+let Position_Empty = 
+    { AbsoluteOffset = Int32.MinValue
+      Line = 0
+      StartOfLine = 0 }
+
+/// Position corresponding to the first line (line number 1) in a given file
+let Position_Zero =
+    { AbsoluteOffset = 0
+      Line = 1
+      StartOfLine = 0 }
+
 type LexBuffer =
     { String : string
       mutable ScanStart : int
@@ -69,8 +62,8 @@ type LexBuffer =
           LexemeLength = 0   
           AcceptAction = -1
           IsPastEndOfStream = false
-          StartPos = Position.Empty
-          EndPos = Position.Empty
+          StartPos = Position_Zero
+          EndPos = Position_Zero
           LocalStore = Dictionary() }
 
 type UnicodeTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[], nonAsciiAlphabetTable : uint16[], transitionTable: int16[][], acceptTable: int16[]) =

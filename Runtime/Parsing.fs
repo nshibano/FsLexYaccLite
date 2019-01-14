@@ -218,8 +218,8 @@ module Implementation =
                     let prod = actionValue action                                     
                     let reduction = reductions.[prod]                                                             
                     let n = int tables.reductionSymbolCounts.[prod]
-                    lhsPos.[0] <- Position.Empty;                                                                     
-                    lhsPos.[1] <- Position.Empty;  
+                    lhsPos.[0] <- Position_Empty                                                                     
+                    lhsPos.[1] <- Position_Empty
                     for i = 0 to n - 1 do                                                                             
                         if valueStack.Count = 0 then failwith "unreachable"
                         let topVal = valueStack.Peek()
@@ -228,8 +228,8 @@ module Implementation =
                         ruleValues.[(n-i)-1] <- topVal.value;  
                         ruleStartPoss.[(n-i)-1] <- topVal.startPos;  
                         ruleEndPoss.[(n-i)-1] <- topVal.endPos;  
-                        if lhsPos.[1] = Position.Empty then lhsPos.[1] <- topVal.endPos;
-                        if not (topVal.startPos = Position.Empty) then lhsPos.[0] <- topVal.startPos
+                        if lhsPos.[1].IsEmpty then lhsPos.[1] <- topVal.endPos;
+                        if not topVal.startPos.IsEmpty then lhsPos.[0] <- topVal.startPos
                     try                                                                                               
                         let redResult = reduction parseState                                                          
                         valueStack.Push(ValueInfo(redResult, lhsPos.[0], lhsPos.[1]));
