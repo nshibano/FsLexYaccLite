@@ -233,3 +233,7 @@ Net45/FsYaccLite/Preprocess.fs
 Net45/FsYaccLite/Print.fs
 Net45/FsYaccLite/Syntax.fs
 Net45/FsYaccLite/Yacc.fs
+Net45/FsLexLite/Compile.fs
+Net45/FsLexLite/Lexer.fs
+Net45/FsLexLite/Parser.fs
+Net45/FsLexLite/Program.fs
