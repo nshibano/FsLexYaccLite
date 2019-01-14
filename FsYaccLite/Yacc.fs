@@ -223,7 +223,6 @@ let main() =
 
   cprintfn cos "";
   cprintfn cos "let _fsyacc_endOfInputTag = %d " compiled.EndOfInputTerminalIndex;
-  cprintfn cos "let _fsyacc_tagOfErrorTerminal = %d" compiled.ErrorTerminalIndex;
   cprintfn cos "";
   cprintfn cos "// This function gets the name of a token as a string";
   cprintfn cos "let token_to_string (t:token) = ";
@@ -440,7 +439,6 @@ let main() =
   cprintfn cos "    reductionSymbolCounts = _fsyacc_reductionSymbolCounts;"
   cprintfn cos "    gotos = _fsyacc_gotos;"
   cprintfn cos "    sparseGotoTableRowOffsets = _fsyacc_sparseGotoTableRowOffsets;"
-  cprintfn cos "    tagOfErrorTerminal = _fsyacc_tagOfErrorTerminal;"  
   cprintfn cos "    productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }"
   cprintfn cos "let engine lexer lexbuf startState = (tables ()).Interpret(lexer, lexbuf, startState)"                                                                                                         
 

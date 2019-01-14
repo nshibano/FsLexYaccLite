@@ -42,12 +42,9 @@ type Tables<'tok> =
       /// The sparse goto table row offsets
       sparseGotoTableRowOffsets: uint16[];
       /// This table is logically part of the Goto table
-      productionToNonTerminalTable: uint16[];
-      /// The tag of the error terminal
-      tagOfErrorTerminal: int }
+      productionToNonTerminalTable: uint16[] }
 
 exception Accept of obj
-
 
 type AssocTable(elemTab:uint16[], offsetTab:uint16[]) =
     let cache = Dictionary()
