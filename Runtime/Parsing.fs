@@ -18,8 +18,6 @@ type IParseState =
     /// Get the store of local values associated with this parser
     abstract ParserLocalStore : IDictionary<string,obj>
 
-exception Accept of obj
-
 type AssocTable(elemTab:uint16[], offsetTab:uint16[]) =
     let cache = Dictionary()
 
@@ -142,16 +140,11 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
                         ruleEndPoss.[(n-i)-1] <- topVal.endPos;  
                         if lhsPos.[1].IsEmpty then lhsPos.[1] <- topVal.endPos;
                         if not topVal.startPos.IsEmpty then lhsPos.[0] <- topVal.startPos
-                    try                                                                                               
-                        let redResult = reduction parseState                                                          
-                        valueStack.Push(ValueInfo(redResult, lhsPos.[0], lhsPos.[1]));
-                        let currState = stateStack.Peek()
-                        let newGotoState = gotoTable.Read(int productionToNonTerminalTable.[prod], currState)
-                        stateStack.Push(newGotoState)
-                    with                                                                                              
-                    | Accept res ->                                                                            
-                          finished <- true                                                                        
-                          valueStack.Push(ValueInfo(res, lhsPos.[0], lhsPos.[1]))
+                    let redResult = reduction parseState                                                          
+                    valueStack.Push(ValueInfo(redResult, lhsPos.[0], lhsPos.[1]));
+                    let currState = stateStack.Peek()
+                    let newGotoState = gotoTable.Read(int productionToNonTerminalTable.[prod], currState)
+                    stateStack.Push(newGotoState)
                 elif kind = errorFlag then
                     failwith "parse error"
                 elif kind = acceptFlag then 

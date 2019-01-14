@@ -281,7 +281,7 @@ let main() =
                   fprintfn os "                     %s" line;
               if !dollar then os.Write '$'
           | None -> 
-              fprintfn os "                      raise (%s.Accept(Microsoft.FSharp.Core.Operators.box _1))" parslib
+              fprintfn os "                      failwith \"unreachable\""
           fprintfn os "                   )";
           fprintfn os "                 : %s));" (if types.ContainsKey prod.Head then  types.[prod.Head] else "'" + prod.Head);
       done;
