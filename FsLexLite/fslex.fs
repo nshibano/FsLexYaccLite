@@ -60,7 +60,7 @@ let main() =
         let alphabetTable = Alphabet.createTable true expanded
         printfn "%d alphabets" alphabetTable.AlphabetCount
         let translated = Alphabet.translate alphabetTable expanded
-        let dfaNodes = Compile translated
+        let dfaNodes = compile translated
         printfn "%d states" dfaNodes.Length
         let actions = List.map snd clauses
         (name, args, alphabetTable, dfaNodes, actions)) spec.Rules

@@ -7,7 +7,7 @@ type MultiMap<'a, 'b> = Dictionary<'a, List<'b>>
 
 let createMultiMap() : MultiMap<_, _> = Dictionary()
 
-let AddToMultiMap (dict : MultiMap<_,_>) a b =
+let addToMultiMap (dict : MultiMap<_,_>) a b =
     match dict.TryGetValue(a) with
     | true, l -> l.Add(b)
     | false, _ ->
@@ -24,7 +24,7 @@ type NfaNodeMap = List<NfaNode>
 
 let [<Literal>] Epsilon = -1
 
-let NfaOfRule (regexps: Regexp list) = 
+let nfaOfRule (regexps: Regexp list) = 
 
     /// Table allocating node ids 
     let nfaNodeMap = new NfaNodeMap()
@@ -33,7 +33,7 @@ let NfaOfRule (regexps: Regexp list) =
         let nodeId = nfaNodeMap.Count
         let trDict = createMultiMap()
         for (a, b) in trs do
-            AddToMultiMap trDict a b
+            addToMultiMap trDict a b
         let node = { Id = nodeId; Transitions = trDict; Accepted = ac }
         nfaNodeMap.Add node
         node
@@ -51,7 +51,7 @@ let NfaOfRule (regexps: Regexp list) =
         | Star re -> 
             let nfaNode = newNfaNode [(Epsilon, dest)] None
             let sre = CompileRegexp re nfaNode
-            AddToMultiMap nfaNode.Transitions Epsilon sre
+            addToMultiMap nfaNode.Transitions Epsilon sre
             newNfaNode [(Epsilon,sre); (Epsilon,dest)] None
         | _ -> failwith "dontcare"
 
@@ -84,7 +84,7 @@ type DfaNode =
       Transitions : List<Alphabet * DfaNode>
       Accepted: int array }
 
-let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode = 
+let nfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode = 
     dfaNodeIdTop := 0
 
     let rec EClosure1 (acc : NfaNodeIdSetBuilder) (n : NfaNode) =
@@ -109,7 +109,7 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
             for KeyValue(inp, dests) in nfaNodeMap.[nid].Transitions do
                 if inp <> Epsilon then
                     for dest in dests do
-                        AddToMultiMap moves inp dest.Id
+                        addToMultiMap moves inp dest.Id
         moves
 
     let nfaSet0 =
@@ -149,6 +149,6 @@ let NfaToDfa (nfaNodeMap : NfaNodeMap) nfaStartNode =
     Array.sortInPlaceBy (fun (node : DfaNode) -> node.Id) dfaNodes
     dfaNodes
 
-let Compile (regexps : Regexp list) =
-    let nfaStart, nfaNodes = NfaOfRule regexps
-    NfaToDfa nfaNodes nfaStart
+let compile (regexps : Regexp list) =
+    let nfaStart, nfaNodes = nfaOfRule regexps
+    nfaToDfa nfaNodes nfaStart

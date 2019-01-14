@@ -1,5 +1,4 @@
 module Lexer 
-open Compile
 open Parser
 open FsLexYaccLite.Lexing
 
