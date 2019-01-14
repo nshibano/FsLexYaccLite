@@ -109,53 +109,42 @@ let main() =
         fprintfn os "module %s" moduleName
   | Some s -> 
           fprintfn os "module %s" s;  
-  
   fprintfn os "#nowarn \"64\""
-
   fprintfn os "open %s" lexlib;
-
   fprintfn os "%s" code;
-
-  fprintfn os "// This type is the type of tokens accepted by the parser";
-
   fprintfn os "type token = ";
   for id,typ in spec.Tokens do 
     match typ with
     | None -> fprintfn os "  | %s" id
-    | Some ty -> fprintfn os "  | %s of (%s)" id ty; 
+    | Some ty -> fprintfn os "  | %s of %s" id ty; 
 
   fprintfn os "";
-  fprintfn os "// This function maps tokens to integer indexes";
-  fprintfn os "let tagOfToken (t:token) = ";
+  fprintfn os "let tagOfToken (t : token) = ";
   fprintfn os "  match t with";
   spec.Tokens |> List.iteri (fun i (id,typ) -> 
       fprintfn os "  | %s %s -> %d " id (match typ with Some _ -> "_" | None -> "") i);
-
   fprintfn os "";
   fprintfn os "let endOfInputTag = %d " compiled.EndOfInputTerminalIndex;
   fprintfn os "";
-
-  fprintfn os "";
-  fprintfn os "// This function gets the data carried by a token as an object";
-  fprintfn os "let dataOfToken (t:token) = ";
+  fprintfn os "let dataOfToken (t : token) : obj = ";
   fprintfn os "  match t with ";
 
   for (id,typ) in spec.Tokens do
       fprintfn os "  | %s %s -> %s " 
         id
         (match typ with Some _ -> "x" | None -> "")
-        (match typ with Some _ -> "Microsoft.FSharp.Core.Operators.box x" | None -> "(null : System.Object)")
+        (match typ with Some _ -> "box x" | None -> "null")
 
   for (key,_) in spec.Types |> Seq.countBy fst |> Seq.filter (fun (_,n) -> n > 1)  do
         failwithf "%s is given multiple %%type declarations" key;
     
   for (key,_) in spec.Tokens |> Seq.countBy fst |> Seq.filter (fun (_,n) -> n > 1)  do
         failwithf "%s is given %%token declarations" key
-    
+  fprintfn os ""
+  
   let types = Map.ofList spec.Types 
   let tokens = Map.ofList spec.Tokens 
-  
-  let nStates = compiled.States.Length 
+  let nStates = compiled.States.Length
   begin 
       fprintf os "let gotos = [| " ;
       let numGotoNonTerminals = compiled.GotoTable.[0].Length 
@@ -196,35 +185,8 @@ let main() =
   end;
 
   begin 
-      fprintf os "let stateToProdIdxsTableElements = [| " ;
-      let indexes = Array.create compiled.States.Length 0 
-      let currIndex = ref 0 
-      for j = 0 to compiled.States.Length - 1 do
-          let state = compiled.States.[j]
-          indexes.[j] <- !currIndex;
-
-          (* Write the head of the table (i.e. the number of entries) *)
-          outputCodedUInt16 os compiled.States.Length;
-          currIndex := !currIndex + compiled.States.Length + 1;
-          
-          (* Write the pairs of entries in incremental order by key *)
-          (* This lets us implement the lookup by a binary chop. *)
-          for prodIdx in state do
-                outputCodedUInt16 os prodIdx;
-      fprintfn os "|]" ;
-      (* Output offsets into gotos table where the gotos for a particular nonterminal begin *)
-      fprintf os "let stateToProdIdxsTableRowOffsets = [|" ;
-      for idx in indexes do 
-          outputCodedUInt16 os idx;
-      fprintfn os "|]" ;
-  end;
-
-  begin 
-    let numActionRows = (Array.length compiled.ActionTable) 
-    //let maxActionColumns = Array.length compiled.ActionTable.[0] 
-    fprintfn os "let action_rows = %d" numActionRows;
     fprintf os "let actionTableElements = [|" ;
-    let actionIndexes = Array.create numActionRows 0 
+    let actionIndexes = Array.create compiled.ActionTable.Length 0 
     
     let actionTableCurrIndex = ref 0 
     for i = 0 to nStates-1 do 
@@ -274,7 +236,7 @@ let main() =
     fprintfn os "|]" ;
     (* Output offsets into actions table where the actions for a particular nonterminal begin *)
     fprintf os "let actionTableRowOffsets = [|" ;
-    for j = 0 to numActionRows-1 do  
+    for j = 0 to compiled.ActionTable.Length - 1 do  
         fprintf os "%a" outputCodedUInt16 actionIndexes.[j];
     fprintfn os "|]" ;
 
@@ -338,8 +300,7 @@ let main() =
         if not (types.ContainsKey id) then 
           failwith ("a %type declaration is required for for start token "+id);
         let ty = types.[id] in 
-        fprintfn os "let %s lexer lexbuf : %s =" id ty;
-        fprintfn os "    Microsoft.FSharp.Core.Operators.unbox (tables.Interpret(lexer, lexbuf, %d))" startState
+        fprintfn os "let %s lexer lexbuf : %s = unbox (tables.Interpret(lexer, lexbuf, %d))" id ty startState
 
   for id in spec.StartSymbols do
       if not (types.ContainsKey id) then 
