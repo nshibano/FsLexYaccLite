@@ -253,7 +253,6 @@ let main() =
       fprintf os "let reductions =" ;
       fprintfn os "    [| " ;
       for prod in preprocessed.Productions do 
-          //fprintfn os "# %d \"%s\"" !lineCountOutput output;
           fprintfn os "        (fun (parseState : %s.IParseState) ->"  parslib
           prod.Body |> Array.iteri (fun i sym -> 
               let tyopt =

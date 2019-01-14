@@ -277,46 +277,6 @@ let compile (spec : Preprocessed) =
 
         accu
 
-    reportTime(); printf  "computing FOLLOW function..."; stdout.Flush();
-
-    let followSetsOfNonTerminal =
-        let accu = Dictionary<NonTerminalIndex, HashSet<TerminalIndex>>(HashIdentity.Structural)
-
-        for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
-            accu.Add(nonTerminalIndex, HashSet(HashIdentity.Structural))
-        
-        for startSymbol in spec.StartSymbols do
-            accu.[indexOfNonTerminal.[startSymbol]].Add(endOfInputTerminalIndex) |> ignore
-
-        let mutable added = false
-        let add nonTerminalIndex terminalIndex =
-            added <- accu.[nonTerminalIndex].Add(terminalIndex) || added
-
-        let scan() =
-            for prodIdx = 0 to spec.Productions.Length - 1 do
-                let head = productions.[prodIdx].HeadNonTerminalIndex
-                let body = productions.[prodIdx].BodySymbolIndexes
-                let mutable pos = 0
-                while pos < body.Length do
-                    match body.[pos] with
-                    | NonTerminalIndex nonTerminalIndex ->
-                        let firstSetOfFollowingPart = firstSetOfPartOfProductionBodyWithLookahead prodIdx (pos + 1) Epsilon
-                        for terminalIndexOrEpsilon in firstSetOfFollowingPart do
-                            if terminalIndexOrEpsilon <> Epsilon then
-                                add nonTerminalIndex terminalIndexOrEpsilon
-                        if firstSetOfFollowingPart.Contains(Epsilon) then
-                            for x in accu.[head] do
-                                add nonTerminalIndex x
-                    | TerminalIndex _ -> ()
-                    pos <- pos + 1
-
-        scan()
-        while added do
-            added <- false
-            scan()
-
-        accu
-    
     let advanceOfItem (item : LR0Item) = { item with DotIndex = item.DotIndex + 1 }
 
     let computeClosure (itemSet : LR0Item []) =
@@ -473,6 +433,7 @@ let compile (spec : Preprocessed) =
     
     let isStartItem (item : LR0Item) = Array.contains (spec.NonTerminals.[productions.[item.ProductionIndex].HeadNonTerminalIndex]) spec.StartSymbols
     let isStartItem1 (item : LR1Item) = isStartItem item.LR0Item    
+    let startNonTerminalIndexes = HashSet(Array.map (fun startSymbol -> indexOfNonTerminal.[startSymbol]) spec.StartSymbols)
 
     reportTime(); printf "building action table..."; stdout.Flush();
     let shiftReduceConflicts = ref 0
@@ -558,7 +519,10 @@ let compile (spec : Preprocessed) =
                 let body = productions.[item.ProductionIndex].BodySymbolIndexes
                 item.DotIndex = body.Length)
             then
-                ImmediateAction (Reduce kernel.[0].ProductionIndex)
+                if startNonTerminalIndexes.Contains(productions.[kernel.[0].ProductionIndex].HeadNonTerminalIndex) then
+                    ImmediateAction Accept
+                else
+                    ImmediateAction (Reduce kernel.[0].ProductionIndex)
             else
 
                 let arr = Array.create spec.Terminals.Length (None, Error)
