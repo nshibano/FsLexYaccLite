@@ -1,28 +1,15 @@
-open FsLexYaccLite.Common.Arg
-open Syntax
-open Compile
-open Printf
-//open Internal.Utilities
-//open Internal.Utilities.Text.Lexing
-open FsLexYaccLite.Lexing
 open System
 open System.Collections.Generic
 open System.IO
-
-//------------------------------------------------------------------
-// This code is duplicated from Microsoft.FSharp.Compiler.UnicodeLexing
-
-type Lexbuf =  LexBuffer
-
-    
-//------------------------------------------------------------------
-// This is the program proper
+open Printf
+open FsLexYaccLite.Common.Arg
+open FsLexYaccLite.Lexing
+open Compile
 
 let input = ref None
 let out = ref None
 let inputCodePage = ref None
 let light = ref None
-
 let mutable lexlib = "FsLexYaccLite.Lexing"
 
 let usage =
