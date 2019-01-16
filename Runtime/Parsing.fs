@@ -7,10 +7,6 @@ open FsLexYaccLite.Lexing
 type IParseState =
     /// Get the start and end position for the terminal or non-terminal at a given index matched by the production
     abstract InputRange: int -> Position * Position
-    /// Get the end position for the terminal or non-terminal at a given index matched by the production
-    abstract InputEndPosition: int -> Position 
-    /// Get the start position for the terminal or non-terminal at a given index matched by the production
-    abstract InputStartPosition: int -> Position 
     /// Get the full range of positions matched by the production
     abstract ResultRange: Position * Position
     /// Get the value produced by the terminal or non-terminal at the given position
@@ -88,8 +84,6 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
         let parseState =
             { new IParseState with 
                 member p.InputRange(n) = (ruleStartPoss.[n-1], ruleEndPoss.[n-1])
-                member p.InputStartPosition(n) = ruleStartPoss.[n-1]
-                member p.InputEndPosition(n) = ruleEndPoss.[n-1]
                 member p.GetInput(n)    = ruleValues.[n-1]
                 member p.ResultRange    = (lhsStartPos, lhsEndPos)
                 member p.ParserLocalStore = localStore :> IDictionary<_,_>
