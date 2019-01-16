@@ -20,7 +20,10 @@ try
     parseCommandLineArgs usage (fun x -> match input with Some _ -> failwith "more than one input given" | None -> input <- Some x) "fslex <filename>"
     let filename = (match input with Some x -> x | None -> failwith "no input given") 
     let spec = 
-      let lexbuf = LexBuffer.FromString(File.ReadAllText(filename))
+      let lexbuf =
+            use f = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+            use r = new StreamReader(f, true)
+            LexBuffer.FromString(r.ReadToEnd())
       lexbuf.EndPos <- Position.FirstLine(filename)
       try 
           Parser.spec Lexer.token lexbuf 

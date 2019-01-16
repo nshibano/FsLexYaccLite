@@ -56,8 +56,12 @@ let main() =
 
   let filename = (match input with Some x -> x | None -> failwith "no input given") in 
 
-  let spec = 
-      let lexbuf = LexBuffer.FromString(File.ReadAllText(filename))
+  let spec =
+      let lexbuf =
+            use f = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+            use r = new StreamReader(f, true)
+            LexBuffer.FromString(r.ReadToEnd())
+      
       lexbuf.EndPos <- Position.FirstLine(filename)
 
       try 
