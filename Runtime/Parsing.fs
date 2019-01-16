@@ -62,11 +62,11 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
     let [<Literal>] acceptFlag = 0xc000
     let [<Literal>] actionMask = 0xc000
 
-    let actionValue action = action &&& (~~~ actionMask)                                    
     let actionKind action = action &&& actionMask
+    let actionValue action = action &&& (~~~ actionMask)                                    
 
     member this.Interpret(lexer : LexBuffer -> 'tok, lexbuf : LexBuffer, initialState : int) =                                                                      
-        let mutable finished = false
+        let mutable cont = true
         let mutable haveLookahead = false                                                                              
         let mutable lookahead = Unchecked.defaultof<'tok>
         let mutable lookaheadEndPos = Unchecked.defaultof<Position>
@@ -94,60 +94,57 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
                 member p.ParserLocalStore = localStore :> IDictionary<_,_>
             }       
 
-        while not finished do                                                                                    
-            if stateStack.Count = 0 then 
-                finished <- true
-            else
-                let state = stateStack.Peek()
+        while cont do                                                                                    
+            let state = stateStack.Peek()
 
-                if (not haveLookahead) && (not lexbuf.IsPastEndOfStream) then
-                    haveLookahead <- true
-                    lookahead <- lexer lexbuf
-                    lookaheadStartPos <- lexbuf.StartPos
-                    lookaheadEndPos <- lexbuf.EndPos
+            if (not haveLookahead) && (not lexbuf.IsPastEndOfStream) then
+                haveLookahead <- true
+                lookahead <- lexer lexbuf
+                lookaheadStartPos <- lexbuf.StartPos
+                lookaheadEndPos <- lexbuf.EndPos
                 
-                let tag = 
-                    if haveLookahead then
-                        tagOfToken lookahead
-                    else
-                        endOfInputTag
-                
-                let action = actionTable.Read(state, tag)
-                let kind = actionKind action
-
-                if kind = shiftFlag then
-                    let nextState = actionValue action                                     
-                    let data = dataOfToken lookahead
-                    valueStack.Push(ValueInfo(data, lookaheadStartPos, lookaheadEndPos))
-                    stateStack.Push(nextState)                                                           
-                    haveLookahead <- false
-                elif kind = reduceFlag then
-                    let prod = actionValue action                                     
-                    let reduction = reductions.[prod]                                                             
-                    let n = int reductionSymbolCounts.[prod]
-                    lhsPos.[0] <- Position_Empty                                                                     
-                    lhsPos.[1] <- Position_Empty
-                    for i = 0 to n - 1 do                                                                             
-                        if valueStack.Count = 0 then failwith "unreachable"
-                        let topVal = valueStack.Peek()
-                        valueStack.Pop() |> ignore
-                        stateStack.Pop() |> ignore
-                        ruleValues.[(n-i)-1] <- topVal.value;  
-                        ruleStartPoss.[(n-i)-1] <- topVal.startPos;  
-                        ruleEndPoss.[(n-i)-1] <- topVal.endPos;  
-                        if lhsPos.[1].IsEmpty then lhsPos.[1] <- topVal.endPos;
-                        if not topVal.startPos.IsEmpty then lhsPos.[0] <- topVal.startPos
-                    let redResult = reduction parseState                                                          
-                    valueStack.Push(ValueInfo(redResult, lhsPos.[0], lhsPos.[1]));
-                    let currState = stateStack.Peek()
-                    let newGotoState = gotoTable.Read(int productionToNonTerminalTable.[prod], currState)
-                    stateStack.Push(newGotoState)
-                elif kind = acceptFlag then 
-                    finished <- true
-                elif kind = errorFlag then
-                    failwith "parse error"
+            let tag = 
+                if haveLookahead then
+                    tagOfToken lookahead
                 else
-                    failwith "unreachable"
+                    endOfInputTag
+                
+            let action = actionTable.Read(state, tag)
+            let kind = actionKind action
 
+            if kind = shiftFlag then
+                let nextState = actionValue action                                     
+                let data = dataOfToken lookahead
+                valueStack.Push(ValueInfo(data, lookaheadStartPos, lookaheadEndPos))
+                stateStack.Push(nextState)                                                           
+                haveLookahead <- false
+            elif kind = reduceFlag then
+                let prod = actionValue action                                     
+                let reduction = reductions.[prod]                                                             
+                let n = int reductionSymbolCounts.[prod]
+                lhsPos.[0] <- Position_Empty                                                                     
+                lhsPos.[1] <- Position_Empty
+                for i = 0 to n - 1 do                                                                             
+                    if valueStack.Count = 0 then failwith "unreachable"
+                    let topVal = valueStack.Peek()
+                    valueStack.Pop() |> ignore
+                    stateStack.Pop() |> ignore
+                    ruleValues.[(n-i)-1] <- topVal.value
+                    ruleStartPoss.[(n-i)-1] <- topVal.startPos
+                    ruleEndPoss.[(n-i)-1] <- topVal.endPos;  
+                    if lhsPos.[1].IsEmpty then lhsPos.[1] <- topVal.endPos
+                    if not topVal.startPos.IsEmpty then lhsPos.[0] <- topVal.startPos
+                let redResult = reduction parseState                                                          
+                valueStack.Push(ValueInfo(redResult, lhsPos.[0], lhsPos.[1]))
+                let currState = stateStack.Peek()
+                let newGotoState = gotoTable.Read(int productionToNonTerminalTable.[prod], currState)
+                stateStack.Push(newGotoState)
+            elif kind = acceptFlag then 
+                cont <- false
+            elif kind = errorFlag then
+                failwith "parse error"
+            else
+                failwith "unreachable"
+        
         valueStack.Peek().value
 
