@@ -77,10 +77,11 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
         stateStack.Push(initialState)
         let valueStack = Stack<ValueInfo>()
 
+        let mutable lhsStartPos = Unchecked.defaultof<Position>
+        let mutable lhsEndPos = Unchecked.defaultof<Position>
         let ruleStartPoss = Array.zeroCreate<Position> maxProductionBodyLength
         let ruleEndPoss   = Array.zeroCreate<Position> maxProductionBodyLength
         let ruleValues    = Array.zeroCreate<obj> maxProductionBodyLength
-        let lhsPos        = Array.zeroCreate<Position> 2
         let actionTable = AssocTable(actionTableElements, actionTableRowOffsets)
         let gotoTable = AssocTable(gotos, sparseGotoTableRowOffsets)
 
@@ -90,7 +91,7 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
                 member p.InputStartPosition(n) = ruleStartPoss.[n-1]
                 member p.InputEndPosition(n) = ruleEndPoss.[n-1]
                 member p.GetInput(n)    = ruleValues.[n-1]
-                member p.ResultRange    = (lhsPos.[0], lhsPos.[1])
+                member p.ResultRange    = (lhsStartPos, lhsEndPos)
                 member p.ParserLocalStore = localStore :> IDictionary<_,_>
             }       
 
@@ -122,20 +123,19 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
                 let prod = actionValue action                                     
                 let reduction = reductions.[prod]                                                             
                 let n = int reductionSymbolCounts.[prod]
-                lhsPos.[0] <- Position_Empty                                                                     
-                lhsPos.[1] <- Position_Empty
+                lhsStartPos <- Position_Empty                                                                     
+                lhsEndPos <- Position_Empty
                 for i = 0 to n - 1 do                                                                             
-                    if valueStack.Count = 0 then failwith "unreachable"
                     let topVal = valueStack.Peek()
                     valueStack.Pop() |> ignore
                     stateStack.Pop() |> ignore
                     ruleValues.[(n-i)-1] <- topVal.value
                     ruleStartPoss.[(n-i)-1] <- topVal.startPos
-                    ruleEndPoss.[(n-i)-1] <- topVal.endPos;  
-                    if lhsPos.[1].IsEmpty then lhsPos.[1] <- topVal.endPos
-                    if not topVal.startPos.IsEmpty then lhsPos.[0] <- topVal.startPos
+                    ruleEndPoss.[(n-i)-1] <- topVal.endPos
+                    if lhsEndPos.IsEmpty then lhsEndPos <- topVal.endPos
+                    if not topVal.startPos.IsEmpty then lhsStartPos <- topVal.startPos
                 let redResult = reduction parseState                                                          
-                valueStack.Push(ValueInfo(redResult, lhsPos.[0], lhsPos.[1]))
+                valueStack.Push(ValueInfo(redResult, lhsStartPos, lhsEndPos))
                 let currState = stateStack.Peek()
                 let newGotoState = gotoTable.Read(int productionToNonTerminalTable.[prod], currState)
                 stateStack.Push(newGotoState)
