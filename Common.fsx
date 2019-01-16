@@ -25,4 +25,9 @@ let cpDir origDir newDir =
     Directory.CreateDirectory(newDir) |> ignore
     for file in Directory.GetFiles(origDir) do
         File.Copy(file, Path.Combine(newDir, Path.GetFileName(file)))
+
+let cpAllFiles fromDir toDir overwrite =
+    let files = Directory.GetFiles(fromDir)
+    for file in Directory.GetFiles(fromDir) do
+        File.Copy(file, Path.Combine(toDir, Path.GetFileName(file)), overwrite)
     
