@@ -66,16 +66,16 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
     let actionKind action = action &&& actionMask
 
     member this.Interpret(lexer : LexBuffer -> 'tok, lexbuf : LexBuffer, initialState : int) =                                                                      
+        let mutable finished = false
+        let mutable haveLookahead = false                                                                              
+        let mutable lookahead = Unchecked.defaultof<'tok>
+        let mutable lookaheadEndPos = Unchecked.defaultof<Position>
+        let mutable lookaheadStartPos = Unchecked.defaultof<Position>
         let localStore = Dictionary<string, obj>()
         localStore.["LexBuffer"] <- lexbuf
         let stateStack = Stack<int>()
         stateStack.Push(initialState)
         let valueStack = Stack<ValueInfo>()
-        let mutable haveLookahead = false                                                                              
-        let mutable lookaheadToken = Unchecked.defaultof<'tok>
-        let mutable lookaheadEndPos = Unchecked.defaultof<Position>
-        let mutable lookaheadStartPos = Unchecked.defaultof<Position>
-        let mutable finished = false
 
         let ruleStartPoss = Array.zeroCreate<Position> maxProductionBodyLength
         let ruleEndPoss   = Array.zeroCreate<Position> maxProductionBodyLength
@@ -99,30 +99,28 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
                 finished <- true
             else
                 let state = stateStack.Peek()
-                let action = 
-                    if not haveLookahead then 
-                        if lexbuf.IsPastEndOfStream then 
-                            haveLookahead <- false
-                        else 
-                            lookaheadToken <- lexer lexbuf
-                            lookaheadStartPos <- lexbuf.StartPos
-                            lookaheadEndPos <- lexbuf.EndPos
-                            haveLookahead <- true
-                    let tag = 
-                        if haveLookahead then tagOfToken lookaheadToken 
-                        else endOfInputTag   
-                                    
-                    actionTable.Read(state, tag)
-                        
-                let kind = actionKind action 
+
+                if (not haveLookahead) && (not lexbuf.IsPastEndOfStream) then
+                    haveLookahead <- true
+                    lookahead <- lexer lexbuf
+                    lookaheadStartPos <- lexbuf.StartPos
+                    lookaheadEndPos <- lexbuf.EndPos
+                
+                let tag = 
+                    if haveLookahead then
+                        tagOfToken lookahead
+                    else
+                        endOfInputTag
+                
+                let action = actionTable.Read(state, tag)
+                let kind = actionKind action
+
                 if kind = shiftFlag then
                     let nextState = actionValue action                                     
-                    if not haveLookahead then failwith "unreachable"
-                    let data = dataOfToken lookaheadToken
+                    let data = dataOfToken lookahead
                     valueStack.Push(ValueInfo(data, lookaheadStartPos, lookaheadEndPos))
                     stateStack.Push(nextState)                                                           
                     haveLookahead <- false
-
                 elif kind = reduceFlag then
                     let prod = actionValue action                                     
                     let reduction = reductions.[prod]                                                             
@@ -144,10 +142,10 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
                     let currState = stateStack.Peek()
                     let newGotoState = gotoTable.Read(int productionToNonTerminalTable.[prod], currState)
                     stateStack.Push(newGotoState)
-                elif kind = errorFlag then
-                    failwith "parse error"
                 elif kind = acceptFlag then 
                     finished <- true
+                elif kind = errorFlag then
+                    failwith "parse error"
                 else
                     failwith "unreachable"
 
