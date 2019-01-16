@@ -12,7 +12,7 @@ let mutable input = None
 let mutable modname= None
 let mutable out = None
 let mutable log = false
-let mutable lexlib = "FsLexYaccLite.Parsing"
+let mutable lexlib = "FsLexYaccLite.Lexing"
 let mutable parslib = "FsLexYaccLite.Parsing"
 
 let usage =
