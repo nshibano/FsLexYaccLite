@@ -28,6 +28,8 @@ try
     with _ -> printfn "failed to run appveyor.exe"
 
     cp @"Common\Arg.fs" @"Net45\Common"
+    cp @"Common\Hashtable.fs" @"Net45\Common"
+
     let lexFiles = Array.concat [| Directory.GetFiles("FsLexLite", "*.fs"); Directory.GetFiles("FsLexLite", "*.fsi") |]
     for lexFile in lexFiles do
         cp lexFile @"Net45\FsLexLite"

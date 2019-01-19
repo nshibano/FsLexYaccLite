@@ -238,3 +238,6 @@ Net45/FsLexLite/Lexer.fs
 Net45/FsLexLite/Parser.fs
 Net45/FsLexLite/Program.fs
 Net45/FsYaccLite/Program.fs
+
+Net45/Common/Hashtable.fs
+Net45/FsYaccLite/YaccOutput.fs
