@@ -69,24 +69,28 @@ let main() =
     printfn "%d productions" compiled.Productions.Length; 
     printfn "#rows in action table: %d" compiled.ActionTable.Length
 
-    YaccOutput.outputParser output modname lexlib parslib (fst spec.Header) spec preprocessed compiled
+    let actionMatrix =
+        Array.map (fun (row : ActionTableRow) ->
+            Array.map (fun x ->
+                match x with
+                | Some (Shift x) -> Some x
+                | Some (Reduce y) -> Some (~~~ y)
+                | Some Accept -> Some (int Int16.MaxValue)
+                | Some Error -> Some (int Int16.MinValue)
+                | None -> None) row.LookaheadActions) compiled.ActionTable
+      
+    let actionHashtable = Hashtable.create None actionMatrix
+    let gotoHashtable = Hashtable.create None compiled.GotoTable
+
+    YaccOutput.outputParser output modname lexlib parslib (fst spec.Header) spec preprocessed compiled actionHashtable gotoHashtable
 
     if verbose then
         YaccOutput.outputCompilationReport (input + ".html") preprocessed compiled
         YaccOutput.outputTableImages input preprocessed compiled
 
-        let actionMatrix =
-            Array.map (fun (row : ActionTableRow) ->
-                Array.map (fun x ->
-                    match x with
-                    | Some _ -> Some 0
-                    | None -> None) row.LookaheadActions) compiled.ActionTable
-      
-        let actionHashtable = Hashtable.create None actionMatrix
         Hashtable.outputHashtableStat actionMatrix actionHashtable
         Hashtable.outputHashtableImage (input + "-actionHashtableImage.png") actionHashtable
 
-        let gotoHashtable = Hashtable.create None compiled.GotoTable
         Hashtable.outputHashtableStat compiled.GotoTable gotoHashtable
         Hashtable.outputHashtableImage (input + "-gotoHashtableImage.png") gotoHashtable
 
