@@ -165,6 +165,13 @@ let actionCoding action =
   | Reduce n -> reduceFlag ||| n
   | Error -> errorFlag
 
+let actionCoding2 action =
+  match action with 
+  | Accept -> Int16.MaxValue
+  | Shift n -> int16 n
+  | Reduce n -> ~~~ (int16 n)
+  | Error -> Int16.MinValue
+
 let outputParser (output : string) (modname : string) (lexlib : string) (parslib : string) (code : string) (spec : ParserSpec) (preprocessed : Preprocessed) (compiled : Compiled) (actionHashtable : Hashtable) (gotoHashtable : Hashtable) =
   use os = (File.CreateText output :> TextWriter)
 
@@ -306,6 +313,7 @@ let outputParser (output : string) (modname : string) (lexlib : string) (parslib
   fprintfn os "let maxProductionBodyLength = %d" (Array.max (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions))
 
   outputHashtable os "actionTable" actionHashtable
+  outputInt16Array os "actionTable_defaultActions" (Array.map (fun (row : ActionTableRow) -> int (actionCoding2 row.DefaultAction)) compiled.ActionTable)
   outputHashtable os "gotoTable" gotoHashtable
 
 
@@ -349,7 +357,9 @@ let outputParser (output : string) (modname : string) (lexlib : string) (parslib
       fprintfn os "|]" ;
   end;
   
-  fprintfn os "let tables = %s.Tables(reductions, endOfInputTag, tagOfToken, dataOfToken, actionTableElements, actionTableRowOffsets, reductionSymbolCounts, gotos, sparseGotoTableRowOffsets, productionToNonTerminalTable, maxProductionBodyLength)" parslib
+  fprintfn os "let nonTerminalsCount = %d" preprocessed.NonTerminals.Length
+
+  fprintfn os "let tables = %s.Tables(reductions, endOfInputTag, tagOfToken, dataOfToken, actionTableElements, actionTableRowOffsets, reductionSymbolCounts, gotos, sparseGotoTableRowOffsets, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount)" parslib
 
   for (id, startState) in Seq.zip spec.StartSymbols compiled.StartStates do
         let ty = types.[id]
