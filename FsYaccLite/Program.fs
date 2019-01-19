@@ -23,12 +23,25 @@ let usage =
      ("--parslib", StringArg (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)")]
 
 let main() =
+
     parseCommandLineArgs usage (fun x -> match input with Some _ -> failwith "more than one input given" | None -> input <- Some x) "fsyacc <filename>"
 
     let input =
         match input with
         | Some x -> x
         | None -> failwith "no input given"
+
+    let output =
+        match output with
+        | Some x -> x
+        | None -> Path.ChangeExtension(input, ".fs")
+
+    let modname =
+        match modname with 
+        | None ->
+            let s = Path.GetFileNameWithoutExtension(input)
+            String(Char.ToUpperInvariant s.[0], 1) + s.Substring(1)
+        | Some name -> name
 
     let spec =
         let lexbuf =
@@ -39,29 +52,24 @@ let main() =
         lexbuf.EndPos <- Position.FirstLine(input)
 
         try 
-        Parser.spec Lexer.token lexbuf 
+            Parser.spec Lexer.token lexbuf 
         with e -> 
             eprintf "%s(%d,%d): error: %s" input lexbuf.StartPos.Line lexbuf.StartPos.Column e.Message;
-            exit 1  in
+            exit 1
   
     let spec = { spec with Tokens = List.rev spec.Tokens }
   
-    let output =
-        match output with
-        | Some x -> x
-        | None -> Path.ChangeExtension(input, ".fs")
-
     printfn "building tables"; 
     let preprocessed = processParserSpecAst spec
     let compiled = compile preprocessed
-    let (code, _) = spec.Header
 
     printfn "%d states" compiled.States.Length; 
     printfn "%d nonterminals" compiled.GotoTable.[0].Length; 
     printfn "%d terminals" preprocessed.Terminals.Length
     printfn "%d productions" compiled.Productions.Length; 
     printfn "#rows in action table: %d" compiled.ActionTable.Length
-    YaccOutput.outputParser input output modname lexlib parslib code spec preprocessed compiled
+
+    YaccOutput.outputParser output modname lexlib parslib (fst spec.Header) spec preprocessed compiled
 
     if verbose then
         use f = (File.CreateText (input + ".html")) :> TextWriter
@@ -87,9 +95,12 @@ let main() =
         Hashtable.outputHashtableStat compiled.GotoTable gotoHashtable
         Hashtable.outputHashtableImage (input + "-gotoHashtableImage.png") gotoHashtable
 
+#if DEBUG
+main()
+#else
 try
     main()
 with e -> 
     Console.Error.WriteLine(e.Message)
     exit 1
-
+#endif
