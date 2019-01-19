@@ -69,44 +69,29 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
             fprintfn f "%a" outputPrecInfo spec.Productions.[item.ProductionIndex].PrecedenceInfo
         fprintfn f ""
 
-        match comp.ActionTable.[i] with
-        //| ImmediateAction action ->
-        //    fprintfn f "  immediate action:"
-        //    let actionText =
-        //        match action with 
-        //        | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
-        //        | Reduce prodIdx ->
-        //            let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(" ", spec.Productions.[prodIdx].Body))
-        //            (s, s.Length - 4)
-        //        | Error -> ("error", 5)
-        //        | Accept -> ("accept", 6)
-        //    fprintfn f "    %s" (fst actionText)
-        //    fprintfn f ""
-        | actions ->
-            fprintfn f "  lookahead actions:"
-            let rows = ResizeArray()
-            for j = 0 to actions.LookaheadActions.Length - 1 do
-                let k, action = actions.LookaheadActions.[j]
-                if action <> Error || true then
-                    let term, prec = spec.Terminals.[k]
-                    let precText = stringOfPrecInfo prec
-                    let termText = (if precText.Length = 0 then term else term + " " + precText) + ":"
+        let row = comp.ActionTable.[i]
+        fprintfn f "  lookahead actions:"
+        let rows = ResizeArray()
+        for j = 0 to row.LookaheadActions.Length - 1 do
+            let k, action = row.LookaheadActions.[j]
+            if action <> Error || true then
+                let term, prec = spec.Terminals.[k]
+                let precText = stringOfPrecInfo prec
+                let termText = (if precText.Length = 0 then term else term + " " + precText) + ":"
 
-                    let actionText =
-                        match action with 
-                        | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
-                        | Reduce prodIdx ->
-                            let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(" ", spec.Productions.[prodIdx].Body))
-                            (s, s.Length - 4)
-                        | Error -> ("error", 5)
-                        | Accept -> ("accept", 6)
+                let actionText =
+                    match action with 
+                    | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
+                    | Reduce prodIdx ->
+                        let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(" ", spec.Productions.[prodIdx].Body))
+                        (s, s.Length - 4)
+                    | Error -> ("error", 5)
+                    | Accept -> ("accept", 6)
                     
-                    rows.Add([| (termText, termText.Length); actionText |])
-            outputTable f 4 (rows.ToArray())
-            //let errorActionsInRow = Array.fold (fun count action -> count + (if action = Error then 1 else 0)) 0 actions
-            //if errorActionsInRow > 0 then
-            //    fprintfn f "    (%d error actions)" errorActionsInRow
-            fprintfn f ""
+                rows.Add([| (termText, termText.Length); actionText |])
+        outputTable f 4 (rows.ToArray())
+        fprintfn f ""
+
         fprintfn f "  default action:"
         let actionText =
             match comp.ActionTable.[i].DefaultAction with 
@@ -118,7 +103,6 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
             | Accept -> ("accept", 6)
         fprintfn f "    %s (for %d lookaheads)" (fst actionText) (spec.Terminals.Length - comp.ActionTable.[i].LookaheadActions.Length)
         fprintfn f ""
-
 
         fprintfn f "  gotos:"
         for j = 0 to comp.GotoTable.[i].Length - 1 do
