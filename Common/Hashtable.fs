@@ -93,23 +93,19 @@ let outputHashtableImage (path : string) (table : Hashtable) =
         for j = 0 to lineLength - 1 do
             let x = j
             let bucketIndex = lineLength * i + j
-            if bucketIndex < buckets.Length then
-                for k = 0 to lineHeight - 1 do
-                    let y = lineHeight * i + k
-                    let color =
-                        if k < lineHeight - buckets.[bucketIndex] then
-                            Color.Black
-                        else
-                            match lineHeight - 1 - k with
+            for k = 0 to lineHeight - 1 do
+                let y = lineHeight * (i + 1) - 1 - k
+                let color =
+                    if bucketIndex < buckets.Length then
+                        if k < buckets.[bucketIndex] then
+                            match k with
                             | 0 -> Color.Green
                             | 1 -> Color.Green
                             | 2 -> Color.Yellow
                             | _ -> Color.Red
-                    bmp.SetPixel(x, y, color)
-            else
-                for k = 0 to lineHeight - 1 do
-                    let y = lineHeight * i + k
-                    bmp.SetPixel(x, y, Color.FromArgb(0xFF303030))
+                        else Color.Black
+                    else Color.FromArgb(0xFF303030)
+                bmp.SetPixel(x, y, color)
     use scaled = scaleImage 4 bmp
     try scaled.Save(path, ImageFormat.Png) // this fails when the image is too big
     with _ -> Printf.eprintfn "failed to save hashtable image %s" path

@@ -77,10 +77,10 @@ let main() =
 
         let actionMatrix =
             Array.map (fun (row : ActionTableRow) ->
-                let ary = Array.create preprocessed.Terminals.Length None
-                Array.iter (fun (i, _) ->
-                    ary.[i] <- Some 0) row.LookaheadActions
-                ary) compiled.ActionTable
+                Array.map (fun x ->
+                    match x with
+                    | Some _ -> Some 0
+                    | None -> None) row.LookaheadActions) compiled.ActionTable
       
         let actionHashtable = Hashtable.create None actionMatrix
         Hashtable.outputHashtableStat actionMatrix actionHashtable

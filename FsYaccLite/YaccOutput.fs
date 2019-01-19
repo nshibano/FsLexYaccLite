@@ -57,14 +57,14 @@ let outputCompilationReport (path : string) (spec : Preprocessed) (comp : Compil
         fprintfn f "  lookahead actions:"
         let rows = ResizeArray()
         for j = 0 to row.LookaheadActions.Length - 1 do
-            let k, action = row.LookaheadActions.[j]
-            if action <> Error || true then
-                let term, prec = spec.Terminals.[k]
+            let action = row.LookaheadActions.[j]
+            if action <> None then
+                let term, prec = spec.Terminals.[j]
                 let precText = stringOfPrecInfo prec
                 let termText = (if precText.Length = 0 then term else term + " " + precText) + ":"
 
                 let actionText =
-                    match action with 
+                    match action.Value with 
                     | Shift n -> (sprintf "shift <a href=\"#s%d\">%d</a>" n n, (6 + n.ToString().Length))
                     | Reduce prodIdx ->
                         let s = sprintf "reduce %s -&gt; %s" (spec.NonTerminals.[comp.Productions.[prodIdx].HeadNonTerminalIndex]) (String.Join(" ", spec.Productions.[prodIdx].Body))
@@ -119,10 +119,11 @@ let outputTableImages (path : string) (p : Preprocessed) (c : Compiled)  =
     for y = 0 to actionTableBmp.Height - 1 do
         let row = c.ActionTable.[y]
         for x = 0 to actionTableBmp.Width - 1 do
-//            actionTableBmp.SetPixel(x, y, colorOfAction row.DefaultAction)
-            actionTableBmp.SetPixel(x, y, Color.Black)
-        for (x, action) in row.LookaheadActions do
-            actionTableBmp.SetPixel(x, y, colorOfAction action)
+            let color =
+                match row.LookaheadActions.[x] with
+                | Some action  -> colorOfAction action
+                | None -> Color.Black
+            actionTableBmp.SetPixel(x, y, color)
     use scaled = Hashtable.scaleImage 4 actionTableBmp
     scaled.Save(path + "-actionTable.png", ImageFormat.Png)
 
@@ -246,14 +247,8 @@ let outputParser (output : string) (modname : string) (lexlib : string) (parslib
     let actionTableCurrIndex = ref 0 
     for i = 0 to nStates-1 do 
         actionIndexes.[i] <- !actionTableCurrIndex;
-        let actions = compiled.ActionTable.[i]
-        let ary = Array.create preprocessed.Terminals.Length actions.DefaultAction
-        for (terminalIndex, action) in actions.LookaheadActions do
-            ary.[terminalIndex] <- action
-
-        let ary = Array.create preprocessed.Terminals.Length actions.DefaultAction
-        for (terminalIndex, action) in actions.LookaheadActions do
-            ary.[terminalIndex] <- action
+        let row = compiled.ActionTable.[i]
+        let ary = Array.map (fun x -> match x with None -> row.DefaultAction | Some x -> x ) row.LookaheadActions
 
         let terminalsByAction = new Dictionary<_,int list>(10) 
         let countPerAction = new Dictionary<_,_>(10) 

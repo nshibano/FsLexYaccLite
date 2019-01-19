@@ -44,7 +44,7 @@ type Action =
     | Error
 
 type ActionTableRow =
-    { LookaheadActions : (TerminalIndex * Action) []
+    { LookaheadActions : Action option []
       DefaultAction : Action }
 
 type Compiled =
@@ -560,7 +560,7 @@ let compile (spec : Preprocessed) =
 
             let actions = Array.map snd arr
             let defaultAction, _ = Array.maxBy snd (Array.countBy id actions)
-            let lookaheadActions = Array.choose (fun action -> if snd action = defaultAction then None else Some action) (Array.indexed actions)
+            let lookaheadActions = Array.map (fun action -> if action = defaultAction then None else Some action) actions
             { LookaheadActions = lookaheadActions; DefaultAction = defaultAction }
 
         Array.init kernels.Length ComputeActions
