@@ -73,7 +73,6 @@ let main() =
 
     if verbose then
         YaccOutput.outputCompilationReport (input + ".html") preprocessed compiled
-
         YaccOutput.outputTableImages input preprocessed compiled
 
         let actionMatrix =

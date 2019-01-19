@@ -67,7 +67,7 @@ let outputHashtableStat (matrix : int option [] []) (table : Hashtable) =
     let occupied = table.Entries.Length
     let maxEntriesCountInSingleBucket = Array.max table.BucketCounts
     
-    printfn "full-matrix elements : %d, occupied matrix elements: %d, density : %f, buckets count : %d, max entries count in single bucket : %d"
+    printfn "full matrix elements : %d, occupied matrix elements: %d, density : %f, buckets count : %d, max entries count in single bucket : %d"
         (n * m)
         table.Entries.Length
         (float occupied / (float n * float m))
@@ -84,20 +84,32 @@ let scaleImage (n : int) (img : Bitmap) =
     newImg
 
 let outputHashtableImage (path : string) (table : Hashtable) =
-    let maxBucketLength = Array.max table.BucketCounts
-
-    use bmp = new Bitmap(table.BucketPointers.Length, maxBucketLength)
-    for i = 0 to table.BucketPointers.Length - 1 do
-        for j = 0 to maxBucketLength - table.BucketCounts.[i] - 1 do
-            bmp.SetPixel(i, j, Color.Black)
-        for j = maxBucketLength - table.BucketCounts.[i] to maxBucketLength - 1 do
-            let color =
-                match maxBucketLength - 1 - j with
-                | 0 -> Color.Green
-                | 1 -> Color.Green
-                | 2 -> Color.Yellow
-                | _ -> Color.Red
-            bmp.SetPixel(i, j, color)
+    let buckets = table.BucketCounts
+    let lineLength = 256
+    let lineHeight = 8
+    let lineCount = buckets.Length / lineLength + (if buckets.Length % lineLength > 0 then 1 else 0)
+    use bmp = new Bitmap(lineLength, lineHeight * lineCount)
+    for i = 0 to lineCount - 1 do
+        for j = 0 to lineLength - 1 do
+            let x = j
+            let bucketIndex = lineLength * i + j
+            if bucketIndex < buckets.Length then
+                for k = 0 to lineHeight - 1 do
+                    let y = lineHeight * i + k
+                    let color =
+                        if k < lineHeight - buckets.[bucketIndex] then
+                            Color.Black
+                        else
+                            match lineHeight - 1 - k with
+                            | 0 -> Color.Green
+                            | 1 -> Color.Green
+                            | 2 -> Color.Yellow
+                            | _ -> Color.Red
+                    bmp.SetPixel(x, y, color)
+            else
+                for k = 0 to lineHeight - 1 do
+                    let y = lineHeight * i + k
+                    bmp.SetPixel(x, y, Color.FromArgb(0xFF303030))
     use scaled = scaleImage 4 bmp
     try scaled.Save(path, ImageFormat.Png) // this fails when the image is too big
     with _ -> Printf.eprintfn "failed to save hashtable image %s" path
