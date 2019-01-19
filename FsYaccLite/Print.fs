@@ -138,7 +138,7 @@ let outputTableImages (path : string) (p : Preprocessed) (c : Compiled)  =
     for i = 0 to actionTableBmp.Width - 1 do
         for j = 0 to actionTableBmp.Height - 1 do
             actionTableBmp.SetPixel(i, j, colorOfAction (match c.ActionTable.[j] with ImmediateAction action -> action | LookaheadActions actions -> actions.[i]))
-    actionTableBmp.Save(path + "-actionTable.png", ImageFormat.Png)
+    (Hashtable.scaleImage 4 actionTableBmp).Save(path + "-actionTable.png", ImageFormat.Png)
 
     let gotoTableBmp = new Bitmap(p.NonTerminals.Length, c.States.Length)
     let colorOfGoto x =
@@ -148,4 +148,4 @@ let outputTableImages (path : string) (p : Preprocessed) (c : Compiled)  =
     for i = 0 to gotoTableBmp.Width - 1 do
         for j = 0 to gotoTableBmp.Height - 1 do
             gotoTableBmp.SetPixel(i, j, colorOfGoto c.GotoTable.[j].[i])
-    gotoTableBmp.Save(path + "-gotoTable.png", ImageFormat.Png)
+    (Hashtable.scaleImage 4 gotoTableBmp).Save(path + "-gotoTable.png", ImageFormat.Png)
