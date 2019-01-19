@@ -198,14 +198,14 @@ Tests/Expr/Parser.fs
 Tests/Expr/Parser.fsi
 Tests/Expr/Parsing.fs
 Tests/Expr/Parsing.fsi
-Tests/Expr/Parser.fsyacc.html
+Tests/Expr/Parser.fsy.html
 Tests/Expr/*.png
 
 FsLexYaccLite-*.zip
 
 Tests/ABC/Parser.fs
 Tests/ABC/Parser.fsi
-Tests/ABC/Parser.fsyacc.html
+Tests/ABC/Parser.fsy.html
 
 Net45/Common/Arg.fs
 Net45/FsLexLite/Alphabet.fs

@@ -10,13 +10,13 @@ open Compile
 
 let mutable input = None
 let mutable modname= None
-let mutable out = None
+let mutable output = None
 let mutable verbose = false
 let mutable lexlib = "FsLexYaccLite.Lexing"
 let mutable parslib = "FsLexYaccLite.Parsing"
 
 let usage =
-  [ ("-o", StringArg (fun s -> out <- Some s), "Name the output file.");
+  [ ("-o", StringArg (fun s -> output <- Some s), "Name the output file.");
     ("-v", UnitArg (fun () -> verbose <- true), "Produce a listing file."); 
     ("--module", StringArg (fun s -> modname <- Some s), "Define the F# module name to host the generated parser."); 
     ("--lexlib", StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer (default: Microsoft.FSharp.Text.Lexing)");
@@ -54,28 +54,31 @@ let actionCoding action =
 let main() =
   let _ = parseCommandLineArgs usage (fun x -> match input with Some _ -> failwith "more than one input given" | None -> input <- Some x) "fsyacc <filename>"
 
-  let filename = (match input with Some x -> x | None -> failwith "no input given") in 
+  let input =
+    match input with
+    | Some x -> x
+    | None -> failwith "no input given"
 
   let spec =
       let lexbuf =
-            use f = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+            use f = new FileStream(input, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
             use r = new StreamReader(f, true)
             LexBuffer.FromString(r.ReadToEnd())
       
-      lexbuf.EndPos <- Position.FirstLine(filename)
+      lexbuf.EndPos <- Position.FirstLine(input)
 
       try 
         Parser.spec Lexer.token lexbuf 
       with e -> 
-         eprintf "%s(%d,%d): error: %s" filename lexbuf.StartPos.Line lexbuf.StartPos.Column e.Message;
+         eprintf "%s(%d,%d): error: %s" input lexbuf.StartPos.Line lexbuf.StartPos.Column e.Message;
          exit 1  in
   
   let spec = { spec with Tokens = List.rev spec.Tokens }
   
   let output =
-    match out with
+    match output with
     | Some x -> x
-    | None -> Path.GetFileNameWithoutExtension(filename) + ".fs"
+    | None -> Path.ChangeExtension(input, ".fs")
 
   printfn "building tables"; 
   let preprocessed = processParserSpecAst spec
@@ -89,13 +92,13 @@ let main() =
   printfn "#rows in action table: %d" compiled.ActionTable.Length
 
   if verbose then
-      use f = (File.CreateText (output + ".html")) :> TextWriter
+      use f = (File.CreateText (input + ".html")) :> TextWriter
       fprintfn f "<pre>"
       fprintfn f "Output file describing compiled parser placed in %s" output
       YaccOutput.outputCompilationReport f preprocessed compiled
       fprintfn f "</pre>"
 
-      YaccOutput.outputTableImages filename preprocessed compiled
+      YaccOutput.outputTableImages input preprocessed compiled
 
       let actionMatrix =
           Array.map (fun (row : ActionTableRow) ->
@@ -106,11 +109,11 @@ let main() =
       
       let actionHashtable = Hashtable.create None actionMatrix
       Hashtable.outputHashtableStat actionMatrix actionHashtable
-      Hashtable.outputHashtableImage (filename + "-actionHashtableImage.png") actionHashtable
+      Hashtable.outputHashtableImage (input + "-actionHashtableImage.png") actionHashtable
 
       let gotoHashtable = Hashtable.create None compiled.GotoTable
       Hashtable.outputHashtableStat compiled.GotoTable gotoHashtable
-      Hashtable.outputHashtableImage (filename + "-gotoHashtableImage.png") gotoHashtable
+      Hashtable.outputHashtableImage (input + "-gotoHashtableImage.png") gotoHashtable
 
   use os = (File.CreateText output :> TextWriter)
 
@@ -119,7 +122,7 @@ let main() =
   match modname with 
   | None ->
         let moduleName =
-            let s = Path.GetFileNameWithoutExtension(filename)
+            let s = Path.GetFileNameWithoutExtension(input)
             String(Char.ToUpperInvariant s.[0], 1) + s.Substring(1)
         fprintfn os "module %s" moduleName
   | Some s -> 
