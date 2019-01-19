@@ -67,6 +67,12 @@ let processParserSpecAst (spec : ParserSpec) =
            
     if spec.StartSymbols = [] then (failwith "at least one %start declaration is required\n")
 
+    let types = Map.ofList spec.Types
+
+    for id in spec.StartSymbols do
+          if not (types.ContainsKey id) then 
+            failwith ("a %type declaration is required for start token " + id)
+    
     for nt,_ in spec.Types do 
         checkNonTerminal nt
 
