@@ -40,20 +40,6 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
     stdout.Flush()
         
     fprintfn f ""
-
-    fprintfn f "FIRST sets:"
-
-    let rows = List()
-
-    for nonTerminalIndex = 0 to spec.NonTerminals.Length - 1 do
-        let rowA = spec.NonTerminals.[nonTerminalIndex] + ":"
-        let firstSet = sortedArrayOfHashSet(comp.FirstSets.[NonTerminalIndex nonTerminalIndex])
-        let itemStrings = Array.map (fun item -> match item with Epsilon -> "ε" | terminalIndex -> fst spec.Terminals.[terminalIndex]) firstSet
-        let rowB = String.Join(" ", itemStrings)
-        rows.Add([| (rowA, rowA.Length); (rowB, rowB.Length) |])
-
-    outputTable f 2 (rows.ToArray())
-
     fprintfn f "------------------------";
     fprintfn f "states = ";
     fprintfn f "";

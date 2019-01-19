@@ -11,13 +11,13 @@ open Compile
 let mutable input = None
 let mutable modname= None
 let mutable out = None
-let mutable log = false
+let mutable verbose = false
 let mutable lexlib = "FsLexYaccLite.Lexing"
 let mutable parslib = "FsLexYaccLite.Parsing"
 
 let usage =
   [ ("-o", StringArg (fun s -> out <- Some s), "Name the output file.");
-    ("-v", UnitArg (fun () -> log <- true), "Produce a listing file."); 
+    ("-v", UnitArg (fun () -> verbose <- true), "Produce a listing file."); 
     ("--module", StringArg (fun s -> modname <- Some s), "Define the F# module name to host the generated parser."); 
     ("--lexlib", StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer (default: Microsoft.FSharp.Text.Lexing)");
     ("--parslib", StringArg (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)")]
@@ -71,46 +71,34 @@ let main() =
          exit 1  in
   
   let spec = { spec with Tokens = List.rev spec.Tokens }
-
-  let has_extension (s:string) = 
-    (s.Length >= 1 && s.[s.Length - 1] = '.') 
-    || Path.HasExtension(s)
-
-  let chop_extension (s:string) =
-    if not (has_extension s) then invalidArg "s" "the file name does not have an extension"
-    Path.Combine (Path.GetDirectoryName s,Path.GetFileNameWithoutExtension(s)) 
   
-  let checkSuffix (x:string) (y:string) = x.EndsWith(y)
-
-  let output = match out with Some x -> x | _ -> chop_extension filename + (if checkSuffix filename ".mly" then ".ml" else ".fs") in
-  let outputi = match out with Some x -> chop_extension x + (if checkSuffix x ".ml" then ".mli" else ".fsi") | _ -> chop_extension filename + (if checkSuffix filename ".mly" then ".mli" else ".fsi") in
-  let outputo = 
-      if log then Some (match out with Some x -> chop_extension x + ".fsyacc.html" | _ -> chop_extension filename + ".fsyacc.html") 
-      else None 
+  let output =
+    match out with
+    | Some x -> x
+    | None -> Path.GetFileNameWithoutExtension(filename) + ".fs"
 
   use os = (File.CreateText output :> TextWriter)
-
-  let logf = Option.map (fun path -> File.CreateText path :> TextWriter) outputo
-  Option.iter (fun f ->
-    fprintfn f "<pre>"
-    fprintfn f "Output file describing compiled parser placed in %s and %s" output outputi) logf
 
   printfn "building tables"; 
   let preprocessed = processParserSpecAst spec
   let compiled = compile preprocessed
-  Option.iter (fun f -> Print.outputCompilationReport f preprocessed compiled) logf
-  if log then
-    Print.outputTableImages filename preprocessed compiled 
-  Option.iter (fun f -> fprintfn f "</pre>") logf
+  let (code, pos) = spec.Header
 
-  let (code,pos) = spec.Header 
   printfn "%d states" compiled.States.Length; 
   printfn "%d nonterminals" compiled.GotoTable.[0].Length; 
   printfn "%d terminals" preprocessed.Terminals.Length
   printfn "%d productions" compiled.Productions.Length; 
   printfn "#rows in action table: %d" compiled.ActionTable.Length
 
-  if log then
+  if verbose then
+      use f = (File.CreateText (output + ".html")) :> TextWriter
+      fprintfn f "<pre>"
+      fprintfn f "Output file describing compiled parser placed in %s" output
+      Print.outputCompilationReport f preprocessed compiled
+      fprintfn f "</pre>"
+
+      Print.outputTableImages filename preprocessed compiled
+
       let actionMatrix =
           Array.map (fun (row : ActionTableRow) ->
                 let ary = Array.create preprocessed.Terminals.Length None
@@ -327,8 +315,6 @@ let main() =
   for id in spec.StartSymbols do
       if not (types.ContainsKey id) then 
         failwith ("a %type declaration is required for start token "+id);
-
-  Option.iter (fun (f : TextWriter) -> f.Close()) logf
 
 let _ = 
     //try

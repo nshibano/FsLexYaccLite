@@ -49,7 +49,6 @@ type ActionTableRow =
 
 type Compiled =
     {
-        FirstSets : Dictionary<SymbolIndex, HashSet<TerminalIndexOrEpsilon>>
         Productions : CompiledProduction []
         States : ProductionIndex [] []
         Kernels : LR0Item [] []
@@ -582,8 +581,7 @@ let compile (spec : Preprocessed) =
 
     displayMemoStats()
 
-    { FirstSets = firstSetOfSymbol
-      Productions = productions
+    { Productions = productions
       States = Array.map (fun state -> Array.map (fun (item : LR0Item) -> item.ProductionIndex) state) kernels
       Kernels = kernels
       StartStates = startKernelIndexs
