@@ -72,11 +72,7 @@ let main() =
     YaccOutput.outputParser output modname lexlib parslib (fst spec.Header) spec preprocessed compiled
 
     if verbose then
-        use f = (File.CreateText (input + ".html")) :> TextWriter
-        fprintfn f "<pre>"
-        fprintfn f "Output file describing compiled parser placed in %s" output
-        YaccOutput.outputCompilationReport f preprocessed compiled
-        fprintfn f "</pre>"
+        YaccOutput.outputCompilationReport (input + ".html") preprocessed compiled
 
         YaccOutput.outputTableImages input preprocessed compiled
 

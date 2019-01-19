@@ -34,11 +34,9 @@ let outputTable (f : TextWriter) (indent : int) (rows : (string * int) [] []) =
             f.Write(String(' ', maxWidths.[i] - (snd row.[i])))
         f.WriteLine()
 
-let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compiled) =
-
-    printfn  "writing tables to log"
-    stdout.Flush()
-        
+let outputCompilationReport (path : string) (spec : Preprocessed) (comp : Compiled) =
+    use f = (File.CreateText path) :> TextWriter
+    fprintfn f "<pre>"
     fprintfn f ""
     fprintfn f "------------------------";
     fprintfn f "states = ";
@@ -99,6 +97,7 @@ let outputCompilationReport (f : TextWriter) (spec : Preprocessed) (comp : Compi
             
     fprintfn f "startStates = %s" (String.Join(";", (Array.map string comp.StartStates)));
     fprintfn f "------------------------"
+    fprintfn f "</pre>"
 
 let randomLightColor (hashBase : int) (key : int) =
     let cutoff = 0.3
