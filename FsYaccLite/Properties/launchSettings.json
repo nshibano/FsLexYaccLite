@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FsYaccLite": {
+      "commandName": "Project",
+      "commandLineArgs": "-v ..\\..\\..\\..\\Tests\\Expr\\Parser.fsy"
+    }
+  }
+}

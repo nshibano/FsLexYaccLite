@@ -31,6 +31,12 @@ type LR1Item =
     { LR0Item : LR0Item
       Lookahead : TerminalIndex }
 
+type CompiledProduction =
+    {
+        HeadNonTerminalIndex : NonTerminalIndex
+        BodySymbolIndexes : SymbolIndex []
+    }
+
 type Action = 
     | Shift of kernelIndex : KernelIndex
     | Reduce of productionIndex : ProductionIndex
@@ -38,14 +44,8 @@ type Action =
     | Error
 
 type ActionTableRow =
-    | ImmediateAction of Action
-    | LookaheadActions of Action []
-
-type CompiledProduction =
-    {
-        HeadNonTerminalIndex : NonTerminalIndex
-        BodySymbolIndexes : SymbolIndex []
-    }
+    { LookaheadActions : (TerminalIndex * Action) []
+      DefaultAction : Action }
 
 type Compiled =
     {
@@ -513,57 +513,58 @@ let compile (spec : Preprocessed) =
         // This build the action table for one state. 
         let ComputeActions kernelIdx =
             let kernel = kernels.[kernelIdx]
+            let arr = Array.create spec.Terminals.Length (None, Error)
 
-            if kernel.Length = 1 &&
-               (let item = kernel.[0]
-                let body = productions.[item.ProductionIndex].BodySymbolIndexes
-                item.DotIndex = body.Length)
-            then
-                if startNonTerminalIndexes.Contains(productions.[kernel.[0].ProductionIndex].HeadNonTerminalIndex) then
-                    ImmediateAction Accept
-                else
-                    ImmediateAction (Reduce kernel.[0].ProductionIndex)
-            else
+            // Compute the LR(1) items based on lookaheads
+            let items =
+                let accu = ResizeArray()
+                for item in kernel do
+                    let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
+                    for lookahead in lookaheadTable.[kernelItemIdx] do
+                        accu.Add({ LR0Item = item; Lookahead = lookahead })
+                computeLR1Closure (sortedArrayofList accu)
 
-                let arr = Array.create spec.Terminals.Length (None, Error)
+            for item in items do
+                let body = productions.[item.LR0Item.ProductionIndex].BodySymbolIndexes
+                if item.LR0Item.DotIndex < body.Length then
+                    let symbol = body.[item.LR0Item.DotIndex]
+                    match symbol with
+                    | TerminalIndex terminalIndex ->
+                        let action =
+                            match gotoKernel kernelIdx symbol with
+                            | None -> failwith "unreachable"
+                            | Some gkernelItemIdx -> Shift gkernelItemIdx
+                        let prec = snd spec.Terminals.[terminalIndex]
+                        addResolvingPrecedence arr kernelIdx terminalIndex (prec, action)
+                    | _ -> ()
+                elif not (isStartItem1 item) then
+                    let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
+                    let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Reduce item.LR0Item.ProductionIndex)
+                    addResolvingPrecedence arr kernelIdx item.Lookahead action
+                elif item.Lookahead = endOfInputTerminalIndex then
+                    let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
+                    let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Accept)
+                    addResolvingPrecedence arr kernelIdx item.Lookahead action
+                else failwith "unreachable?"
+             
+            let canReduce (item : LR0Item) =
+                if item.DotIndex = productions.[item.ProductionIndex].BodySymbolIndexes.Length then
+                    Some item.ProductionIndex
+                else None
+            let reduceActions = Array.choose canReduce kernel
+            if reduceActions.Length = 1 then
+                for i = 0 to spec.Terminals.Length - 1 do
+                    match arr.[i] with
+                    | (None, Error) ->
+                        arr.[i] <- (None, Reduce reduceActions.[0])
+                    | _ -> ()
 
-                // Compute the LR(1) items based on lookaheads
-                let items =
-                    let accu = ResizeArray()
-                    for item in kernel do
-                        let kernelItemIdx = { KernelIndex = kernelIdx; Item = item }
-                        for lookahead in lookaheadTable.[kernelItemIdx] do
-                            accu.Add({ LR0Item = item; Lookahead = lookahead })
-                    computeLR1Closure (sortedArrayofList accu)
-
-                for item in items do
-                    let body = productions.[item.LR0Item.ProductionIndex].BodySymbolIndexes
-                    if item.LR0Item.DotIndex < body.Length then
-                        let symbol = body.[item.LR0Item.DotIndex]
-                        match symbol with
-                        | TerminalIndex terminalIndex ->
-                            let action =
-                                match gotoKernel kernelIdx symbol with
-                                | None -> failwith "unreachable"
-                                | Some gkernelItemIdx -> Shift gkernelItemIdx
-                            let prec = snd spec.Terminals.[terminalIndex]
-                            addResolvingPrecedence arr kernelIdx terminalIndex (prec, action)
-                        | _ -> ()
-                    elif not (isStartItem1 item) then
-                        let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
-                        let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Reduce item.LR0Item.ProductionIndex)
-                        addResolvingPrecedence arr kernelIdx item.Lookahead action
-                    elif item.Lookahead = endOfInputTerminalIndex then
-                        let prec = spec.Productions.[item.LR0Item.ProductionIndex].PrecedenceInfo
-                        let action = (Option.map (fun (x, y, _) -> (x, y)) prec, Accept)
-                        addResolvingPrecedence arr kernelIdx item.Lookahead action
-                    else failwith "unreachable?"
-
-                LookaheadActions (Array.map snd arr)
+            let actions = Array.map snd arr
+            let defaultAction, _ = Array.maxBy snd (Array.countBy id actions)
+            let lookaheadActions = Array.choose (fun action -> if snd action = defaultAction then None else Some action) (Array.indexed actions)
+            { LookaheadActions = lookaheadActions; DefaultAction = defaultAction }
 
         Array.init kernels.Length ComputeActions
-
-    // The goto table is much simpler - it is based on LR(0) kernels alone. 
 
     reportTime(); printf  "building goto table..."; stdout.Flush();
     let gotoTable = 

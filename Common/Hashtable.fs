@@ -86,7 +86,7 @@ let scaleImage (n : int) (img : Bitmap) =
 let outputHashtableImage (path : string) (table : Hashtable) =
     let maxBucketLength = Array.max table.BucketCounts
 
-    let bmp = new Bitmap(table.BucketPointers.Length, maxBucketLength)
+    use bmp = new Bitmap(table.BucketPointers.Length, maxBucketLength)
     for i = 0 to table.BucketPointers.Length - 1 do
         for j = 0 to maxBucketLength - table.BucketCounts.[i] - 1 do
             bmp.SetPixel(i, j, Color.Black)
@@ -98,5 +98,6 @@ let outputHashtableImage (path : string) (table : Hashtable) =
                 | 2 -> Color.Yellow
                 | _ -> Color.Red
             bmp.SetPixel(i, j, color)
-    let scaled = scaleImage 4 bmp
-    scaled.Save(path, ImageFormat.Png)
+    use scaled = scaleImage 4 bmp
+    try scaled.Save(path, ImageFormat.Png) // this fails when the image is too big
+    with _ -> Printf.eprintfn "failed to save hashtable image %s" path
