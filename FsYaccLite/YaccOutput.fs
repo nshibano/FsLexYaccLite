@@ -1,4 +1,4 @@
-﻿module Print
+﻿module YaccOutput
 
 open System
 open System.Collections.Generic

@@ -13,7 +13,7 @@
     <Compile Include="Lexer.fs" />
     <Compile Include="Preprocess.fs" />
     <Compile Include="Compile.fs" />
-    <Compile Include="Print.fs" />
+    <Compile Include="YaccOutput.fs" />
     <Compile Include="Program.fs" />
     <None Include="Lexer.fsl" />
     <None Include="Parser.fsy" />
