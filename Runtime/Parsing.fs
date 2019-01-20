@@ -51,15 +51,7 @@ type ValueInfo =
         new (value, startPos, endPos) = { value = value; startPos = startPos; endPos = endPos }
     end
 
-type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, actionTableElements : uint16[], actionTableRowOffsets : uint16[], reductionSymbolCounts : uint16[], gotos: uint16[], sparseGotoTableRowOffsets : uint16[], productionToNonTerminalTable : uint16[], maxProductionBodyLength : int, gotoTableBuckets : int16 [], gotoTableEntries : int16 [], nonTerminalsCount : int, actionTable_buckets : int16 [], actionTable_entries : int16 [], actionTable_defaultActions : int16 [], terminalsCount : int) =
-    let [<Literal>] shiftFlag = 0x0000
-    let [<Literal>] reduceFlag = 0x4000
-    let [<Literal>] errorFlag = 0x8000
-    let [<Literal>] acceptFlag = 0xc000
-    let [<Literal>] actionMask = 0xc000
-
-    let actionKind action = action &&& actionMask
-    let actionValue action = action &&& (~~~ actionMask)
+type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, reductionSymbolCounts : uint16[], productionToNonTerminalTable : uint16[], maxProductionBodyLength : int, gotoTableBuckets : int16 [], gotoTableEntries : int16 [], nonTerminalsCount : int, actionTable_buckets : int16 [], actionTable_entries : int16 [], actionTable_defaultActions : int16 [], terminalsCount : int) =
     
     let rec findEntry (entries : int16 []) key p =
         let x = entries.[2 * p]
@@ -70,13 +62,13 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
             int entries.[2 * p + 1]
         elif hasNext then
             findEntry entries key (p + 1)
-        else -1
+        else System.Int32.MinValue
     
     let lookup (buckets : int16 []) (entries : int16 []) (key : int) =
         let bucket = int buckets.[key % buckets.Length]
         if bucket >= 0 then
             findEntry entries key bucket
-        else -1
+        else System.Int32.MinValue
 
     member this.Interpret(lexer : LexBuffer -> 'tok, lexbuf : LexBuffer, initialState : int) =                                                                      
         let mutable cont = true
@@ -95,8 +87,6 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
         let ruleStartPoss = Array.zeroCreate<Position> maxProductionBodyLength
         let ruleEndPoss   = Array.zeroCreate<Position> maxProductionBodyLength
         let ruleValues    = Array.zeroCreate<obj> maxProductionBodyLength
-        let actionTable = AssocTable(actionTableElements, actionTableRowOffsets)
-        let gotoTable = AssocTable(gotos, sparseGotoTableRowOffsets)
 
         let parseState =
             { new IParseState with 
@@ -121,17 +111,25 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
                 else
                     endOfInputTag
                 
-            let action = actionTable.Read(state, tag)
-            let kind = actionKind action
+            let action =
+                let v = lookup actionTable_buckets actionTable_entries (terminalsCount * state + tag)
+                if v <> System.Int32.MinValue then
+                    v
+                else
+                    int actionTable_defaultActions.[state]
 
-            if kind = shiftFlag then
-                let nextState = actionValue action                                     
+            if action = int System.Int16.MaxValue then
+                cont <- false
+            elif action = int System.Int16.MinValue then
+                failwith "parse error"
+            elif action >= 0 then
+                let nextState = action                             
                 let data = dataOfToken lookahead
                 valueStack.Push(ValueInfo(data, lookaheadStartPos, lookaheadEndPos))
                 stateStack.Push(nextState)                                                           
                 haveLookahead <- false
-            elif kind = reduceFlag then
-                let prod = actionValue action                                     
+            else
+                let prod = ~~~action                    
                 let reduction = reductions.[prod]                                                             
                 let n = int reductionSymbolCounts.[prod]
                 lhsStartPos <- Position_Empty                                                                     
@@ -148,15 +146,8 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
                 let redResult = reduction parseState                                                          
                 valueStack.Push(ValueInfo(redResult, lhsStartPos, lhsEndPos))
                 let currState = stateStack.Peek()
-                //let newGotoState = gotoTable.Read(int productionToNonTerminalTable.[prod], currState)
                 let newGotoState = lookup gotoTableBuckets gotoTableEntries (nonTerminalsCount * currState + int productionToNonTerminalTable.[prod])
                 stateStack.Push(newGotoState)
-            elif kind = acceptFlag then 
-                cont <- false
-            elif kind = errorFlag then
-                failwith "parse error"
-            else
-                failwith "unreachable"
         
         valueStack.Peek().value
 
