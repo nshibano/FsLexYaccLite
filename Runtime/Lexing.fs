@@ -52,8 +52,6 @@ type LexBuffer =
       mutable StartPos : Position
       mutable EndPos : Position
       LocalStore : Dictionary<string, obj> }
-    member x.BufferMaxScanLength = x.String.Length - x.ScanStart
-    member x.BufferScanPos = x.ScanStart + x.ScanLength
     member x.Lexeme = x.String.Substring(x.ScanStart, x.LexemeLength)
     static member FromString (s:string) =
         { LexBuffer.String = s
@@ -83,7 +81,7 @@ type UnicodeTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint1
             lexBuffer.LexemeLength <- lexBuffer.ScanLength
             lexBuffer.AcceptAction <- a
             
-        if lexBuffer.ScanLength = lexBuffer.BufferMaxScanLength then
+        if lexBuffer.ScanLength = lexBuffer.String.Length - lexBuffer.ScanStart then
             let snew = int transitionTable.[state].[transitionTable.[state].Length - 1] // get eof entry
             if snew = sentinel then 
                 endOfScan lexBuffer
@@ -94,7 +92,7 @@ type UnicodeTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint1
                 failwith "End of file on lexing stream"
 
         else
-            let inp = lexBuffer.String.[lexBuffer.BufferScanPos]
+            let inp = lexBuffer.String.[lexBuffer.ScanStart + lexBuffer.ScanLength]
 
             let alphabet =
                 if inp < '\128' then
