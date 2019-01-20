@@ -12,14 +12,12 @@ let mutable input = None
 let mutable modname= None
 let mutable output = None
 let mutable verbose = false
-let mutable lexlib = "FsLexYaccLite.Lexing"
 let mutable parslib = "FsLexYaccLite.Parsing"
 
 let usage =
     [("-o", StringArg (fun s -> output <- Some s), "Name the output file.")
      ("-v", UnitArg (fun () -> verbose <- true), "Produce a listing file.")
      ("--module", StringArg (fun s -> modname <- Some s), "Define the F# module name to host the generated parser.")
-     ("--lexlib", StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer (default: Microsoft.FSharp.Text.Lexing)")
      ("--parslib", StringArg (fun s ->  parslib <- s), "Specify the namespace for the implementation of the parser table interpreter (default: Microsoft.FSharp.Text.Parsing)")]
 
 let main() =
@@ -102,7 +100,7 @@ let main() =
     
     let gotoHashtable = Hashtable.create None gotoElements
 
-    YaccOutput.outputParser output modname lexlib parslib (fst spec.Header) spec preprocessed compiled actionHashtable gotoHashtable
+    YaccOutput.outputParser output modname parslib (fst spec.Header) spec preprocessed compiled actionHashtable gotoHashtable
 
     if verbose then
         YaccOutput.outputCompilationReport (input + ".html") preprocessed compiled
