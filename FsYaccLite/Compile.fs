@@ -569,7 +569,7 @@ let compile (spec : Preprocessed) =
     let gotoTable = 
          Array.init kernels.Length (fun kernelIndex ->
             Array.init spec.NonTerminals.Length (fun nonTerminalIndex ->
-                gotoKernel  kernelIndex (NonTerminalIndex nonTerminalIndex)))
+                gotoKernel kernelIndex (NonTerminalIndex nonTerminalIndex)))
 
     reportTime(); printfn  "returning tables."; stdout.Flush();
 

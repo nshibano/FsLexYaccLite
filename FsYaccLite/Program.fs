@@ -69,18 +69,38 @@ let main() =
     printfn "%d productions" compiled.Productions.Length; 
     printfn "#rows in action table: %d" compiled.ActionTable.Length
 
-    let actionMatrix =
-        Array.map (fun (row : ActionTableRow) ->
-            Array.map (fun x ->
-                match x with
-                | Some (Shift x) -> Some x
-                | Some (Reduce y) -> Some (~~~ y)
-                | Some Accept -> Some (int Int16.MaxValue)
-                | Some Error -> Some (int Int16.MinValue)
-                | None -> None) row.LookaheadActions) compiled.ActionTable
-      
-    let actionHashtable = Hashtable.create None actionMatrix
-    let gotoHashtable = Hashtable.create None compiled.GotoTable
+    let actionElements =
+        let accu = ResizeArray()
+        for i = 0 to compiled.Kernels.Length - 1 do
+            for j = 0 to preprocessed.Terminals.Length - 1 do
+                let row = compiled.ActionTable.[i]
+                match row.LookaheadActions.[j] with
+                | Some action ->
+                    let k = preprocessed.Terminals.Length * i + j
+                    let v =
+                        match action with
+                        | Shift x -> x
+                        | Reduce y -> ~~~ y
+                        | Accept -> int Int16.MaxValue
+                        | Error -> int Int16.MinValue
+                    accu.Add((k, v))
+                | None -> ()
+        accu.ToArray()
+
+    let actionHashtable = Hashtable.create None actionElements
+
+    let gotoElements =
+        let accu = ResizeArray()
+        for i = 0 to compiled.Kernels.Length - 1 do
+            for j = 0 to preprocessed.NonTerminals.Length - 1 do
+                match compiled.GotoTable.[i].[j] with
+                | Some v ->
+                    let k = preprocessed.NonTerminals.Length * i + j
+                    accu.Add(k, v)
+                | None -> ()
+        accu.ToArray()
+    
+    let gotoHashtable = Hashtable.create None gotoElements
 
     YaccOutput.outputParser output modname lexlib parslib (fst spec.Header) spec preprocessed compiled actionHashtable gotoHashtable
 
@@ -88,10 +108,10 @@ let main() =
         YaccOutput.outputCompilationReport (input + ".html") preprocessed compiled
         YaccOutput.outputTableImages input preprocessed compiled
 
-        Hashtable.outputHashtableStat actionMatrix actionHashtable
+        Hashtable.outputHashtableStat compiled.Kernels.Length preprocessed.Terminals.Length actionHashtable
         Hashtable.outputHashtableImage (input + "-actionHashtableImage.png") actionHashtable
 
-        Hashtable.outputHashtableStat compiled.GotoTable gotoHashtable
+        Hashtable.outputHashtableStat compiled.Kernels.Length preprocessed.NonTerminals.Length gotoHashtable
         Hashtable.outputHashtableImage (input + "-gotoHashtableImage.png") gotoHashtable
 
 #if DEBUG

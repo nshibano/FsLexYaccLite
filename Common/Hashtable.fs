@@ -11,35 +11,20 @@ type Hashtable =
       BucketCounts : int []
       Entries : (bool * int * int) [] }
 
-let create (size : int option) (matrix : int option [] []) : Hashtable =
-
-    let occupied =
-        let mutable accu = 0
-        for row in matrix do
-            for elem in row do
-                if elem.IsSome then accu <- accu + 1
-        accu
+let create (bucketsCount : int option) (pairs : (int * int) []) : Hashtable =
 
     let size =
-        match size with
+        match bucketsCount with
         | Some size -> size
         | None ->
             let mutable i = 0
-            while primes.[i] < occupied do i <- i + 1
+            while primes.[i] < pairs.Length do i <- i + 1
             primes.[i]
 
     let buckets = Array.init size (fun i -> ResizeArray())
-    let m = matrix.Length
-    let n = matrix.[0].Length
-
-    for i = 0 to m - 1 do
-        for j = 0 to n - 1 do
-            match matrix.[i].[j] with
-            | Some v ->
-                let k = n * i + j
-                let h = k % size
-                buckets.[h].Add((k, v))
-            | None -> ()
+    
+    for (k, v) in pairs do
+        buckets.[k % size].Add((k, v))
     
     let buckets = Array.map (fun (bucket : ResizeArray<int * int>) -> bucket.ToArray()) buckets
 
@@ -60,15 +45,13 @@ let create (size : int option) (matrix : int option [] []) : Hashtable =
       BucketCounts = Array.map (fun (bucket : (int * int) []) -> bucket.Length) buckets
       Entries = entries.ToArray() }
 
-let outputHashtableStat (matrix : int option [] []) (table : Hashtable) =
+let outputHashtableStat m n (table : Hashtable) =
 
-    let m = matrix.Length
-    let n = if matrix.Length > 0 then matrix.[0].Length else 0
     let occupied = table.Entries.Length
     let maxEntriesCountInSingleBucket = Array.max table.BucketCounts
     
     printfn "full matrix elements : %d, occupied matrix elements: %d, density : %f, buckets count : %d, max entries count in single bucket : %d"
-        (n * m)
+        (m * n)
         table.Entries.Length
         (float occupied / (float n * float m))
         table.BucketPointers.Length
