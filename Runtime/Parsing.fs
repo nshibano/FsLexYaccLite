@@ -1,5 +1,6 @@
 module FsLexYaccLite.Parsing
 
+open System
 open System.Collections.Generic
 open FsLexYaccLite.Lexing
 
@@ -24,22 +25,20 @@ type ValueInfo =
 
 type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, reductionSymbolCounts : uint16[], productionToNonTerminalTable : uint16[], maxProductionBodyLength : int, gotoTableBuckets : int16 [], gotoTableEntries : int16 [], nonTerminalsCount : int, actionTable_buckets : int16 [], actionTable_entries : int16 [], actionTable_defaultActions : int16 [], terminalsCount : int) =
     
-    let rec findEntry (entries : int16 []) key p =
-        let x = entries.[2 * p]
-        let hasNext = x < 0s
-        let k = int (if 0s <= x then x else ~~~x)
+    let rec findEntry (entries : int16 []) (key : int) (pointer : int) =
+        let entryHead = entries.[pointer]
 
-        if key = k then
-            int entries.[2 * p + 1]
-        elif hasNext then
-            findEntry entries key (p + 1)
-        else System.Int32.MinValue
+        if key = int (if entryHead >= 0s then entryHead else ~~~entryHead) then
+            int entries.[pointer + 1]
+        elif entryHead < 0s then
+            findEntry entries key (pointer + 2)
+        else Int32.MinValue
     
     let lookup (buckets : int16 []) (entries : int16 []) (key : int) =
-        let bucket = int buckets.[key % buckets.Length]
-        if bucket >= 0 then
-            findEntry entries key bucket
-        else System.Int32.MinValue
+        let bucketIndex = int buckets.[key % buckets.Length]
+        if bucketIndex >= 0 then
+            findEntry entries key (2 * bucketIndex)
+        else Int32.MinValue
 
     member this.Interpret(lexer : LexBuffer -> 'tok, lexbuf : LexBuffer, initialState : int) =                                                                      
         let mutable cont = true
