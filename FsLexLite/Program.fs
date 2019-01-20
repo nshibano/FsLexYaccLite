@@ -9,10 +9,12 @@ open Compile
 let mutable input = None
 let mutable out = None
 let mutable lexlib = "FsLexYaccLite.Lexing"
+let mutable modname = None
 
 let usage =
-  [ ("-o", StringArg (fun s -> out <- Some s), "Name the output file."); 
-    ("--lexlib", StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer table interpreter (default Microsoft.FSharp.Text.Lexing)")]
+    [("-o", StringArg (fun s -> out <- Some s), "Name the output file.")
+     ("--module", StringArg (fun s -> modname <- Some s), "Define the F# module name to host the generated parser.")
+     ("--lexlib", StringArg (fun s ->  lexlib <- s), "Specify the namespace for the implementation of the lexer table interpreter (default Microsoft.FSharp.Text.Lexing)")]
 
 let [<Literal>] Sentinel = -1
 
@@ -52,10 +54,16 @@ try
         match out with 
         | Some x -> x 
         | _ -> Path.Combine (Path.GetDirectoryName filename,Path.GetFileNameWithoutExtension(filename)) + ".fs"
+
     use os = System.IO.File.CreateText output
+
     let moduleName =
-        let s = Path.GetFileNameWithoutExtension(filename)
-        String(Char.ToUpperInvariant s.[0], 1) + s.Substring(1)
+        match modname with
+        | None ->
+            let s = Path.GetFileNameWithoutExtension(filename)
+            String(Char.ToUpperInvariant s.[0], 1) + s.Substring(1)
+        | Some name -> name
+    
     fprintfn os "module %s" moduleName
     
     let printLinesIfCodeDefined (code,pos:Position) =
@@ -114,7 +122,7 @@ try
                 else
                     int16 Sentinel) dfaNodes)
 
-        fprintfn os "let private %s_tables = %s.UnicodeTables(%s_asciiAlphabetTable, %s_nonAsciiCharRangeTable, %s_nonAsciiAlphabetTable, %s_transitionTable, %s_acceptTable)" name lexlib name name name name name
+        fprintfn os "let private %s_tables = %s.LexTables(%s_asciiAlphabetTable, %s_nonAsciiCharRangeTable, %s_nonAsciiAlphabetTable, %s_transitionTable, %s_acceptTable)" name lexlib name name name name name
     
     for i = 0 to rules.Length - 1 do
         let name, args, alphabetTable, dfaNodes, actions = rules.[i]

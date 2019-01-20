@@ -64,7 +64,7 @@ type LexBuffer =
           EndPos = Position_Zero
           LocalStore = Dictionary() }
 
-type UnicodeTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[], nonAsciiAlphabetTable : uint16[], transitionTable: int16[][], acceptTable: int16[]) =
+type LexTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[], nonAsciiAlphabetTable : uint16[], transitionTable: int16[][], acceptTable: int16[]) =
         
     let [<Literal>] sentinel = -1
         

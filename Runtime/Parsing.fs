@@ -23,7 +23,7 @@ type ValueInfo =
         new (value, startPos, endPos) = { value = value; startPos = startPos; endPos = endPos }
     end
 
-type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, reductionSymbolCounts : uint16[], productionToNonTerminalTable : uint16[], maxProductionBodyLength : int, gotoTableBuckets : int16 [], gotoTableEntries : int16 [], nonTerminalsCount : int, actionTable_buckets : int16 [], actionTable_entries : int16 [], actionTable_defaultActions : int16 [], terminalsCount : int) =
+type ParseTables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, reductionSymbolCounts : uint16[], productionToNonTerminalTable : uint16[], maxProductionBodyLength : int, gotoTableBuckets : int16 [], gotoTableEntries : int16 [], nonTerminalsCount : int, actionTable_buckets : int16 [], actionTable_entries : int16 [], actionTable_defaultActions : int16 [], terminalsCount : int) =
     
     let lookup (buckets : int16 []) (entries : int16 []) (key : int) =
         let bucketIndex = int buckets.[key % buckets.Length]
