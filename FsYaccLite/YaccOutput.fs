@@ -209,9 +209,6 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
         failwithf "%s is given %%token declarations" key
   fprintfn os ""
   
-  let types = Map.ofList spec.Types 
-  let tokens = Map.ofList spec.Tokens 
-
   outputUInt16Array os "reductionSymbolCounts" (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions)
   outputUInt16Array os "productionToNonTerminalTable" (Array.map (fun (prod : CompiledProduction) -> prod.HeadNonTerminalIndex) compiled.Productions)
   
@@ -221,8 +218,10 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
   outputInt16Array os "actionTable_defaultActions" (Array.map (fun (row : ActionTableRow) -> int (actionCoding2 row.DefaultAction)) compiled.ActionTable)
   outputHashtable os "gotoTable" gotoHashtable
 
-
-  let getType nt = if types.ContainsKey nt then  types.[nt] else "'"+nt 
+  let typeOfNonTerminal = Map.ofList spec.Types 
+  let typeOfToken = Map.ofList spec.Tokens 
+  let getType nt = if typeOfNonTerminal.ContainsKey nt then typeOfNonTerminal.[nt] else "'" + nt 
+  
   begin 
       fprintf os "let reductions =" ;
       fprintfn os "    [| " ;
@@ -233,8 +232,8 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
                   if Array.contains sym preprocessed.NonTerminals then
                         Some (getType sym)
                   else
-                      if tokens.ContainsKey sym then 
-                        tokens.[sym]
+                      if typeOfToken.ContainsKey sym then 
+                        typeOfToken.[sym]
                       else None
               match tyopt with 
               | Some ty -> fprintfn os "            let _%d = (let data = parseState.GetInput(%d) in (Microsoft.FSharp.Core.Operators.unbox data : %s)) in" (i+1) (i+1) ty
@@ -257,7 +256,7 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
           | None -> 
               fprintfn os "                      failwith \"unreachable\""
           fprintfn os "                   )";
-          fprintfn os "                 : %s));" (if types.ContainsKey prod.Head then  types.[prod.Head] else "'" + prod.Head);
+          fprintfn os "                 : %s));" (getType prod.Head)
       done;
       fprintfn os "|]" ;
   end;
@@ -268,6 +267,6 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
   fprintfn os "let tables = %s.ParseTables(reductions, endOfInputTag, tagOfToken, dataOfToken, reductionSymbolCounts, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)" parslib
 
   for (id, startState) in Seq.zip spec.StartSymbols compiled.StartStates do
-        let ty = types.[id]
+        let ty = typeOfNonTerminal.[id]
         fprintfn os "let %s lexer lexbuf : %s = unbox (tables.Interpret(lexer, lexbuf, %d))" id ty startState    
   ()
