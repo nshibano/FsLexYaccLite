@@ -3,7 +3,7 @@ module FsLexYaccLite.Parsing
 open System.Collections.Generic
 open FsLexYaccLite.Lexing
 
-/// The information accessible via the <c>parseState</c> value within parser actions.
+/// The information accessible via the parseState value within parser actions.
 type IParseState =
     /// Get the start and end position for the terminal or non-terminal at a given index matched by the production
     abstract InputRange: int -> Position * Position
@@ -12,36 +12,7 @@ type IParseState =
     /// Get the value produced by the terminal or non-terminal at the given position
     abstract GetInput: int -> obj 
     /// Get the store of local values associated with this parser
-    abstract ParserLocalStore : IDictionary<string, obj>
-
-type AssocTable(elemTab:uint16[], offsetTab:uint16[]) =
-    let cache = Dictionary<int, int>()
-
-    member t.readAssoc (minElemNum,maxElemNum,defaultValueOfAssoc,keyToFind) =     
-        let elemNumber : int = (minElemNum+maxElemNum)/2
-        if elemNumber = maxElemNum 
-        then defaultValueOfAssoc
-        else 
-            let x = int elemTab.[elemNumber*2]
-            if keyToFind = x then 
-                int elemTab.[elemNumber*2+1]
-            elif keyToFind < x then t.readAssoc (minElemNum ,elemNumber,defaultValueOfAssoc,keyToFind)
-            else                    t.readAssoc (elemNumber+1,maxElemNum,defaultValueOfAssoc,keyToFind)
-
-    member t.Read(rowNumber, keyToFind) =
-        
-        let mutable res = 0 
-        let cacheKey = (rowNumber <<< 16) ||| keyToFind
-        let ok = cache.TryGetValue(cacheKey, &res) 
-        if ok then res 
-        else
-            let headOfTable = int offsetTab.[rowNumber]
-            let firstElemNumber = headOfTable + 1           
-            let numberOfElementsInAssoc = int elemTab.[headOfTable*2]
-            let defaultValueOfAssoc = int elemTab.[headOfTable*2+1]          
-            let res = t.readAssoc (firstElemNumber,(firstElemNumber+numberOfElementsInAssoc),defaultValueOfAssoc,keyToFind)
-            cache.[cacheKey] <- res
-            res
+    abstract ParserLocalStore : Dictionary<string, obj>
 
 type ValueInfo = 
     struct
@@ -93,7 +64,7 @@ type Tables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, 
                 member p.InputRange(n) = (ruleStartPoss.[n-1], ruleEndPoss.[n-1])
                 member p.GetInput(n)    = ruleValues.[n-1]
                 member p.ResultRange    = (lhsStartPos, lhsEndPos)
-                member p.ParserLocalStore = localStore :> IDictionary<_,_>
+                member p.ParserLocalStore = localStore
             }       
 
         while cont do                                                                                    
