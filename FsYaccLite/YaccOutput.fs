@@ -356,10 +356,11 @@ let outputParser (output : string) (modname : string) (lexlib : string) (parslib
       done;
       fprintfn os "|]" ;
   end;
-  
+
+  fprintfn os "let terminalsCount = %d" preprocessed.Terminals.Length  
   fprintfn os "let nonTerminalsCount = %d" preprocessed.NonTerminals.Length
 
-  fprintfn os "let tables = %s.Tables(reductions, endOfInputTag, tagOfToken, dataOfToken, actionTableElements, actionTableRowOffsets, reductionSymbolCounts, gotos, sparseGotoTableRowOffsets, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount)" parslib
+  fprintfn os "let tables = %s.Tables(reductions, endOfInputTag, tagOfToken, dataOfToken, actionTableElements, actionTableRowOffsets, reductionSymbolCounts, gotos, sparseGotoTableRowOffsets, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)" parslib
 
   for (id, startState) in Seq.zip spec.StartSymbols compiled.StartStates do
         let ty = types.[id]

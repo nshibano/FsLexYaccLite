@@ -8,7 +8,7 @@ let primes = [| 3; 7; 11; 17; 23; 29; 37; 47; 59; 71; 89; 107; 131; 163; 197; 23
 
 type Hashtable =
     { BucketPointers : int option []
-      BucketCounts : int []
+      BucketEntriesCounts : int []
       Entries : (bool * int * int) [] }
 
 let create (bucketsCount : int option) (pairs : (int * int) []) : Hashtable =
@@ -20,17 +20,15 @@ let create (bucketsCount : int option) (pairs : (int * int) []) : Hashtable =
             let mutable i = 0
             while primes.[i] < pairs.Length do i <- i + 1
             primes.[i]
-
-    let buckets = Array.init size (fun i -> ResizeArray())
     
-    for (k, v) in pairs do
-        buckets.[k % size].Add((k, v))
-    
-    let buckets = Array.map (fun (bucket : ResizeArray<int * int>) -> bucket.ToArray()) buckets
+    let buckets =
+        let accu = Array.init size (fun i -> ResizeArray())
+        for (k, v) in pairs do
+            accu.[k % size].Add((k, v))
+        Array.map (fun (bucket : ResizeArray<int * int>) -> bucket.ToArray()) accu
 
     let entries = ResizeArray()
     let pointers = ResizeArray()
-
     for bucket in buckets do
         if bucket.Length = 0 then
             pointers.Add(None)
@@ -42,13 +40,13 @@ let create (bucketsCount : int option) (pairs : (int * int) []) : Hashtable =
                 entries.Add(hasNext, key, value)
 
     { BucketPointers = pointers.ToArray()
-      BucketCounts = Array.map (fun (bucket : (int * int) []) -> bucket.Length) buckets
+      BucketEntriesCounts = Array.map (fun (bucket : (int * int) []) -> bucket.Length) buckets
       Entries = entries.ToArray() }
 
 let outputHashtableStat m n (table : Hashtable) =
 
     let occupied = table.Entries.Length
-    let maxEntriesCountInSingleBucket = Array.max table.BucketCounts
+    let maxEntriesCountInSingleBucket = Array.max table.BucketEntriesCounts
     
     printfn "full matrix elements : %d, occupied matrix elements: %d, density : %f, buckets count : %d, max entries count in single bucket : %d"
         (m * n)
@@ -85,7 +83,7 @@ let outputHashtable (f : TextWriter) (name : string) (table : Hashtable) =
     outputInt16Array f (name + "_entries") entries
 
 let outputHashtableImage (path : string) (table : Hashtable) =
-    let buckets = table.BucketCounts
+    let buckets = table.BucketEntriesCounts
     let lineLength = 256
     let lineHeight = 8
     let lineCount = buckets.Length / lineLength + (if buckets.Length % lineLength > 0 then 1 else 0)
