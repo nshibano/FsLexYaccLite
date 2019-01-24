@@ -52,7 +52,13 @@ type LexBuffer =
       mutable StartPos : Position
       mutable EndPos : Position
       LocalStore : Dictionary<string, obj> }
-    member x.Lexeme = x.String.Substring(x.ScanStart, x.LexemeLength)
+
+    member lexbuf.Lexeme = lexbuf.String.Substring(lexbuf.ScanStart, lexbuf.LexemeLength)
+
+    member lexbuf.NewLine() =
+        let pos = lexbuf.EndPos
+        lexbuf.EndPos <- { pos with Line = pos.Line + 1; StartOfLine = pos.AbsoluteOffset }
+
     static member FromString (s:string) =
         { LexBuffer.String = s
           ScanStart = 0
