@@ -1,4 +1,5 @@
-module Lexer 
+module Lexer
+ 
 open Parser
 open FsLexYaccLite.Lexing
 
@@ -133,7 +134,7 @@ let private token_transitionTable =
         [| -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s |]
     |]
 let private token_acceptTable = [| -1s; 14s; 14s; 14s; 14s; 14s; 30s; 10s; 11s; 12s; 13s; 30s; 14s; 15s; 16s; 17s; 18s; 19s; 20s; 21s; 22s; 23s; 24s; 25s; 26s; 27s; 30s; 30s; 31s; 14s; 14s; 14s; 14s; 14s; 14s; -1s; -1s; 12s; 13s; 28s; 29s; 14s; 14s; 2s; 3s; 4s; 5s; -1s; -1s; -1s; -1s; 29s; 0s; 14s; -1s; -1s; -1s; -1s; 1s; -1s; -1s; -1s; -1s; 6s; 7s; -1s; -1s; -1s; -1s; 8s; -1s; -1s; -1s; -1s; 9s |]
-let private token_tables = FsLexYaccLite.Lexing.UnicodeTables(token_asciiAlphabetTable, token_nonAsciiCharRangeTable, token_nonAsciiAlphabetTable, token_transitionTable, token_acceptTable)
+let private token_tables = FsLexYaccLite.Lexing.LexTables(token_asciiAlphabetTable, token_nonAsciiCharRangeTable, token_nonAsciiAlphabetTable, token_transitionTable, token_acceptTable)
 let private string_asciiAlphabetTable = [| 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 0us; 1us; 13us; 13us; 2us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 0us; 13us; 3us; 13us; 13us; 13us; 13us; 4us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 13us; 13us; 13us; 13us; 13us; 13us; 13us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 13us; 7us; 13us; 13us; 13us; 13us; 8us; 9us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 10us; 8us; 8us; 8us; 11us; 8us; 12us; 8us; 8us; 8us; 8us; 8us; 8us; 13us; 13us; 13us; 13us; 13us |]
 let private string_nonAsciiCharRangeTable = [| 128us |]
 let private string_nonAsciiAlphabetTable = [| 13us |]
@@ -157,7 +158,7 @@ let private string_transitionTable =
         [| -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s |]
     |]
 let private string_acceptTable = [| -1s; 7s; 3s; 4s; 7s; 5s; 6s; 7s; 0s; -1s; 1s; -1s; 4s; 5s; -1s; 2s |]
-let private string_tables = FsLexYaccLite.Lexing.UnicodeTables(string_asciiAlphabetTable, string_nonAsciiCharRangeTable, string_nonAsciiAlphabetTable, string_transitionTable, string_acceptTable)
+let private string_tables = FsLexYaccLite.Lexing.LexTables(string_asciiAlphabetTable, string_nonAsciiCharRangeTable, string_nonAsciiAlphabetTable, string_transitionTable, string_acceptTable)
 let private code_asciiAlphabetTable = [| 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 0us; 1us; 11us; 11us; 2us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 0us; 11us; 3us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 4us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 6us; 11us; 7us; 11us; 11us; 11us; 11us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 9us; 11us; 10us; 11us; 11us |]
 let private code_nonAsciiCharRangeTable = [| 128us |]
 let private code_nonAsciiAlphabetTable = [| 11us |]
@@ -181,7 +182,7 @@ let private code_transitionTable =
         [| 15s; -1s; -1s; 15s; 15s; 15s; 15s; 15s; 15s; 15s; 15s; 15s; -1s |]
     |]
 let private code_acceptTable = [| -1s; 0s; 1s; 8s; 3s; 4s; 8s; 5s; 8s; 7s; 8s; 2s; 4s; 5s; 6s; 6s |]
-let private code_tables = FsLexYaccLite.Lexing.UnicodeTables(code_asciiAlphabetTable, code_nonAsciiCharRangeTable, code_nonAsciiAlphabetTable, code_transitionTable, code_acceptTable)
+let private code_tables = FsLexYaccLite.Lexing.LexTables(code_asciiAlphabetTable, code_nonAsciiCharRangeTable, code_nonAsciiAlphabetTable, code_transitionTable, code_acceptTable)
 let private codestring_asciiAlphabetTable = [| 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 0us; 1us; 8us; 8us; 2us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 0us; 8us; 3us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 4us; 4us; 4us; 4us; 4us; 4us; 4us; 4us; 4us; 4us; 8us; 8us; 8us; 8us; 8us; 8us; 8us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 5us; 8us; 6us; 8us; 8us; 8us; 8us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 8us; 8us; 8us; 8us; 8us |]
 let private codestring_nonAsciiCharRangeTable = [| 128us |]
 let private codestring_nonAsciiAlphabetTable = [| 8us |]
@@ -200,7 +201,7 @@ let private codestring_transitionTable =
         [| 10s; -1s; -1s; -1s; 10s; 10s; -1s; 10s; -1s; -1s |]
     |]
 let private codestring_acceptTable = [| -1s; 5s; 1s; 2s; 5s; 3s; 4s; 5s; 0s; 2s; 3s |]
-let private codestring_tables = FsLexYaccLite.Lexing.UnicodeTables(codestring_asciiAlphabetTable, codestring_nonAsciiCharRangeTable, codestring_nonAsciiAlphabetTable, codestring_transitionTable, codestring_acceptTable)
+let private codestring_tables = FsLexYaccLite.Lexing.LexTables(codestring_asciiAlphabetTable, codestring_nonAsciiCharRangeTable, codestring_nonAsciiAlphabetTable, codestring_transitionTable, codestring_acceptTable)
 let private comment_asciiAlphabetTable = [| 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 0us; 12us; 12us; 1us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 2us; 12us; 12us; 12us; 12us; 3us; 4us; 5us; 6us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 7us; 12us; 12us; 12us; 12us; 12us; 8us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 9us; 12us; 12us; 12us; 10us; 12us; 11us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us; 12us |]
 let private comment_nonAsciiCharRangeTable = [| 128us |]
 let private comment_nonAsciiAlphabetTable = [| 12us |]
@@ -225,7 +226,7 @@ let private comment_transitionTable =
         [| -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s |]
     |]
 let private comment_acceptTable = [| -1s; 7s; 1s; 7s; 3s; 7s; 7s; 5s; 6s; 7s; -1s; -1s; 2s; 3s; 4s; 6s; 0s |]
-let private comment_tables = FsLexYaccLite.Lexing.UnicodeTables(comment_asciiAlphabetTable, comment_nonAsciiCharRangeTable, comment_nonAsciiAlphabetTable, comment_transitionTable, comment_acceptTable)
+let private comment_tables = FsLexYaccLite.Lexing.LexTables(comment_asciiAlphabetTable, comment_nonAsciiCharRangeTable, comment_nonAsciiAlphabetTable, comment_transitionTable, comment_acceptTable)
 let rec token lexbuf =
     match token_tables.Interpret(lexbuf) with
     | 0 ->

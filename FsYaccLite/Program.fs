@@ -47,7 +47,7 @@ let main() =
             use r = new StreamReader(f, true)
             LexBuffer.FromString(r.ReadToEnd())
       
-        lexbuf.EndPos <- Position.FirstLine(input)
+        lexbuf.EndPos <- Position_Zero
 
         try 
             Parser.spec Lexer.token lexbuf 

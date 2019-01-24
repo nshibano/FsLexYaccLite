@@ -26,7 +26,7 @@ try
             use f = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
             use r = new StreamReader(f, true)
             LexBuffer.FromString(r.ReadToEnd())
-      lexbuf.EndPos <- Position.FirstLine(filename)
+      lexbuf.EndPos <- Position_Zero
       try 
           Parser.spec Lexer.token lexbuf 
       with e -> 
@@ -67,7 +67,7 @@ try
     fprintfn os "module %s" moduleName
     
     let printLinesIfCodeDefined (code,pos:Position) =
-        if pos <> Position.Empty  // If bottom code is unspecified, then position is empty.        
+        if pos <> Position_Empty  // If bottom code is unspecified, then position is empty.        
         then 
             fprintfn os "%s" code;
     
