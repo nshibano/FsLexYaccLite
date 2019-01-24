@@ -10,29 +10,50 @@ type Production =
       Code : Code option }
 
 type Preprocessed = 
-    { Terminals: (string * (Associativity * int) option) []
-      NonTerminals: string array
+    { Tokens : (string * string option) []
+      Types : Dictionary<string, string>
+      Terminals: (string * (Associativity * int) option) []
+      NonTerminals: string []
       Symbols : string []
-      Productions: Production array
-      StartSymbols: string array }
+      Productions: Production []
+      OriginalStartSymbols : string []
+      StartSymbols: string [] }
 
 let endOfInputTerminal = "$"
 let dummyLookahead = "#"
 let errorTerminal = "error"
 
 let processParserSpecAst (spec : ParserSpec) =
+    let tokens = ResizeArray()
+    let types = Dictionary(HashIdentity.Structural)
+    let startSymbols = ResizeArray()
+    let assocs = ResizeArray()
+
+    for decl in spec.Decls do
+        match decl with
+        | Token (ty, names) ->
+            for name in names do
+                tokens.Add((name, ty))
+        | Type (ty, idents) ->
+            for ident in idents do
+                try
+                    types.Add(ident, ty)
+                with _ ->
+                    failwithf "%s is given multiple %%type declarations" ident
+        | Start idents -> startSymbols.AddRange(idents)
+        | Prec (assoc, idents) -> assocs.Add((assoc, idents))
     
     let explicitPrecInfo = 
-        let levels = spec.Associativities.Length
-        spec.Associativities 
-        |> List.mapi (fun i precSpecs -> List.map (fun (precSym, assoc) -> (precSym, (assoc, levels - i - 1))) precSpecs)
+        assocs
+        |> List.ofSeq
+        |> List.mapi (fun i (assoc, idents) -> List.map (fun precSym -> (precSym, (assoc, i))) idents)
         |> List.concat
     
     for key, _ in explicitPrecInfo |> Seq.countBy fst |> Seq.filter (fun (_, n) -> n > 1)  do
         failwithf "%s is given two associativities" key
     
     let explicitPrecInfo = Map.ofList explicitPrecInfo
-    let terminals = Array.append (Array.map fst (Array.ofList spec.Tokens)) [| errorTerminal |]
+    let terminals = Array.append (Array.map fst (tokens.ToArray())) [| errorTerminal |]
     let terminalsSet = HashSet(terminals)
        
     let productions =  
@@ -65,19 +86,17 @@ let processParserSpecAst (spec : ParserSpec) =
             else
                 if not (terminalsSet.Contains sym) then failwith (sprintf "token %s is not declared" sym)
            
-    if spec.StartSymbols = [] then (failwith "at least one %start declaration is required\n")
+    if startSymbols.Count = 0 then (failwith "at least one %start declaration is required\n")
 
-    let types = Map.ofList spec.Types
-
-    for id in spec.StartSymbols do
+    for id in startSymbols do
           if not (types.ContainsKey id) then 
             failwith ("a %type declaration is required for start token " + id)
     
-    for nt,_ in spec.Types do 
-        checkNonTerminal nt
+    for kv in types do 
+        checkNonTerminal kv.Key
 
     let terminals = Array.map (fun t -> (t, explicitPrecInfo.TryFind t)) terminals
-    let startSymbols = Array.ofList spec.StartSymbols
+    let startSymbols = startSymbols.ToArray()
     
     // Augment the grammar 
     let fakeStartSymbols = Array.map (fun nt -> "_start" + nt) startSymbols
@@ -92,8 +111,11 @@ let processParserSpecAst (spec : ParserSpec) =
                 startSymbols)
             productions
 
-    { Terminals = terminals
+    { Tokens = tokens.ToArray()
+      Types = types
+      Terminals = terminals
       NonTerminals = nonTerminals
       Symbols = Array.append (Array.map fst terminals) nonTerminals
       Productions = productions
+      OriginalStartSymbols = startSymbols
       StartSymbols = fakeStartSymbols }

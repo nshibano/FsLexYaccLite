@@ -14,28 +14,28 @@ open Syntax
 %%      
 
 spec: 
-    headeropt decls PERCENT_PERCENT rules EOF
-    { List.foldBack (fun f x -> f x) $2 { Header=$1;Tokens=[];Types=[];Associativities=[];StartSymbols=[];Rules=$4 } }
+    | headeropt decls PERCENT_PERCENT rules EOF { { Header = $1; Decls = List.rev $2; Rules = $4 } }
 
 headeropt: 
-  | HEADER 
-       { $1 } 
-  | 
-      { "", (parseState.ResultRange |> fst)}
+    | HEADER { $1 } 
+    |        { "", (fst parseState.ResultRange)}
 
-decls:  
-    { [] } 
-  | decl decls { $1 :: $2 }
+decls :
+    | decls decl { $2 :: $1 }
+    |            { [] }
 
-decl: 
-    TOKEN idents { (fun x -> {x with Tokens = x.Tokens @ (List.map (fun x -> (x,$1)) $2)}) }
-  | TYPE idents   { (fun x -> {x with Types = x.Types @ (List.map (fun x -> (x,$1)) $2)} ) } 
-  | START idents   { (fun x -> {x with StartSymbols = x.StartSymbols @ $2} ) }
-  | LEFT idents   { (fun x -> {x with Associativities = x.Associativities @ [(List.map (fun x -> (x,LeftAssoc)) $2)]} ) }
-  | RIGHT idents   { (fun x -> {x with Associativities = x.Associativities @ [(List.map (fun x -> (x,RightAssoc)) $2)]} ) }
-  | NONASSOC idents   { (fun x -> {x with Associativities = x.Associativities @ [(List.map (fun x -> (x,NonAssoc)) $2)]} ) }
+decl :
+    | TOKEN idents    { Token ($1, List.rev $2) }
+    | TYPE idents     { Type ($1, List.rev $2) }
+    | START idents    { Start (List.rev $2) }
+    | LEFT idents     { Prec (LeftAssoc, List.rev $2) }
+    | RIGHT idents    { Prec (RightAssoc, List.rev $2) }
+    | NONASSOC idents { Prec (NonAssoc, List.rev $2) }
 
-idents: IDENT idents { $1 :: $2 } | { [] }
+idents :
+    | idents IDENT { $2 :: $1 }
+    |              { [] }
+
 rules: rule rules { $1 :: $2 } | rule { [$1] }
 rule: IDENT COLON optbar clauses optsemi { ($1,$4) }
 optbar: { } | BAR { }

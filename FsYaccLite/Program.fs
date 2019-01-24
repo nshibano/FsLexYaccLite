@@ -54,9 +54,7 @@ let main() =
         with e -> 
             eprintf "%s(%d,%d): error: %s" input lexbuf.StartPos.Line lexbuf.StartPos.Column e.Message;
             exit 1
-  
-    let spec = { spec with Tokens = List.rev spec.Tokens }
-  
+    
     printfn "building tables"; 
     let preprocessed = processParserSpecAst spec
     let compiled = compile preprocessed

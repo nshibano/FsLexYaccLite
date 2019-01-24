@@ -180,7 +180,7 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
   fprintfn os "#nowarn \"64\""
   fprintfn os "%s" code;
   fprintfn os "type token = "
-  for id, typ in spec.Tokens do 
+  for id, typ in preprocessed.Tokens do 
     match typ with
     | None -> fprintfn os "  | %s" id
     | Some ty -> fprintfn os "  | %s of %s" id ty; 
@@ -188,7 +188,7 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
   fprintfn os "";
   fprintfn os "let tagOfToken (t : token) = ";
   fprintfn os "  match t with";
-  spec.Tokens |> List.iteri (fun i (id,typ) -> 
+  preprocessed.Tokens |> Array.iteri (fun i (id,typ) -> 
       fprintfn os "  | %s %s -> %d " id (match typ with Some _ -> "_" | None -> "") i);
   fprintfn os "";
   fprintfn os "let endOfInputTag = %d " compiled.EndOfInputTerminalIndex;
@@ -196,16 +196,13 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
   fprintfn os "let dataOfToken (t : token) : obj = ";
   fprintfn os "  match t with ";
 
-  for (id,typ) in spec.Tokens do
+  for (id,typ) in preprocessed.Tokens do
       fprintfn os "  | %s %s -> %s " 
         id
         (match typ with Some _ -> "x" | None -> "")
         (match typ with Some _ -> "box x" | None -> "null")
-
-  for (key,_) in spec.Types |> Seq.countBy fst |> Seq.filter (fun (_,n) -> n > 1)  do
-        failwithf "%s is given multiple %%type declarations" key;
     
-  for (key,_) in spec.Tokens |> Seq.countBy fst |> Seq.filter (fun (_,n) -> n > 1)  do
+  for (key,_) in preprocessed.Tokens |> Seq.countBy fst |> Seq.filter (fun (_,n) -> n > 1)  do
         failwithf "%s is given %%token declarations" key
   fprintfn os ""
   
@@ -218,8 +215,8 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
   outputInt16Array os "actionTable_defaultActions" (Array.map (fun (row : ActionTableRow) -> int (actionCoding2 row.DefaultAction)) compiled.ActionTable)
   outputHashtable os "gotoTable" gotoHashtable
 
-  let typeOfNonTerminal = Map.ofList spec.Types 
-  let typeOfToken = Map.ofList spec.Tokens 
+  let typeOfNonTerminal = preprocessed.Types 
+  let typeOfToken = Map.ofArray preprocessed.Tokens 
   let getType nt = if typeOfNonTerminal.ContainsKey nt then typeOfNonTerminal.[nt] else "'" + nt 
   
   begin 
@@ -266,7 +263,7 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
 
   fprintfn os "let tables = %s.ParseTables(reductions, endOfInputTag, tagOfToken, dataOfToken, reductionSymbolCounts, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)" parslib
 
-  for (id, startState) in Seq.zip spec.StartSymbols compiled.StartStates do
+  for (id, startState) in Seq.zip preprocessed.OriginalStartSymbols compiled.StartStates do
         let ty = typeOfNonTerminal.[id]
         fprintfn os "let %s lexer lexbuf : %s = unbox (tables.Interpret(lexer, lexbuf, %d))" id ty startState    
   ()

@@ -7,19 +7,18 @@ type Rule = Rule of Identifier list * Identifier option * Code option
 type Associativity = LeftAssoc | RightAssoc | NonAssoc
 
 type Decl =
-    | Token of string list
-    | Type of string list
-    | Start of string list
-    | Left of string list
-    | Right of string list
-    | Nonassoc of string list
+    | Token of string option * Identifier list
+    | Type of string * Identifier list
+    | Start of Identifier list
+    | Prec of Associativity * Identifier list
 
 type ParserSpec = 
     { Header : Code
-      Tokens : (Identifier * string option) list
-      Types : (Identifier * string) list
-      Associativities : (Identifier * Associativity) list list
-      StartSymbols : Identifier list
+      Decls : Decl list
+      //Tokens : (Identifier * string option) list
+      //Types : (Identifier * string) list
+      //Associativities : (Identifier * Associativity) list list
+      //StartSymbols : Identifier list
       Rules : (Identifier * Rule list) list }
       
 let stringOfAssoc (assoc : Associativity) =
