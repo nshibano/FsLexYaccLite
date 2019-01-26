@@ -1,31 +1,24 @@
 module Syntax
 
-type Identifier = string
-type Code = string
-
-type Associativity = LeftAssoc | RightAssoc | NonAssoc
+type Assoc = LeftAssoc | RightAssoc | NonAssoc
 
 type Decl =
-    | Token of string option * Identifier list
-    | Type of string * Identifier list
-    | Start of Identifier list
-    | Prec of Associativity * Identifier list
+    | Token of string option * string list
+    | Type of string * string list
+    | Start of string list
+    | Prec of Assoc * string list
 
-type Rule =
+type Clause =
     { Symbols : string list
       PrecSymbol : string option
-      Code : Code }
+      Code : string }
 
 type ParserSpec = 
-    { Header : Code
+    { Header : string
       Decls : Decl list
-      //Tokens : (Identifier * string option) list
-      //Types : (Identifier * string) list
-      //Associativities : (Identifier * Associativity) list list
-      //StartSymbols : Identifier list
-      Rules : (Identifier * string option * Rule list) list }
+      Rules : (string * string option * Clause list) list }
       
-let stringOfAssoc (assoc : Associativity) =
+let stringOfAssoc (assoc : Assoc) =
     match assoc with
     | LeftAssoc -> "left"
     | RightAssoc -> "right"

@@ -6,7 +6,7 @@ open Syntax
 %start spec
 
 %token <string> IDENT TYPE_LITERAL
-%token <Syntax.Code> HEADER CODE 
+%token <string> HEADER CODE 
 %token BAR PERCENT_PERCENT START KW_TYPE TOKEN LEFT RIGHT NONASSOC COLON PREC SEMI EOF
 
 %left BAR

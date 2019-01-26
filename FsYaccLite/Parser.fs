@@ -7,8 +7,8 @@ open Syntax
 type token = 
   | IDENT of string
   | TYPE_LITERAL of string
-  | HEADER of Syntax.Code
-  | CODE of Syntax.Code
+  | HEADER of string
+  | CODE of string
   | BAR
   | PERCENT_PERCENT
   | START
@@ -90,7 +90,7 @@ let reductions =    [|
                    )
                  : Syntax.ParserSpec));
         (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.Code)) in
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
@@ -278,7 +278,7 @@ let reductions =    [|
         (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'syms)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'optprec)) in
-            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.Code)) in
+            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (

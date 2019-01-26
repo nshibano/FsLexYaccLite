@@ -441,7 +441,7 @@ let compile (spec : Preprocessed) =
 
         // Now build the action tables. First a utility to merge the given action  
         // into the table, taking into account precedences etc. and reporting errors. 
-        let addResolvingPrecedence (row : ((Associativity * int) option * Action) []) kernelIdx termIdx itemNew  = 
+        let addResolvingPrecedence (row : ((Assoc * int) option * Action) []) kernelIdx termIdx itemNew  = 
             // printf "DEBUG: state %d: adding action for %s, precNew = %a, actionNew = %a\n" kernelIdx (termTab.OfIndex termIdx) outputPrec precNew OutputAction actionNew; 
             // We add in order of precedence - however the precedences may be the same, and we give warnings when rpecedence resolution is based on implicit file orderings 
 
