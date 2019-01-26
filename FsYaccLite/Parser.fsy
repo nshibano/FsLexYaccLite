@@ -29,7 +29,7 @@ optTypeLiteral:
     |              { None }
 
 decl:
-    | TOKEN optTypeLiteral idents   { Token ($2, List.rev $3) }
+    | TOKEN optTypeLiteral idents { Token ($2, List.rev $3) }
     | KW_TYPE TYPE_LITERAL idents { Type ($2, List.rev $3) }
     | START idents                { Start (List.rev $2) }
     | LEFT idents                 { Prec (LeftAssoc, List.rev $2) }
@@ -45,7 +45,7 @@ rules:
     | rule       { [$1] }
 
 rule:
-    | IDENT optTypeLiteral COLON optbar clauses optsemi { ($1, $2, List.rev $5) }
+    | IDENT optTypeLiteral COLON optbar clauses optsemi { { Ident = $1; Type = $2; Clauses = List.rev $5 } }
 
 optbar:
     | BAR { }

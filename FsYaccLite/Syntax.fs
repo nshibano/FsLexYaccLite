@@ -13,10 +13,15 @@ type Clause =
       PrecSymbol : string option
       Code : string }
 
+type Rule =
+    { Ident : string
+      Type : string option
+      Clauses : Clause list }
+
 type ParserSpec = 
     { Header : string
       Decls : Decl list
-      Rules : (string * string option * Clause list) list }
+      Rules : Rule list }
       
 let stringOfAssoc (assoc : Assoc) =
     match assoc with

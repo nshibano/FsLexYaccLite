@@ -141,7 +141,7 @@ let reductions =    [|
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-                                                           Token (_2, List.rev _3) 
+                                                         Token (_2, List.rev _3) 
                    )
                  : 'decl));
         (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
@@ -227,7 +227,7 @@ let reductions =    [|
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-                                                                               (_1, _2, List.rev _5) 
+                                                                               { Ident = _1; Type = _2; Clauses = List.rev _5 } 
                    )
                  : 'rule));
         (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
