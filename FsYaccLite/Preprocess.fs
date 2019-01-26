@@ -59,7 +59,7 @@ let processParserSpecAst (spec : ParserSpec) =
             let assoc, idents = assocs.[i]
             for ident in idents do
                 if accu.ContainsKey(ident) then failwithf "%s is given more than one associativities" ident
-                accu.Add(ident, (assoc ,i))
+                accu.Add(ident, (assoc, i))
         accu
     
     let terminals = Array.append (Array.map fst (tokens)) [| errorTerminal |]

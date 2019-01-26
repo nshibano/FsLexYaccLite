@@ -56,7 +56,6 @@ type Compiled =
         ActionTable : ActionTableRow []
         GotoTable : int option [] [] 
         EndOfInputTerminalIndex : int
-        ErrorTerminalIndex : int
     }
 
 let sortedArrayofList (l : List<'T>) =
@@ -587,5 +586,4 @@ let compile (spec : Preprocessed) =
       StartStates = startKernelIndexs
       ActionTable = actionTable
       GotoTable = gotoTable
-      EndOfInputTerminalIndex = indexOfTerminal.[endOfInputTerminal]
-      ErrorTerminalIndex = indexOfTerminal.[errorTerminal] }
+      EndOfInputTerminalIndex = indexOfTerminal.[endOfInputTerminal] }
