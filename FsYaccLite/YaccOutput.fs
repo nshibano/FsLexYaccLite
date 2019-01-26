@@ -218,14 +218,17 @@ let outputParser (output : string) (modname : string) (parslib : string) (header
   let getType nt = if typeOfNonTerminal.ContainsKey nt then typeOfNonTerminal.[nt] else "'" + nt 
   
   begin 
-      fprintfn os "let reductions (i : int) (parseState : FsLexYaccLiteRuntime.IParseState) ="
-      fprintfn os "    match i with"
+      fprintfn os "let reductions (_productionIndex : int) (parseState : FsLexYaccLiteRuntime.IParseState) ="
+      fprintfn os "    match _productionIndex with"
       for i = 0 to preprocessed.Productions.Length - 1 do
           let prod = preprocessed.Productions.[i]
-          let code, dollars =
-                if isNull prod.Code then
-                    "failwith \"unreachable\"", HashSet()
-                elif String.IsNullOrWhiteSpace prod.Code then
+          fprintfn os "    | %d ->" i
+
+          if isNull prod.Code then
+             fprintfn os "        failwith \"unreachable\""
+          else
+             let code, dollars =
+                if String.IsNullOrWhiteSpace prod.Code then
                     "()", HashSet()
                 else
                     let code = prod.Code
@@ -247,24 +250,23 @@ let outputParser (output : string) (modname : string) (parslib : string) (header
                             sb.Append(code.[pos]) |> ignore
                             pos <- pos + 1
                     sb.ToString(), dollars
-          fprintfn os "    | %d ->" i
-          Array.iteri (fun j sym -> 
-              let tyopt =
+             Array.iteri (fun j sym -> 
+               let tyopt =
                   if Array.contains sym preprocessed.NonTerminals then
                         Some (getType sym)
                   elif typeOfToken.ContainsKey sym then 
                         typeOfToken.[sym]
                   else None
-              match tyopt with 
-              | Some ty when dollars.Contains(j+1) -> fprintfn os "        let _%d = unbox<%s> (parseState.GetInput(%d))" (j+1) ty (j+1)
-              | _ -> ()) prod.Body
-          let linesCount = code.Split([| "\r"; "\n" |], StringSplitOptions.None).Length
-          if linesCount > 1 then
+               match tyopt with 
+               | Some ty when dollars.Contains(j+1) -> fprintfn os "        let _%d = unbox<%s> (parseState.GetInput(%d))" (j+1) ty (j+1)
+               | _ -> ()) prod.Body
+             let linesCount = code.Split([| "\r"; "\n" |], StringSplitOptions.None).Length
+             if linesCount > 1 then
               fprintfn os "        let res ="
               Output.outputCode os 12 code
-          else
+             else
               fprintfn os "        let res = %s" (code.Trim(' ', '\t'))
-          fprintfn os "        box<%s> res" (getType prod.Head)
+             fprintfn os "        box<%s> res" (getType prod.Head)
       fprintfn os "    | _ -> failwith \"unreachable\""
   end;
 
