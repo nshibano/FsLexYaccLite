@@ -242,5 +242,4 @@ Net45/FsYaccLite/Program.fs
 Net45/Common/Hashtable.fs
 Net45/FsYaccLite/YaccOutput.fs
 
-Runtime/FsLexYaccLiteRuntime.fs
 Tests/Expr/FsLexYaccLiteRuntime.fs
