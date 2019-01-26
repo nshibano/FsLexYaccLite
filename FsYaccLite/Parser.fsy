@@ -5,7 +5,7 @@ open Syntax
 %type <Syntax.ParserSpec> spec
 %token <string>  IDENT 
 %token <Syntax.Code> HEADER CODE 
-%token BAR PERCENT_PERCENT  START LEFT RIGHT NONASSOC LESS GREATER COLON PREC SEMI EOF ERROR
+%token BAR PERCENT_PERCENT  START LEFT RIGHT NONASSOC COLON PREC SEMI EOF
 %token <string> TYPE
 %token <string option> TOKEN
 %start spec
@@ -60,8 +60,7 @@ clause:
 
 syms:
     | IDENT syms { $1 :: $2 }
-    | ERROR syms { "error" :: $2 }
-    | { [] }
+    |            { [] }
 
 optprec:
     | PREC IDENT { Some $2 }

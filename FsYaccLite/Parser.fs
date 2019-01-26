@@ -8,13 +8,10 @@ type token =
   | IDENT of string
   | CODE of Syntax.Code
   | HEADER of Syntax.Code
-  | ERROR
   | EOF
   | SEMI
   | PREC
   | COLON
-  | GREATER
-  | LESS
   | NONASSOC
   | RIGHT
   | LEFT
@@ -29,36 +26,30 @@ let tagOfToken (t : token) =
   | IDENT _ -> 0 
   | CODE _ -> 1 
   | HEADER _ -> 2 
-  | ERROR  -> 3 
-  | EOF  -> 4 
-  | SEMI  -> 5 
-  | PREC  -> 6 
-  | COLON  -> 7 
-  | GREATER  -> 8 
-  | LESS  -> 9 
-  | NONASSOC  -> 10 
-  | RIGHT  -> 11 
-  | LEFT  -> 12 
-  | START  -> 13 
-  | PERCENT_PERCENT  -> 14 
-  | BAR  -> 15 
-  | TYPE _ -> 16 
-  | TOKEN _ -> 17 
+  | EOF  -> 3 
+  | SEMI  -> 4 
+  | PREC  -> 5 
+  | COLON  -> 6 
+  | NONASSOC  -> 7 
+  | RIGHT  -> 8 
+  | LEFT  -> 9 
+  | START  -> 10 
+  | PERCENT_PERCENT  -> 11 
+  | BAR  -> 12 
+  | TYPE _ -> 13 
+  | TOKEN _ -> 14 
 
-let endOfInputTag = 20 
+let endOfInputTag = 17 
 
 let dataOfToken (t : token) : obj = 
   match t with 
   | IDENT x -> box x 
   | CODE x -> box x 
   | HEADER x -> box x 
-  | ERROR  -> null 
   | EOF  -> null 
   | SEMI  -> null 
   | PREC  -> null 
   | COLON  -> null 
-  | GREATER  -> null 
-  | LESS  -> null 
   | NONASSOC  -> null 
   | RIGHT  -> null 
   | LEFT  -> null 
@@ -68,14 +59,14 @@ let dataOfToken (t : token) : obj =
   | TYPE x -> box x 
   | TOKEN x -> box x 
 
-let reductionSymbolCounts = [|1us; 5us; 1us; 0us; 2us; 0us; 2us; 2us; 2us; 2us; 2us; 2us; 2us; 0us; 2us; 1us; 5us; 1us; 0us; 1us; 0us; 3us; 1us; 3us; 2us; 2us; 0us; 2us; 0us|]
-let productionToNonTerminalTable = [|0us; 1us; 2us; 2us; 3us; 3us; 4us; 4us; 4us; 4us; 4us; 4us; 5us; 5us; 6us; 6us; 7us; 8us; 8us; 9us; 9us; 10us; 10us; 11us; 12us; 12us; 12us; 13us; 13us|]
+let reductionSymbolCounts = [|1us; 5us; 1us; 0us; 2us; 0us; 2us; 2us; 2us; 2us; 2us; 2us; 2us; 0us; 2us; 1us; 5us; 1us; 0us; 1us; 0us; 3us; 1us; 3us; 2us; 0us; 2us; 0us|]
+let productionToNonTerminalTable = [|0us; 1us; 2us; 2us; 3us; 3us; 4us; 4us; 4us; 4us; 4us; 4us; 5us; 5us; 6us; 6us; 7us; 8us; 8us; 9us; 9us; 10us; 10us; 11us; 12us; 12us; 13us; 13us|]
 let maxProductionBodyLength = 5
-let actionTable_buckets = [| -1s; -1s; 0s; -1s; -1s; 1s; 2s; 3s; 4s; 5s; 6s; 7s; 10s; 13s; 14s; -1s; 15s; 17s; 18s; -1s; -1s; -1s; -1s; 19s; -1s; -1s; 20s; 21s; 23s; 24s; 25s; -1s; 26s; 28s; 29s; -1s; -1s; 30s; -1s; -1s; -1s; -1s; -1s; 31s; 32s; -1s; 33s; 34s; 35s; 37s; 39s; 40s; -1s; 41s; 43s; -1s; -1s; -1s; 44s; -1s; -1s; -1s; 45s; -1s; 46s; 47s; -1s; 48s; -1s; -1s; 49s; -1s; -1s; 50s; 51s; 53s; 54s; 55s; -1s; 56s; 58s; -1s; -1s; -1s; -1s; 59s; 60s; -1s; 61s; 62s; 63s; 65s; 68s; 69s; 71s; 72s; 74s; 77s; 78s; -1s; 79s; 81s; 83s; -1s; 85s; 86s; 88s; 89s; -1s; -1s; 90s; 92s; 94s; 95s; 96s; 97s; 98s; 101s; 103s; 104s; 105s; 106s; 108s; -1s; -1s; -1s; 109s; -1s; -1s; -1s; -1s |]
-let actionTable_entries = [| 2s; 1s; 136s; -14s; 137s; -14s; 138s; -14s; 139s; -14s; 140s; -14s; 10s; -4s; -12s; -4s; -143s; -14s; 273s; 22s; -13s; -4s; -144s; -14s; 798s; 41s; 13s; -4s; 14s; -4s; -17s; -4s; 147s; -14s; 17s; -4s; 673s; -29s; 678s; 38s; 157s; -14s; -159s; -14s; 420s; 22s; 159s; -14s; 160s; -14s; 161s; -14s; -164s; -14s; 294s; 22s; 164s; -14s; 820s; 42s; 168s; -14s; 567s; 28s; 568s; -27s; 570s; 29s; 178s; -14s; -180s; -14s; 441s; 22s; -181s; -14s; 573s; -27s; 181s; -14s; 182s; -14s; -185s; -14s; 315s; 22s; 185s; -14s; 189s; 17s; 62s; 32767s; 588s; 28s; 589s; -27s; 591s; 29s; 594s; -27s; 73s; -6s; -75s; -6s; 336s; 22s; 75s; -6s; 76s; -6s; 77s; -6s; -80s; -6s; 210s; -14s; 80s; -6s; 609s; 28s; 610s; -27s; 612s; 29s; 220s; -14s; -222s; -14s; 483s; -19s; -223s; -14s; -485s; -19s; 615s; -27s; 223s; -14s; -225s; -14s; 486s; -19s; 94s; 5s; -96s; 6s; 226s; -14s; -97s; 7s; -228s; -14s; 489s; -19s; 97s; 8s; 98s; 9s; -101s; 10s; 231s; -14s; -102s; 11s; 756s; 28s; -365s; 23s; 757s; -27s; 759s; 29s; -106s; -14s; 498s; 26s; 630s; -21s; 762s; -27s; -242s; -14s; 634s; -21s; -243s; -14s; 635s; 35s; 243s; -14s; 244s; -14s; 245s; -14s; 115s; -14s; -117s; -14s; -248s; -14s; 378s; 17s; -118s; -14s; 248s; -14s; 118s; -14s; 119s; -14s; 382s; 24s; -122s; -14s; 645s; 36s; 122s; -14s; 126s; -14s |]
-let actionTable_defaultActions = [| -32768s; -3s; -1s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -5s; -12s; -11s; -10s; -9s; -32768s; -32768s; -16s; -8s; -7s; -13s; -32768s; -2s; -15s; -18s; -32768s; -32768s; -32768s; -32768s; -23s; -32768s; -25s; -26s; -20s; -32768s; -17s; -32768s; -32768s; -22s; -28s; -24s |]
-let gotoTable_buckets = [| -1s; 0s; 2s; -1s; 4s; -1s; 5s; 7s; 8s; 9s; 10s; 11s; -1s; 12s; 13s; 14s; -1s; 15s; 16s; -1s; 17s; 19s; 21s |]
-let gotoTable_entries = [| -2s; 2s; 461s; 39s; -3s; 3s; 117s; 16s; 418s; 34s; -76s; 13s; 259s; 25s; 145s; 20s; 330s; 27s; 515s; 40s; 516s; 32s; 103s; 15s; 404s; 33s; 60s; 12s; 429s; 37s; 132s; 18s; 133s; 19s; -90s; 14s; 388s; 30s; -160s; 21s; 389s; 31s; -46s; 4s; 390s; 32s |]
+let actionTable_buckets = [| -1s; 0s; 1s; 2s; -1s; -1s; 3s; 5s; 6s; 8s; 10s; 12s; 14s; 15s; 16s; 18s; -1s; -1s; -1s; 19s; 20s; -1s; -1s; -1s; 21s; 22s; 23s; 24s; 25s; 27s; 28s; -1s; 29s; 30s; -1s; -1s; -1s; 31s; 32s; 33s; -1s; -1s; -1s; -1s; 34s; 35s; 36s; 37s; 38s; -1s; 39s; 40s; -1s; 41s; -1s; 42s; 43s; 44s; 45s; 46s; -1s; 47s; 48s; 49s; 51s; 52s; -1s; 53s; 54s; -1s; -1s; -1s; -1s; 55s; 56s; -1s; 57s; 58s; 60s; 61s; 62s; 64s; 67s; 70s; 72s; 73s; 74s; 76s; -1s; -1s; 77s; 78s; -1s; 79s; 80s; -1s; -1s; 82s; 84s; 89s; 91s; 93s; 95s; 96s; 97s; 99s; 101s |]
+let actionTable_entries = [| 108s; -14s; 2s; 1s; 324s; 17s; -328s; 24s; 648s; 39s; 7s; -4s; -9s; -4s; 115s; -14s; -10s; -4s; 116s; -14s; -11s; -4s; 117s; -14s; -12s; -4s; 118s; -14s; 119s; -14s; 13s; -4s; -15s; -4s; 121s; -14s; 122s; -14s; 126s; -14s; 234s; 22s; 559s; -28s; 667s; 40s; 133s; -14s; 134s; -14s; -136s; -14s; 563s; 36s; 136s; -14s; 137s; -14s; 139s; -14s; 140s; -14s; 144s; -14s; 252s; 22s; 360s; 22s; 151s; -14s; 152s; -14s; 153s; -14s; 154s; -14s; 155s; -14s; 157s; -14s; 158s; -14s; 53s; 32767s; 162s; 17s; 270s; 22s; 378s; 22s; 486s; 28s; 487s; -26s; 61s; -6s; 62s; -6s; -64s; -6s; 491s; -26s; 64s; -6s; 65s; -6s; 67s; -6s; 68s; -6s; 180s; -14s; 288s; 22s; 504s; 28s; -506s; -26s; 612s; 28s; 613s; -26s; 79s; 5s; -81s; 6s; 187s; -14s; -82s; 7s; -189s; -14s; 509s; -26s; -83s; 8s; -190s; -14s; 617s; -26s; -84s; 9s; 190s; -14s; 191s; -14s; 85s; 10s; -87s; 11s; 193s; -14s; 194s; -14s; 90s; -14s; 198s; -14s; 414s; -19s; -416s; -19s; 522s; -21s; -98s; -14s; 525s; -21s; -99s; -14s; -206s; -14s; -313s; 23s; -420s; -19s; 526s; 33s; -100s; -14s; 206s; -14s; -101s; -14s; 207s; -14s; -102s; -14s; 208s; -14s; 209s; -14s; 103s; -14s; -105s; -14s; 211s; -14s; -213s; -14s; 426s; 26s; 534s; 34s |]
+let actionTable_defaultActions = [| -32768s; -3s; -1s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -5s; -12s; -11s; -10s; -9s; -32768s; -32768s; -16s; -8s; -7s; -13s; -32768s; -2s; -15s; -18s; -32768s; -32768s; -32768s; -23s; -32768s; -25s; -20s; -32768s; -17s; -32768s; -32768s; -22s; -27s; -24s |]
+let gotoTable_buckets = [| -1s; 0s; 2s; -1s; 4s; 5s; 6s; 8s; 9s; -1s; 10s; 11s; -1s; 12s; 13s; -1s; -1s; 14s; 15s; -1s; 16s; 18s; 20s |]
+let gotoTable_entries = [| -2s; 2s; 415s; 35s; -3s; 3s; 117s; 16s; 487s; 38s; 488s; 31s; -76s; 13s; 259s; 25s; 145s; 20s; 330s; 27s; 447s; 37s; 103s; 15s; 404s; 32s; 60s; 12s; 132s; 18s; 133s; 19s; -90s; 14s; 388s; 29s; -160s; 21s; 389s; 30s; -46s; 4s; 390s; 31s |]
 let reductions =    [| 
         (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.ParserSpec)) in
@@ -285,18 +276,10 @@ let reductions =    [|
                    )
                  : 'syms));
         (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'syms)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-                                        "error" :: _2 
-                   )
-                 : 'syms));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                             [] 
+                                        [] 
                    )
                  : 'syms));
         (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
@@ -315,7 +298,7 @@ let reductions =    [|
                    )
                  : 'optprec));
 |]
-let terminalsCount = 21
+let terminalsCount = 18
 let nonTerminalsCount = 14
 let tables = FsLexYaccLite.Parsing.ParseTables(reductions, endOfInputTag, tagOfToken, dataOfToken, reductionSymbolCounts, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)
 let spec lexer lexbuf : Syntax.ParserSpec = unbox (tables.Interpret(lexer, lexbuf, 0))

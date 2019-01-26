@@ -38,9 +38,6 @@ rule token = parse
  | "%left" { LEFT }
  | "%right" { RIGHT }
  | "%nonassoc" { NONASSOC }
- | "error" { ERROR }
- | '<' { LESS }
- | '>' { GREATER }
  | ';' { SEMI }
  | '{' { let p = lexbuf.StartPos in 
          let buff = (new StringBuilder 100) in
