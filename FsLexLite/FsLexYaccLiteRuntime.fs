@@ -4,12 +4,12 @@ open System
 open System.Collections.Generic
 
 /// Position information stored for lexing tokens
-type Position = 
-    { 
+type Position =
+    {
         /// The absolute offset of the column for the position
         AbsoluteOffset : int
 
-        /// The line number in the input stream, assuming fresh positions have been updated 
+        /// The line number in the input stream, assuming fresh positions have been updated
         /// using AsNewLinePos() and by modifying the EndPos property of the LexBuffer.
         Line : int
 
@@ -20,9 +20,9 @@ type Position =
     /// Return the column number marked by the position, i.e. the difference between the AbsoluteOffset and the StartOfLineAbsoluteOffset
     member x.Column = x.AbsoluteOffset - x.StartOfLine
     /// Given a position just beyond the end of a line, return a position at the start of the next line
-    member pos.NextLine = 
-        { pos with 
-                Line = pos.Line + 1 
+    member pos.NextLine =
+        { pos with
+                Line = pos.Line + 1
                 StartOfLine = pos.AbsoluteOffset }
     /// Given a position at the start of a token of length n, return a position just beyond the end of the token
     member pos.EndOfToken(n) = { pos with AbsoluteOffset = pos.AbsoluteOffset + n }
@@ -31,7 +31,7 @@ type Position =
     member pos.IsEmpty = pos.AbsoluteOffset = System.Int32.MinValue
 
 /// Dummy position value which represents an absence of position information.
-let Position_Empty = 
+let Position_Empty =
     { AbsoluteOffset = Int32.MinValue
       Line = 0
       StartOfLine = 0 }
@@ -63,7 +63,7 @@ type LexBuffer =
         { LexBuffer.String = s
           ScanStart = 0
           ScanLength = 0
-          LexemeLength = 0   
+          LexemeLength = 0
           AcceptAction = -1
           IsPastEndOfStream = false
           StartPos = Position_Zero
@@ -71,25 +71,25 @@ type LexBuffer =
           LocalStore = Dictionary() }
 
 type LexTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[], nonAsciiAlphabetTable : uint16[], transitionTable: int16[][], acceptTable: int16[]) =
-        
+
     let [<Literal>] sentinel = -1
-        
+
     let endOfScan lexBuffer =
-        if lexBuffer.AcceptAction < 0 then 
+        if lexBuffer.AcceptAction < 0 then
             failwith "unrecognized input"
         lexBuffer.StartPos <- lexBuffer.EndPos
         lexBuffer.EndPos <- lexBuffer.EndPos.EndOfToken(lexBuffer.LexemeLength)
         lexBuffer.AcceptAction
-        
+
     let rec scanUntilSentinel lexBuffer state =
-        let a = int acceptTable.[state] 
-        if a <> sentinel then 
+        let a = int acceptTable.[state]
+        if a <> sentinel then
             lexBuffer.LexemeLength <- lexBuffer.ScanLength
             lexBuffer.AcceptAction <- a
-            
+
         if lexBuffer.ScanLength = lexBuffer.String.Length - lexBuffer.ScanStart then
             let snew = int transitionTable.[state].[transitionTable.[state].Length - 1] // get eof entry
-            if snew = sentinel then 
+            if snew = sentinel then
                 endOfScan lexBuffer
             elif not lexBuffer.IsPastEndOfStream then
                 lexBuffer.IsPastEndOfStream <- true
@@ -117,13 +117,13 @@ type LexTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[],
 
             let snew = int transitionTable.[state].[alphabet]
 
-            if snew = sentinel then 
+            if snew = sentinel then
                 endOfScan lexBuffer
-            else 
+            else
                 lexBuffer.ScanLength <- lexBuffer.ScanLength + 1
                 scanUntilSentinel lexBuffer snew
 
-    member this.Interpret(lexBuffer : LexBuffer) = 
+    member this.Interpret(lexBuffer : LexBuffer) =
         lexBuffer.ScanStart <- lexBuffer.ScanStart + lexBuffer.LexemeLength
         lexBuffer.ScanLength <- 0
         lexBuffer.LexemeLength <- 0
@@ -137,11 +137,11 @@ type IParseState =
     /// Get the full range of positions matched by the production
     abstract ResultRange: Position * Position
     /// Get the value produced by the terminal or non-terminal at the given position
-    abstract GetInput: int -> obj 
+    abstract GetInput: int -> obj
     /// Get the store of local values associated with this parser
     abstract ParserLocalStore : Dictionary<string, obj>
 
-type ValueInfo = 
+type ValueInfo =
     struct
         val value: obj
         val startPos: Position
@@ -149,8 +149,8 @@ type ValueInfo =
         new (value, startPos, endPos) = { value = value; startPos = startPos; endPos = endPos }
     end
 
-type ParseTables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, reductionSymbolCounts : uint16[], productionToNonTerminalTable : uint16[], maxProductionBodyLength : int, gotoTableBuckets : int16 [], gotoTableEntries : int16 [], nonTerminalsCount : int, actionTable_buckets : int16 [], actionTable_entries : int16 [], actionTable_defaultActions : int16 [], terminalsCount : int) =
-    
+type ParseTables<'tok>(reductions : int -> IParseState -> obj, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, reductionSymbolCounts : uint16[], productionToNonTerminalTable : uint16[], maxProductionBodyLength : int, gotoTableBuckets : int16 [], gotoTableEntries : int16 [], nonTerminalsCount : int, actionTable_buckets : int16 [], actionTable_entries : int16 [], actionTable_defaultActions : int16 [], terminalsCount : int) =
+
     let lookup (buckets : int16 []) (entries : int16 []) (key : int) =
         let bucketIndex = int buckets.[key % buckets.Length]
         if bucketIndex >= 0 then
@@ -169,9 +169,9 @@ type ParseTables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : 
             result
         else Int32.MinValue
 
-    member this.Interpret(lexer : LexBuffer -> 'tok, lexbuf : LexBuffer, initialState : int) =                                                                      
+    member this.Interpret(lexer : LexBuffer -> 'tok, lexbuf : LexBuffer, initialState : int) =
         let mutable cont = true
-        let mutable haveLookahead = false                                                                              
+        let mutable haveLookahead = false
         let mutable lookahead = Unchecked.defaultof<'tok>
         let mutable lookaheadEndPos = Unchecked.defaultof<Position>
         let mutable lookaheadStartPos = Unchecked.defaultof<Position>
@@ -188,14 +188,14 @@ type ParseTables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : 
         let ruleValues    = Array.zeroCreate<obj> maxProductionBodyLength
 
         let parseState =
-            { new IParseState with 
+            { new IParseState with
                 member p.InputRange(n) = (ruleStartPoss.[n-1], ruleEndPoss.[n-1])
                 member p.GetInput(n)    = ruleValues.[n-1]
                 member p.ResultRange    = (lhsStartPos, lhsEndPos)
                 member p.ParserLocalStore = localStore
-            }       
+            }
 
-        while cont do                                                                                    
+        while cont do
             let state = stateStack.Peek()
 
             if (not haveLookahead) && (not lexbuf.IsPastEndOfStream) then
@@ -203,13 +203,13 @@ type ParseTables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : 
                 lookahead <- lexer lexbuf
                 lookaheadStartPos <- lexbuf.StartPos
                 lookaheadEndPos <- lexbuf.EndPos
-                
-            let tag = 
+
+            let tag =
                 if haveLookahead then
                     tagOfToken lookahead
                 else
                     endOfInputTag
-                
+
             let action =
                 let v = lookup actionTable_buckets actionTable_entries (terminalsCount * state + tag)
                 if v <> System.Int32.MinValue then
@@ -222,18 +222,17 @@ type ParseTables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : 
             elif action = int System.Int16.MinValue then
                 failwith "parse error"
             elif action >= 0 then
-                let nextState = action                             
+                let nextState = action
                 let data = dataOfToken lookahead
                 valueStack.Push(ValueInfo(data, lookaheadStartPos, lookaheadEndPos))
-                stateStack.Push(nextState)                                                           
+                stateStack.Push(nextState)
                 haveLookahead <- false
             else
-                let prod = ~~~action                    
-                let reduction = reductions.[prod]                                                             
+                let prod = ~~~action
                 let n = int reductionSymbolCounts.[prod]
-                lhsStartPos <- Position_Empty                                                                     
+                lhsStartPos <- Position_Empty
                 lhsEndPos <- Position_Empty
-                for i = 0 to n - 1 do                                                                             
+                for i = 0 to n - 1 do
                     let topVal = valueStack.Peek()
                     valueStack.Pop() |> ignore
                     stateStack.Pop() |> ignore
@@ -242,11 +241,11 @@ type ParseTables<'tok>(reductions : (IParseState -> obj) array, endOfInputTag : 
                     ruleEndPoss.[(n-i)-1] <- topVal.endPos
                     if lhsEndPos.IsEmpty then lhsEndPos <- topVal.endPos
                     if not topVal.startPos.IsEmpty then lhsStartPos <- topVal.startPos
-                let redResult = reduction parseState                                                          
+                let redResult = reductions prod parseState
                 valueStack.Push(ValueInfo(redResult, lhsStartPos, lhsEndPos))
                 let currState = stateStack.Peek()
                 let newGotoState = lookup gotoTableBuckets gotoTableEntries (nonTerminalsCount * currState + int productionToNonTerminalTable.[prod])
                 stateStack.Push(newGotoState)
-        
+
         valueStack.Peek().value
 

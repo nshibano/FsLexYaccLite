@@ -70,254 +70,165 @@ let actionTable_entries = [| 2s; 1s; 134s; 17s; 266s; 13s; 5s; -4s; -7s; -4s; 39
 let actionTable_defaultActions = [| -32768s; -3s; -1s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -5s; -32768s; -32768s; -18s; -11s; -32768s; -7s; -32768s; -12s; -13s; -14s; -32768s; -2s; -17s; -15s; -10s; -9s; -32768s; -20s; -32768s; -32768s; -32768s; -25s; -32768s; -27s; -32768s; -22s; -19s; -32768s; -32768s; -24s; -29s; -26s |]
 let gotoTable_buckets = [| 0s; 2s; 4s; -1s; -1s; -1s; -1s; 5s; 6s; 7s; -1s; 9s; 10s; 12s; 13s; 14s; 15s; 16s; -1s; 18s; -1s; -1s; -1s; -1s; 19s; 20s; 23s; -1s; -1s |]
 let gotoTable_entries = [| -262s; 27s; 493s; 36s; -2s; 2s; 291s; 28s; 2s; 3s; 65s; 12s; 124s; 19s; -97s; 16s; 444s; 31s; 156s; 21s; -477s; 33s; 505s; 39s; 477s; 34s; 478s; 35s; 218s; 25s; 567s; 42s; -540s; 41s; 568s; 35s; 48s; 4s; 82s; 14s; -84s; 15s; -142s; 20s; 199s; 23s; 171s; 22s |]
-let reductions =    [| 
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.ParserSpec)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                      failwith "unreachable"
-                   )
-                 : '_startspec));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'headerOpt)) in
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'decls)) in
-            let _4 = (let data = parseState.GetInput(4) in (Microsoft.FSharp.Core.Operators.unbox data : 'rules)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                                                       { Header = _1; Decls = List.rev _2; Rules = List.rev _4 } 
-                   )
-                 : Syntax.ParserSpec));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                    _1 
-                   )
-                 : 'headerOpt));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                    "" 
-                   )
-                 : 'headerOpt));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'decls)) in
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'decl)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                        _2 :: _1 
-                   )
-                 : 'decls));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                        [] 
-                   )
-                 : 'decls));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                          Some _1 
-                   )
-                 : 'optTypeLiteral));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                          None 
-                   )
-                 : 'optTypeLiteral));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'optTypeLiteral)) in
-            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'idents)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                                         Token (_2, List.rev _3) 
-                   )
-                 : 'decl));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
-            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'idents)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                                         Type (_2, List.rev _3) 
-                   )
-                 : 'decl));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'idents)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                                         Start (List.rev _2) 
-                   )
-                 : 'decl));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'idents)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                                         Prec (LeftAssoc, List.rev _2) 
-                   )
-                 : 'decl));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'idents)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                                         Prec (RightAssoc, List.rev _2) 
-                   )
-                 : 'decl));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'idents)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                                         Prec (NonAssoc, List.rev _2) 
-                   )
-                 : 'decl));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'idents)) in
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                          _2 :: _1 
-                   )
-                 : 'idents));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                          [] 
-                   )
-                 : 'idents));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'rules)) in
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'rule)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                        _2 :: _1 
-                   )
-                 : 'rules));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'rule)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                        [_1] 
-                   )
-                 : 'rules));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'optTypeLiteral)) in
-            let _4 = (let data = parseState.GetInput(4) in (Microsoft.FSharp.Core.Operators.unbox data : 'optbar)) in
-            let _5 = (let data = parseState.GetInput(5) in (Microsoft.FSharp.Core.Operators.unbox data : 'clauses)) in
-            let _6 = (let data = parseState.GetInput(6) in (Microsoft.FSharp.Core.Operators.unbox data : 'optsemi)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                                                               { Ident = _1; Type = _2; Clauses = List.rev _5 } 
-                   )
-                 : 'rule));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                 
-                   )
-                 : 'optbar));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                 
-                   )
-                 : 'optbar));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                  
-                   )
-                 : 'optsemi));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                  
-                   )
-                 : 'optsemi));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'clauses)) in
-            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'clause)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                                _3 :: _1 
-                   )
-                 : 'clauses));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'clause)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                                [_1] 
-                   )
-                 : 'clauses));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'syms)) in
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'optprec)) in
-            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                               { Symbols = _1; PrecSymbol = _2; Code = _3} 
-                   )
-                 : 'clause));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'syms)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                        _1 :: _2 
-                   )
-                 : 'syms));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                        [] 
-                   )
-                 : 'syms));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                        Some _2 
-                   )
-                 : 'optprec));
-        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
-            Microsoft.FSharp.Core.Operators.box
-                (
-                   (
-                                        None 
-                   )
-                 : 'optprec));
-|]
+let reductions (i : int) (parseState : FsLexYaccLiteRuntime.IParseState) =
+    match i with
+    | 0 ->
+        let _1 = unbox<Syntax.ParserSpec> (parseState.GetInput(1))
+        let res =
+            failwith "unreachable"
+        box<Syntax.ParserSpec> res
+    | 1 ->
+        let _1 = unbox<'headerOpt> (parseState.GetInput(1))
+        let _2 = unbox<'decls> (parseState.GetInput(2))
+        let _4 = unbox<'rules> (parseState.GetInput(4))
+        let res =
+            { Header = _1; Decls = List.rev _2; Rules = List.rev _4 } 
+        box<Syntax.ParserSpec> res
+    | 2 ->
+        let _1 = unbox<string> (parseState.GetInput(1))
+        let res =
+            _1 
+        box<'headerOpt> res
+    | 3 ->
+        let res =
+            "" 
+        box<'headerOpt> res
+    | 4 ->
+        let _1 = unbox<'decls> (parseState.GetInput(1))
+        let _2 = unbox<'decl> (parseState.GetInput(2))
+        let res =
+            _2 :: _1 
+        box<'decls> res
+    | 5 ->
+        let res =
+            [] 
+        box<'decls> res
+    | 6 ->
+        let _1 = unbox<string> (parseState.GetInput(1))
+        let res =
+            Some _1 
+        box<'optTypeLiteral> res
+    | 7 ->
+        let res =
+            None 
+        box<'optTypeLiteral> res
+    | 8 ->
+        let _2 = unbox<'optTypeLiteral> (parseState.GetInput(2))
+        let _3 = unbox<'idents> (parseState.GetInput(3))
+        let res =
+            Token (_2, List.rev _3) 
+        box<'decl> res
+    | 9 ->
+        let _2 = unbox<string> (parseState.GetInput(2))
+        let _3 = unbox<'idents> (parseState.GetInput(3))
+        let res =
+            Type (_2, List.rev _3) 
+        box<'decl> res
+    | 10 ->
+        let _2 = unbox<'idents> (parseState.GetInput(2))
+        let res =
+            Start (List.rev _2) 
+        box<'decl> res
+    | 11 ->
+        let _2 = unbox<'idents> (parseState.GetInput(2))
+        let res =
+            Prec (LeftAssoc, List.rev _2) 
+        box<'decl> res
+    | 12 ->
+        let _2 = unbox<'idents> (parseState.GetInput(2))
+        let res =
+            Prec (RightAssoc, List.rev _2) 
+        box<'decl> res
+    | 13 ->
+        let _2 = unbox<'idents> (parseState.GetInput(2))
+        let res =
+            Prec (NonAssoc, List.rev _2) 
+        box<'decl> res
+    | 14 ->
+        let _1 = unbox<'idents> (parseState.GetInput(1))
+        let _2 = unbox<string> (parseState.GetInput(2))
+        let res =
+            _2 :: _1 
+        box<'idents> res
+    | 15 ->
+        let res =
+            [] 
+        box<'idents> res
+    | 16 ->
+        let _1 = unbox<'rules> (parseState.GetInput(1))
+        let _2 = unbox<'rule> (parseState.GetInput(2))
+        let res =
+            _2 :: _1 
+        box<'rules> res
+    | 17 ->
+        let _1 = unbox<'rule> (parseState.GetInput(1))
+        let res =
+            [_1] 
+        box<'rules> res
+    | 18 ->
+        let _1 = unbox<string> (parseState.GetInput(1))
+        let _2 = unbox<'optTypeLiteral> (parseState.GetInput(2))
+        let _4 = unbox<'optbar> (parseState.GetInput(4))
+        let _5 = unbox<'clauses> (parseState.GetInput(5))
+        let _6 = unbox<'optsemi> (parseState.GetInput(6))
+        let res =
+            { Ident = _1; Type = _2; Clauses = List.rev _5 } 
+        box<'rule> res
+    | 19 ->
+        let res =
+            ()
+        box<'optbar> res
+    | 20 ->
+        let res =
+            ()
+        box<'optbar> res
+    | 21 ->
+        let res =
+            ()
+        box<'optsemi> res
+    | 22 ->
+        let res =
+            ()
+        box<'optsemi> res
+    | 23 ->
+        let _1 = unbox<'clauses> (parseState.GetInput(1))
+        let _3 = unbox<'clause> (parseState.GetInput(3))
+        let res =
+            _3 :: _1 
+        box<'clauses> res
+    | 24 ->
+        let _1 = unbox<'clause> (parseState.GetInput(1))
+        let res =
+            [_1] 
+        box<'clauses> res
+    | 25 ->
+        let _1 = unbox<'syms> (parseState.GetInput(1))
+        let _2 = unbox<'optprec> (parseState.GetInput(2))
+        let _3 = unbox<string> (parseState.GetInput(3))
+        let res =
+            { Symbols = _1; PrecSymbol = _2; Code = _3} 
+        box<'clause> res
+    | 26 ->
+        let _1 = unbox<string> (parseState.GetInput(1))
+        let _2 = unbox<'syms> (parseState.GetInput(2))
+        let res =
+            _1 :: _2 
+        box<'syms> res
+    | 27 ->
+        let res =
+            [] 
+        box<'syms> res
+    | 28 ->
+        let _2 = unbox<string> (parseState.GetInput(2))
+        let res =
+            Some _2 
+        box<'optprec> res
+    | 29 ->
+        let res =
+            None 
+        box<'optprec> res
+    | _ -> failwith "unreachable"
 let terminalsCount = 19
 let nonTerminalsCount = 15
 let tables = FsLexYaccLiteRuntime.ParseTables(reductions, endOfInputTag, tagOfToken, dataOfToken, reductionSymbolCounts, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)
-let spec lexer lexbuf : Syntax.ParserSpec = unbox (tables.Interpret(lexer, lexbuf, 0))
+let spec lexer lexbuf = unbox<Syntax.ParserSpec> (tables.Interpret(lexer, lexbuf, 0))
