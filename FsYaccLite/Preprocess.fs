@@ -116,7 +116,6 @@ let processParserSpecAst (spec : ParserSpec) =
     
     // Augment the grammar 
     let fakeStartSymbols = Array.map (fun nt -> "_start" + nt) startSymbols
-    let nonTerminals = Array.append fakeStartSymbols nonTerminals
     let terminals = Array.append terminals [| (dummyLookahead, None); (endOfInputTerminal, None) |]
     let productions =
         Array.append
@@ -130,7 +129,7 @@ let processParserSpecAst (spec : ParserSpec) =
     { Tokens = tokens
       Types = types
       Terminals = terminals
-      NonTerminals = nonTerminals
+      NonTerminals = Array.append fakeStartSymbols nonTerminals
       Symbols = Array.append (Array.map fst terminals) nonTerminals
       Productions = productions
       OriginalStartSymbols = startSymbols

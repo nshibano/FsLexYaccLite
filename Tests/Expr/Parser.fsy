@@ -24,13 +24,12 @@ open Test.Ast
 %nonassoc Uminus
 
 %start Start
-%type <Test.Ast.Expr> Start
 
 %%
 
-Start : Expr EOF { $1 }
+Start <Expr> : Expr EOF { $1 }
 
-Expr :
+Expr <Expr> :
     | IDENT                       { Ident $1 }
     | NUMBER                      { Number $1 }
     | STRING                      { String $1 }
