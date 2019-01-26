@@ -1,1 +1,0 @@
-fsyacc fsyaccpars.fsy --module FsLexYacc.FsYacc.Parser --lexlib Microsoft.FSharp.Text.Lexing --parslib Microsoft.FSharp.Text.Parsing
