@@ -239,7 +239,7 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
           fprintfn os "                (";
           fprintfn os "                   (";
           match prod.Code with 
-          | Some (code,_) -> 
+          | Some code -> 
               let dollar = ref false in 
               let c = code |> String.collect (fun c -> 
                   if not !dollar && c = '$' then (dollar := true; "")

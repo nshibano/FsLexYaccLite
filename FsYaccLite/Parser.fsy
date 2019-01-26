@@ -14,11 +14,11 @@ open Syntax
 %%      
 
 spec:
-    | headeropt decls PERCENT_PERCENT rules EOF { { Header = $1; Decls = List.rev $2; Rules = List.rev $4 } }
+    | headerOpt decls PERCENT_PERCENT rules EOF { { Header = $1; Decls = List.rev $2; Rules = List.rev $4 } }
 
-headeropt:
+headerOpt:
     | HEADER { $1 } 
-    |        { "", (fst parseState.ResultRange)}
+    |        { "" }
 
 decls:
     | decls decl { $2 :: $1 }

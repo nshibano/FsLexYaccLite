@@ -98,7 +98,7 @@ let main() =
     
     let gotoHashtable = Hashtable.create None gotoElements
 
-    YaccOutput.outputParser output modname parslib (fst spec.Header) spec preprocessed compiled actionHashtable gotoHashtable
+    YaccOutput.outputParser output modname parslib (spec.Header) spec preprocessed compiled actionHashtable gotoHashtable
 
     if verbose then
         YaccOutput.outputCompilationReport (input + ".html") preprocessed compiled

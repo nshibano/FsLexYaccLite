@@ -5,12 +5,11 @@ open Parser
 open System.Text
 open FsLexYaccLite.Lexing
 
-let lexeme (lexbuf : LexBuffer) = lexbuf.Lexeme  
 let newline (lexbuf:LexBuffer) = lexbuf.EndPos <- lexbuf.EndPos.NextLine
 
 
-let unexpected_char lexbuf =
-  failwith ("Unexpected character '"+(lexeme lexbuf)+"'")
+let unexpected_char (lexbuf : LexBuffer) =
+  failwith ("Unexpected character '"+(lexbuf.Lexeme)+"'")
 
 let typeDepth = ref 0
 let startPos = ref Position_Empty
@@ -240,7 +239,7 @@ let rec token lexbuf =
     | 16 ->
         newline lexbuf; token lexbuf 
     | 17 ->
-        IDENT (lexeme lexbuf) 
+        IDENT lexbuf.Lexeme 
     | 18 ->
         BAR 
     | 19 ->
@@ -257,48 +256,48 @@ let rec token lexbuf =
 and fs_type lexbuf =
     match fs_type_tables.Interpret(lexbuf) with
     | 0 ->
-        incr typeDepth; appendBuf(lexeme lexbuf); fs_type lexbuf
+        incr typeDepth; appendBuf(lexbuf.Lexeme); fs_type lexbuf
     | 1 ->
         decr typeDepth; 
         if !typeDepth = 0
         then Some(string str_buf) 
-        else appendBuf(lexeme lexbuf); fs_type lexbuf 
+        else appendBuf(lexbuf.Lexeme); fs_type lexbuf 
     | 2 ->
-        appendBuf(lexeme lexbuf); fs_type lexbuf 
+        appendBuf(lexbuf.Lexeme); fs_type lexbuf 
     | _ -> failwith "fs_type"
 and header p buff lexbuf =
     match header_tables.Interpret(lexbuf) with
     | 0 ->
-        HEADER (buff.ToString(), p) 
+        HEADER (buff.ToString()) 
     | 1 ->
         newline lexbuf; 
         ignore <| buff.Append System.Environment.NewLine; 
         header p buff lexbuf 
     | 2 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         header p buff lexbuf 
     | 3 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         header p buff lexbuf 
     | 4 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         header p buff lexbuf 
     | 5 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         ignore(codestring buff lexbuf); 
         header p buff lexbuf 
     | 6 ->
         EOF 
     | 7 ->
-        ignore <| buff.Append(lexeme lexbuf).[0]; 
+        ignore <| buff.Append(lexbuf.Lexeme).[0]; 
         header p buff lexbuf 
     | _ -> failwith "header"
 and code p buff lexbuf =
     match code_tables.Interpret(lexbuf) with
     | 0 ->
-        CODE (buff.ToString(), p) 
+        CODE (buff.ToString()) 
     | 1 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         ignore(code p buff lexbuf); 
         ignore <| buff.Append "}"; 
         code p buff lexbuf 
@@ -307,43 +306,43 @@ and code p buff lexbuf =
         ignore <| buff.Append System.Environment.NewLine; 
         code p buff lexbuf 
     | 3 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         code p buff lexbuf 
     | 4 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         ignore(codestring buff lexbuf); 
         code p buff lexbuf 
     | 5 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         code p buff lexbuf 
     | 6 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         code p buff lexbuf 
     | 7 ->
         EOF 
     | 8 ->
-        ignore <| buff.Append(lexeme lexbuf).[0]; 
+        ignore <| buff.Append(lexbuf.Lexeme).[0]; 
         code p buff lexbuf 
     | _ -> failwith "code"
 and codestring buff lexbuf =
     match codestring_tables.Interpret(lexbuf) with
     | 0 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         codestring buff lexbuf 
     | 1 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         buff.ToString() 
     | 2 ->
         newline lexbuf; 
         ignore <| buff.Append System.Environment.NewLine; 
         codestring buff lexbuf 
     | 3 ->
-        ignore <| buff.Append (lexeme lexbuf); 
+        ignore <| buff.Append (lexbuf.Lexeme); 
         codestring buff lexbuf 
     | 4 ->
         failwith "unterminated string in code" 
     | 5 ->
-        ignore <| buff.Append(lexeme lexbuf).[0]; 
+        ignore <| buff.Append(lexbuf.Lexeme).[0]; 
         codestring buff lexbuf 
     | _ -> failwith "codestring"
 and comment lexbuf =

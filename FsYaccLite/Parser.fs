@@ -86,7 +86,7 @@ let reductions =    [|
                    )
                  : '_startspec));
         (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'headeropt)) in
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'headerOpt)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'decls)) in
             let _4 = (let data = parseState.GetInput(4) in (Microsoft.FSharp.Core.Operators.unbox data : 'rules)) in
             Microsoft.FSharp.Core.Operators.box
@@ -102,14 +102,14 @@ let reductions =    [|
                    (
                                     _1 
                    )
-                 : 'headeropt));
+                 : 'headerOpt));
         (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-                                    "", (fst parseState.ResultRange)
+                                    "" 
                    )
-                 : 'headeropt));
+                 : 'headerOpt));
         (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'decls)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'decl)) in

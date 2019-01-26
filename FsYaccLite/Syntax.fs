@@ -1,7 +1,7 @@
 module Syntax
 
 type Identifier = string
-type Code = string * FsLexYaccLite.Lexing.Position
+type Code = string
 type Rule = Rule of Identifier list * Identifier option * Code option
 
 type Associativity = LeftAssoc | RightAssoc | NonAssoc
