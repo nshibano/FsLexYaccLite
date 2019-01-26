@@ -8,10 +8,17 @@ open System.IO.Compression
 
 open Common
 
-let buildVersion =
+let inAppveyor, buildVersion =
     let s = Environment.GetEnvironmentVariable("APPVEYOR_BUILD_VERSION")
-    if isNull s then "0.0.0" else s
+    if isNull s then
+        false, "0.0.0"
+    else
+        true, s
 
+let pushArtifact path =
+    if inAppveyor then
+        cmd "appveyor" ("PushArtifact " + path)
+    
 try
     if Directory.Exists("Publish") then
         Directory.Delete("Publish", true)
@@ -23,8 +30,7 @@ try
     if File.Exists(core21ZipFileName) then
         File.Delete(core21ZipFileName)
     ZipFile.CreateFromDirectory(@"Publish\core21", core21ZipFileName)
-    try cmd "appveyor" ("PushArtifact " + core21ZipFileName)
-    with _ -> printfn "failed to run appveyor.exe"
+    pushArtifact core21ZipFileName
 
     cp @"Common\Arg.fs" @"Net45\Common"
     cp @"Common\Hashtable.fs" @"Net45\Common"
@@ -45,7 +51,6 @@ try
     if File.Exists(net45ZipFileName) then
         File.Delete(net45ZipFileName)
     ZipFile.CreateFromDirectory(@"Publish\net45", net45ZipFileName)
-    try cmd "appveyor" ("PushArtifact " + net45ZipFileName)
-    with _ -> printfn "failed to run appveyor.exe"
+    pushArtifact net45ZipFileName
 with
     Failure msg -> Console.Error.WriteLine(msg)
