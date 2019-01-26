@@ -15,7 +15,7 @@ open Test.Ast
 %token ELSE
 %token EOF
 
-%nonassoc If
+%nonassoc IfThen
 %nonassoc ELSE BAR
 %right COLONCOLON
 %nonassoc DOTDOT
@@ -30,14 +30,14 @@ open Test.Ast
 Start <Expr> : Expr EOF { $1 }
 
 Expr <Expr> :
-    | IDENT                       { Ident $1 }
-    | NUMBER                      { Number $1 }
-    | STRING                      { String $1 }
-    | Expr PLUS Expr              { Add ($1, $3) }
-    | Expr MINUS Expr             { Sub ($1, $3) }
-    | Expr STAR Expr              { Mult ($1, $3) }
-    | Expr COLONCOLON Expr        { Cons ($1, $3) }
-    | Expr DOTDOT Expr            { Range ($1, $3) }
-    | MINUS Expr %prec Uminus     { Neg $2 }
-    | IF Expr THEN Expr ELSE Expr { If ($2, $4, Some $6) }
-    | IF Expr THEN Expr %prec If  { If ($2, $4, None) }
+    | IDENT                          { Ident $1 }
+    | NUMBER                         { Number $1 }
+    | STRING                         { String $1 }
+    | Expr PLUS Expr                 { Add ($1, $3) }
+    | Expr MINUS Expr                { Sub ($1, $3) }
+    | Expr STAR Expr                 { Mult ($1, $3) }
+    | Expr COLONCOLON Expr           { Cons ($1, $3) }
+    | Expr DOTDOT Expr               { Range ($1, $3) }
+    | MINUS Expr %prec Uminus        { Neg $2 }
+    | IF Expr THEN Expr ELSE Expr    { If ($2, $4, Some $6) }
+    | IF Expr THEN Expr %prec IfThen { If ($2, $4, None) }
