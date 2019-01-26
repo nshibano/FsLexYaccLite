@@ -2,7 +2,6 @@ module Syntax
 
 type Identifier = string
 type Code = string
-type Rule = Rule of Identifier list * Identifier option * Code option
 
 type Associativity = LeftAssoc | RightAssoc | NonAssoc
 
@@ -11,6 +10,11 @@ type Decl =
     | Type of string * Identifier list
     | Start of Identifier list
     | Prec of Associativity * Identifier list
+
+type Rule =
+    { Symbols : string list
+      PrecSymbol : string option
+      Code : Code }
 
 type ParserSpec = 
     { Header : Code

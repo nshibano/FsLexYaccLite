@@ -7,7 +7,7 @@ type Production =
     { Head : string
       Body : string array
       PrecedenceInfo : (Associativity * int * string) option
-      Code : Code option }
+      Code : Code }
 
 type Preprocessed = 
     { Tokens : (string * string option) []
@@ -58,9 +58,9 @@ let processParserSpecAst (spec : ParserSpec) =
        
     let productions =  
         spec.Rules |> List.mapi (fun i (nonterm,rules) -> 
-            rules |> List.mapi (fun j (Rule(syms,precsym,code)) -> 
+            rules |> List.mapi (fun j rule -> 
                 let precInfo = 
-                    let precsym = List.foldBack (fun x acc -> match acc with Some _ -> acc | None -> match x with z when terminalsSet.Contains z -> Some z | _ -> acc) syms precsym
+                    let precsym = List.foldBack (fun x acc -> match acc with Some _ -> acc | None -> match x with z when terminalsSet.Contains z -> Some z | _ -> acc) rule.Symbols rule.PrecSymbol
                     match precsym with 
                     | Some sym ->
                         if explicitPrecInfo.ContainsKey(sym) then
@@ -68,7 +68,7 @@ let processParserSpecAst (spec : ParserSpec) =
                             Some (x, y, sym)
                         else None
                     | None -> None
-                { Head = nonterm; PrecedenceInfo = precInfo; Body = Array.ofList syms; Code = code }))
+                { Head = nonterm; PrecedenceInfo = precInfo; Body = Array.ofList rule.Symbols; Code = rule.Code }))
          |> List.concat
          |> Array.ofList
 
@@ -106,7 +106,7 @@ let processParserSpecAst (spec : ParserSpec) =
         Array.append
             (Array.map2
                 (fun fakeStartNonTerminal startSymbol ->
-                    { Head = fakeStartNonTerminal; PrecedenceInfo = None; Body = [| startSymbol |]; Code = None })
+                    { Head = fakeStartNonTerminal; PrecedenceInfo = None; Body = [| startSymbol |]; Code = null })
                 fakeStartSymbols
                 startSymbols)
             productions

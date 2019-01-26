@@ -56,7 +56,7 @@ clauses:
     | clause             { [$1] }
 
 clause:
-    | syms optprec CODE { Rule ($1, $2, Some $3) }
+    | syms optprec CODE { { Symbols = $1; PrecSymbol = $2; Code = $3} }
 
 syms:
     | IDENT syms { $1 :: $2 }

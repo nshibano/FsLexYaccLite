@@ -272,7 +272,7 @@ let reductions =    [|
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-                                               Rule (_1, _2, Some _3) 
+                                               { Symbols = _1; PrecSymbol = _2; Code = _3} 
                    )
                  : 'clause));
         (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->

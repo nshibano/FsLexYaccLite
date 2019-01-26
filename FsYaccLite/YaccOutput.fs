@@ -222,7 +222,7 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
   begin 
       fprintf os "let reductions =" ;
       fprintfn os "    [| " ;
-      for prod in preprocessed.Productions do 
+      for prod in preprocessed.Productions do
           fprintfn os "        (fun (parseState : %s.IParseState) ->"  parslib
           prod.Body |> Array.iteri (fun i sym -> 
               let tyopt =
@@ -239,7 +239,9 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
           fprintfn os "                (";
           fprintfn os "                   (";
           match prod.Code with 
-          | Some code -> 
+          | null -> 
+              fprintfn os "                      failwith \"unreachable\""
+          | code -> 
               let dollar = ref false in 
               let c = code |> String.collect (fun c -> 
                   if not !dollar && c = '$' then (dollar := true; "")
@@ -250,8 +252,6 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
               for line in lines do 
                   fprintfn os "                     %s" line;
               if !dollar then os.Write '$'
-          | None -> 
-              fprintfn os "                      failwith \"unreachable\""
           fprintfn os "                   )";
           fprintfn os "                 : %s));" (getType prod.Head)
       done;
