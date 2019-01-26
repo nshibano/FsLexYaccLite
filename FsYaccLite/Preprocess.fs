@@ -114,8 +114,10 @@ let processParserSpecAst (spec : ParserSpec) =
 
     let terminals = Array.map (fun t -> (t, match explicitPrecInfo.TryGetValue t with | true, x -> Some x | false, _ -> None)) terminals
     
-    // Augment the grammar 
+    // Augment the grammar
     let fakeStartSymbols = Array.map (fun nt -> "_start" + nt) startSymbols
+    Array.iter2 (fun fake orig -> match types.TryGetValue orig with true, ty -> types.Add(fake, ty) | false, _ -> ()) fakeStartSymbols startSymbols
+
     let terminals = Array.append terminals [| (dummyLookahead, None); (endOfInputTerminal, None) |]
     let productions =
         Array.append

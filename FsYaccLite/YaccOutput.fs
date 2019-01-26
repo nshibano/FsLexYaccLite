@@ -3,6 +3,7 @@
 open System
 open System.Collections.Generic
 open System.IO
+open System.Text
 open System.Drawing
 open System.Drawing.Imaging
 open Printf
@@ -217,42 +218,46 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
   let getType nt = if typeOfNonTerminal.ContainsKey nt then typeOfNonTerminal.[nt] else "'" + nt 
   
   begin 
-      fprintf os "let reductions =" ;
-      fprintfn os "    [| " ;
-      for prod in preprocessed.Productions do
-          fprintfn os "        (fun (parseState : %s.IParseState) ->"  parslib
-          prod.Body |> Array.iteri (fun i sym -> 
+      fprintfn os "let reductions (i : int) (parseState : FsLexYaccLiteRuntime.IParseState) ="
+      fprintfn os "    match i with"
+      for i = 0 to preprocessed.Productions.Length - 1 do
+          let prod = preprocessed.Productions.[i]
+          fprintfn os "    | %d ->" i
+          Array.iteri (fun i sym -> 
               let tyopt =
                   if Array.contains sym preprocessed.NonTerminals then
                         Some (getType sym)
-                  else
-                      if typeOfToken.ContainsKey sym then 
+                  elif typeOfToken.ContainsKey sym then 
                         typeOfToken.[sym]
-                      else None
+                  else None
               match tyopt with 
-              | Some ty -> fprintfn os "            let _%d = (let data = parseState.GetInput(%d) in (Microsoft.FSharp.Core.Operators.unbox data : %s)) in" (i+1) (i+1) ty
-              | None -> ())
-          fprintfn os "            Microsoft.FSharp.Core.Operators.box" 
-          fprintfn os "                (";
-          fprintfn os "                   (";
+              | Some ty -> fprintfn os "        let _%d = unbox<%s> (parseState.GetInput(%d))" (i+1) ty (i+1)
+              | None -> ()) prod.Body
+          fprintfn os "        let res ="
           match prod.Code with 
           | null -> 
-              fprintfn os "                      failwith \"unreachable\""
-          | code -> 
-              let dollar = ref false in 
-              let c = code |> String.collect (fun c -> 
-                  if not !dollar && c = '$' then (dollar := true; "")
-                  elif !dollar && c >= '0' && c <= '9' then (dollar := false; "_"+new System.String(c,1))
-                  elif !dollar then (dollar := false; "$"+new System.String(c,1))
-                  else new System.String(c,1))
-              let lines = c.Split([| '\r'; '\n' |], System.StringSplitOptions.RemoveEmptyEntries);
-              for line in lines do 
-                  fprintfn os "                     %s" line;
-              if !dollar then os.Write '$'
-          fprintfn os "                   )";
-          fprintfn os "                 : %s));" (getType prod.Head)
-      done;
-      fprintfn os "|]" ;
+              fprintfn os "            failwith \"unreachable\""
+          | code ->
+              let code =
+                    let sb = StringBuilder()
+                    let mutable pos = 0
+                    while pos < code.Length do
+                        if code.[pos] = '$' then
+                            pos <- pos + 1
+                            let st = pos
+                            while pos < code.Length && '0' <= code.[pos] && code.[pos] <= '9' do
+                                pos <- pos + 1
+                            if pos = st then
+                                failwith "Dollar sign must be followed by a number"
+                            let i = Int32.Parse(code.Substring(st, pos - st))
+                            bprintf sb "_%d" i
+                        else
+                            sb.Append(code.[pos]) |> ignore
+                            pos <- pos + 1
+                    sb.ToString()
+              Output.outputCode os 12 code
+          fprintfn os "        box<%s> res" (getType prod.Head)
+      fprintfn os "    | _ -> failwith \"unreachable\""
   end;
 
   fprintfn os "let terminalsCount = %d" preprocessed.Terminals.Length  
@@ -261,6 +266,4 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
   fprintfn os "let tables = %s.ParseTables(reductions, endOfInputTag, tagOfToken, dataOfToken, reductionSymbolCounts, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)" parslib
 
   for (id, startState) in Seq.zip preprocessed.OriginalStartSymbols compiled.StartStates do
-        let ty = typeOfNonTerminal.[id]
-        fprintfn os "let %s lexer lexbuf : %s = unbox (tables.Interpret(lexer, lexbuf, %d))" id ty startState    
-  ()
+        fprintfn os "let %s lexer lexbuf = unbox<%s> (tables.Interpret(lexer, lexbuf, %d))" id typeOfNonTerminal.[id] startState

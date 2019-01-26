@@ -129,32 +129,8 @@ try
         fprintfn os "%s %s%s lexbuf =" (if i = 0 then "let rec" else "and") name (String.concat "" (List.map (fun s -> " " + s) args))
         fprintfn os "    match %s_tables.Interpret(lexbuf) with" name
         Seq.iteri (fun i (code : string, _) ->
-            fprintfn os "    | %d ->" i;
-            let lines = code.Split([| '\r'; '\n' |], StringSplitOptions.RemoveEmptyEntries)
-            let getIndentLevel (s : string) =
-                let mutable level = 0
-                let mutable pos = 0
-                while pos < s.Length do
-                    match s.[pos] with
-                    | ' ' ->
-                        level <- level + 1
-                        pos <- pos + 1
-                    | '\t' ->
-                        level <- level + 4
-                        pos <- pos + 1
-                    | _ -> pos <- s.Length
-                level
-
-            let shiftIndentLevel incr (s : string) =
-                let current = getIndentLevel s
-                String(' ', current + incr) + s.TrimStart([|' '; '\t'|])
-
-            let setIndent (level : int) (lines : string array) =
-                let min = Array.min (Array.map getIndentLevel lines)
-                Array.map (shiftIndentLevel (level - min)) lines
-
-            for line in setIndent 8 lines do
-                fprintfn os "%s" line) actions
+            fprintfn os "    | %d ->" i
+            Output.outputCode os 8 code) actions
         fprintfn os "    | _ -> failwith \"%s\"" name
 
     fprintfn os ""
