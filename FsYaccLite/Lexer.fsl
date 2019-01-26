@@ -2,7 +2,7 @@
 open Syntax
 open Parser
 open System.Text
-open FsLexYaccLite.Lexing
+open FsLexYaccLiteRuntime
 
 let newline (lexbuf:LexBuffer) = lexbuf.EndPos <- lexbuf.EndPos.NextLine
 

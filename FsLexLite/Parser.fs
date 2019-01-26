@@ -5,94 +5,94 @@ module Parser
 open Syntax
 
 type token = 
-  | IDENT of string
   | STRING of string
+  | IDENT of string
   | CODE of Syntax.Code
   | CHAR of char
-  | RPAREN
-  | LPAREN
-  | AND
-  | LET
-  | PARSE
   | RULE
-  | DASH
-  | HAT
-  | RBRACK
-  | LBRACK
-  | UNDERSCORE
-  | EQUALS
-  | QMARK
-  | STAR
-  | PLUS
-  | DOT
-  | BAR
+  | PARSE
+  | LET
+  | AND
+  | LPAREN
+  | RPAREN
   | EOF
+  | BAR
+  | DOT
+  | PLUS
+  | STAR
+  | QMARK
+  | EQUALS
+  | UNDERSCORE
+  | LBRACK
+  | RBRACK
+  | HAT
+  | DASH
   | ENDE
 
 let tagOfToken (t : token) = 
   match t with
-  | IDENT _ -> 0 
-  | STRING _ -> 1 
+  | STRING _ -> 0 
+  | IDENT _ -> 1 
   | CODE _ -> 2 
   | CHAR _ -> 3 
-  | RPAREN  -> 4 
-  | LPAREN  -> 5 
-  | AND  -> 6 
-  | LET  -> 7 
-  | PARSE  -> 8 
-  | RULE  -> 9 
-  | DASH  -> 10 
-  | HAT  -> 11 
-  | RBRACK  -> 12 
-  | LBRACK  -> 13 
-  | UNDERSCORE  -> 14 
-  | EQUALS  -> 15 
-  | QMARK  -> 16 
-  | STAR  -> 17 
-  | PLUS  -> 18 
-  | DOT  -> 19 
-  | BAR  -> 20 
-  | EOF  -> 21 
+  | RULE  -> 4 
+  | PARSE  -> 5 
+  | LET  -> 6 
+  | AND  -> 7 
+  | LPAREN  -> 8 
+  | RPAREN  -> 9 
+  | EOF  -> 10 
+  | BAR  -> 11 
+  | DOT  -> 12 
+  | PLUS  -> 13 
+  | STAR  -> 14 
+  | QMARK  -> 15 
+  | EQUALS  -> 16 
+  | UNDERSCORE  -> 17 
+  | LBRACK  -> 18 
+  | RBRACK  -> 19 
+  | HAT  -> 20 
+  | DASH  -> 21 
   | ENDE  -> 22 
 
 let endOfInputTag = 25 
 
 let dataOfToken (t : token) : obj = 
   match t with 
-  | IDENT x -> box x 
   | STRING x -> box x 
+  | IDENT x -> box x 
   | CODE x -> box x 
   | CHAR x -> box x 
-  | RPAREN  -> null 
-  | LPAREN  -> null 
-  | AND  -> null 
-  | LET  -> null 
-  | PARSE  -> null 
   | RULE  -> null 
-  | DASH  -> null 
-  | HAT  -> null 
-  | RBRACK  -> null 
-  | LBRACK  -> null 
-  | UNDERSCORE  -> null 
-  | EQUALS  -> null 
-  | QMARK  -> null 
-  | STAR  -> null 
-  | PLUS  -> null 
-  | DOT  -> null 
-  | BAR  -> null 
+  | PARSE  -> null 
+  | LET  -> null 
+  | AND  -> null 
+  | LPAREN  -> null 
+  | RPAREN  -> null 
   | EOF  -> null 
+  | BAR  -> null 
+  | DOT  -> null 
+  | PLUS  -> null 
+  | STAR  -> null 
+  | QMARK  -> null 
+  | EQUALS  -> null 
+  | UNDERSCORE  -> null 
+  | LBRACK  -> null 
+  | RBRACK  -> null 
+  | HAT  -> null 
+  | DASH  -> null 
   | ENDE  -> null 
 
 let reductionSymbolCounts = [|1us; 6us; 1us; 0us; 0us; 2us; 4us; 3us; 1us; 6us; 0us; 2us; 0us; 1us; 3us; 1us; 2us; 1us; 1us; 1us; 1us; 1us; 2us; 2us; 2us; 2us; 3us; 3us; 3us; 4us; 2us; 4us; 0us|]
 let productionToNonTerminalTable = [|0us; 1us; 2us; 2us; 3us; 3us; 4us; 5us; 5us; 6us; 7us; 7us; 8us; 8us; 9us; 9us; 10us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 12us; 12us; 12us|]
 let maxProductionBodyLength = 6
-let actionTable_buckets = [| 0s; -1s; 1s; -1s; -1s; -1s; -1s; 3s; 4s; 5s; -1s; -1s; -1s; -1s; -1s; -1s; 6s; 7s; 8s; -1s; 10s; -1s; 11s; 13s; 14s; 16s; -1s; 18s; 20s; 21s; 22s; 23s; 24s; -1s; 25s; 26s; 27s; 28s; 29s; 32s; 34s; 36s; 37s; 39s; 41s; 43s; 45s; -1s; 46s; 49s; -1s; 50s; -1s; 51s; -1s; -1s; 53s; 54s; 56s; 57s; 58s; 60s; 62s; -1s; 65s; -1s; -1s; -1s; -1s; 66s; 67s; 68s; 69s; 70s; 71s; 72s; -1s; 73s; 75s; 76s; -1s; 77s; 78s; 79s; 80s; 81s; 82s; 83s; 84s; -1s; -1s; -1s; -1s; -1s; 85s; 86s; -1s; 87s; 88s; -1s; 90s; -1s; 91s; 93s; 94s; -1s; -1s; -1s; -1s; -1s; 95s; 96s; -1s; -1s; 97s; 98s; 99s; 100s; 102s; 103s; -1s; 105s; -1s; 106s; 107s; -1s; -1s; 108s; 109s; 110s; 111s; 113s; 114s; -1s; -1s; 115s; -1s; 116s; 117s; 118s; 119s; 120s; -1s; 121s; -1s; 122s; -1s; -1s; -1s; -1s; -1s; 124s; -1s; 125s; 127s; -1s; -1s; 129s; -1s; -1s; 130s; 131s; -1s |]
-let actionTable_entries = [| 163s; 4s; -3s; 1s; 165s; -5s; 7s; -4s; 334s; -4s; 9s; -4s; 1320s; 52s; 832s; 14s; -345s; 25s; 833s; 15s; 835s; 16s; -838s; 17s; 1326s; 14s; 1327s; 15s; -677s; 14s; 1328s; 53s; -678s; 15s; 1329s; 16s; -680s; 16s; 1331s; 17s; 680s; 38s; 681s; 17s; 845s; 18s; 846s; 19s; 1173s; 48s; 197s; 10s; 1339s; 18s; 1340s; 19s; 689s; 18s; -691s; 19s; -854s; 20s; 1342s; 29s; -1018s; 40s; 1343s; 30s; -693s; 29s; 1344s; 31s; 693s; 30s; -695s; 31s; 1346s; 32s; -859s; 14s; 1347s; 20s; -697s; 32s; 859s; 15s; -209s; 11s; 697s; 20s; 861s; 16s; -864s; 17s; -1027s; 44s; 1352s; 14s; 1353s; 15s; 1355s; 16s; -706s; -33s; 1357s; 17s; 871s; 18s; -547s; 14s; 872s; 19s; 547s; 15s; 874s; 29s; -550s; 16s; 875s; 30s; -877s; 31s; 1365s; 18s; -552s; 17s; -715s; -33s; 1366s; 19s; 879s; 20s; 1373s; 20s; 559s; 18s; 560s; 19s; 1050s; 45s; 562s; 29s; 563s; 30s; 564s; 31s; -78s; 32767s; 566s; 32s; 567s; 20s; 731s; 40s; 1222s; 14s; 1223s; 15s; 572s; 22s; 1225s; 16s; 85s; 4s; 1227s; 17s; 87s; -5s; 740s; 41s; 1235s; 18s; 1236s; 19s; 260s; 14s; -262s; 15s; 587s; -11s; 263s; 16s; -266s; 17s; 1243s; 20s; 918s; 43s; 104s; 7s; 273s; 18s; 274s; 19s; 1092s; 14s; 1093s; 15s; 442s; 14s; -444s; 15s; 1095s; 16s; 281s; 20s; -446s; 16s; 1097s; 17s; 447s; 17s; 286s; 22s; 613s; 35s; 1105s; 18s; 1106s; 19s; 455s; 18s; -457s; 19s; 1108s; 29s; 1109s; 30s; 1110s; 31s; 1113s; 20s; 463s; 20s; 301s; -11s; 139s; 8s; 1118s; -13s; 1119s; -13s; 1121s; -13s; -472s; -33s; 1123s; -13s; 314s; 1s; -480s; 27s; 1131s; -13s; -481s; -33s; 1132s; -13s; 646s; 36s; 1138s; 46s; -651s; 11s; 1139s; -13s |]
-let actionTable_defaultActions = [| -32768s; -3s; -1s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -6s; -32768s; -32768s; -32768s; -9s; -22s; -21s; -18s; -32768s; -32768s; -20s; -19s; -7s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -26s; -25s; -24s; -32768s; -23s; -12s; -32768s; -2s; -8s; -28s; -32768s; -31s; -29s; -27s; -32768s; -30s; -32768s; -14s; -32768s; -32s; -10s; -16s; -32768s; -32768s; -17s; -15s |]
-let gotoTable_buckets = [| -1s; 0s; 1s; -1s; -1s; 4s; 5s; 6s; 7s; -1s; 9s; -1s; 11s; -1s; -1s; -1s; 12s; -1s; -1s; 13s; 14s; 16s; -1s; -1s; 17s; 18s; -1s; -1s; 19s; 20s; 21s; -1s; -1s; 24s; 25s; 27s; 29s |]
-let gotoTable_entries = [| 1s; 2s; -3s; 3s; -151s; 23s; 557s; 33s; 42s; 5s; 43s; 6s; 81s; 9s; -83s; 6s; 674s; 33s; -159s; 24s; 232s; 26s; 567s; 47s; 349s; 33s; 685s; 54s; -428s; 42s; 686s; 50s; 687s; 51s; 246s; 28s; 284s; 33s; 620s; 49s; 621s; 50s; -142s; 21s; -364s; 39s; 622s; 51s; 440s; 33s; -294s; 34s; 330s; 37s; -110s; 12s; 331s; 13s; 110s; 13s |]
+let actionTable_buckets = [| -1s; -1s; 0s; -1s; 1s; -1s; 2s; 3s; 4s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; -1s; 5s; -1s; -1s; 6s; 7s; 8s; 10s; -1s; 12s; -1s; -1s; 13s; -1s; 14s; 17s; 19s; 21s; 24s; 25s; 27s; 28s; 31s; 32s; 33s; 34s; 35s; -1s; 36s; -1s; 38s; 39s; 40s; 41s; -1s; 44s; -1s; 46s; 47s; 49s; 51s; -1s; 54s; 56s; -1s; -1s; -1s; 57s; 59s; 60s; 61s; 62s; 63s; 64s; 65s; -1s; 66s; 67s; -1s; 68s; -1s; 69s; -1s; 70s; 71s; 73s; 74s; -1s; -1s; -1s; -1s; 77s; -1s; 78s; -1s; -1s; -1s; 79s; -1s; 80s; 81s; 83s; 85s; -1s; 87s; 88s; -1s; 89s; -1s; 92s; -1s; -1s; 93s; -1s; 94s; -1s; 95s; 97s; 99s; 100s; -1s; 102s; 104s; -1s; 105s; -1s; 106s; 109s; 110s; 111s; 112s; 113s; -1s; 114s; 115s; 116s; 117s; -1s; -1s; -1s; -1s; 119s; 120s; 121s; -1s; 122s; -1s; -1s; -1s; -1s; 123s; -1s; 124s; 125s; -1s; -1s; -1s; -1s; -1s; 127s; 129s; -1s; 130s; -1s; 131s |]
+let actionTable_entries = [| 2s; 1s; 4s; -4s; 6s; -4s; 1311s; 52s; 334s; -4s; 345s; 25s; 1326s; 14s; 1327s; 15s; -677s; 14s; 1328s; 53s; -678s; 15s; 1329s; 16s; 679s; 16s; 1334s; 17s; -685s; 17s; -1174s; 48s; 1336s; 18s; -686s; 38s; 1337s; 29s; -524s; -33s; 686s; 18s; -199s; 10s; -688s; 29s; 1339s; 30s; 1340s; 31s; -690s; 30s; 1341s; 32s; 690s; 31s; -692s; 32s; -1018s; 40s; 1343s; 19s; 1344s; 20s; 693s; 19s; 694s; 20s; 858s; 14s; 859s; 15s; -210s; 11s; 861s; 16s; 1352s; 14s; 1353s; 15s; 539s; -33s; -541s; 27s; -867s; 17s; 1355s; 16s; -706s; -33s; 868s; 18s; 1033s; 44s; -872s; 30s; 1360s; 17s; -547s; 14s; 872s; 31s; -548s; 15s; -874s; 32s; 1362s; 18s; -550s; 16s; 875s; 19s; 876s; 20s; -555s; 17s; 1369s; 19s; 1370s; 20s; 556s; 18s; 557s; 29s; 721s; -33s; 559s; 30s; 560s; 31s; 561s; 32s; 563s; 19s; 564s; 20s; 77s; 32767s; 731s; 40s; 1222s; 14s; -83s; -5s; 1223s; 15s; 1061s; 45s; -85s; 4s; -574s; 22s; 1225s; 16s; 1230s; 17s; 1232s; 18s; 747s; 41s; 260s; 14s; -262s; 15s; 1239s; 19s; -589s; -11s; 1240s; 20s; -264s; 16s; 915s; 43s; 754s; 14s; 755s; 15s; -106s; 7s; -269s; 17s; 757s; 16s; 270s; 18s; 762s; 17s; 764s; 18s; -278s; 19s; 1092s; 14s; -279s; 20s; 1093s; 15s; 442s; 14s; -444s; 15s; 1095s; 16s; -446s; 16s; 771s; 19s; 772s; 20s; 1100s; 17s; -288s; 22s; -451s; 17s; 1102s; 18s; 614s; 35s; 452s; 18s; 1105s; 30s; 1106s; 31s; 1107s; 32s; 1109s; 19s; 1110s; 20s; 459s; 19s; -135s; 8s; 460s; 20s; 302s; -11s; 1118s; -13s; 1119s; -13s; 1121s; -13s; 1126s; -13s; 1128s; -13s; -315s; 1s; 1129s; 46s; -647s; 36s; 1135s; -13s; 1136s; -13s; 160s; -5s; -163s; 4s; 651s; 11s |]
+let actionTable_defaultActions = [| -32768s; -3s; -1s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -6s; -32768s; -32768s; -32768s; -9s; -21s; -22s; -18s; -32768s; -19s; -20s; -32768s; -7s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -32768s; -24s; -25s; -26s; -23s; -12s; -32768s; -2s; -8s; -28s; -32768s; -31s; -29s; -27s; -32768s; -30s; -32768s; -14s; -32768s; -32s; -10s; -16s; -32768s; -32768s; -17s; -15s |]
+let gotoTable_buckets = [| -1s; 0s; 1s; -1s; -1s; 4s; 5s; 6s; 7s; -1s; 9s; -1s; 11s; 12s; -1s; -1s; 13s; -1s; 14s; 15s; 16s; 17s; -1s; -1s; -1s; 18s; -1s; -1s; 19s; 20s; 21s; -1s; -1s; 24s; 25s; 27s; 29s |]
+let gotoTable_entries = [| 1s; 2s; -3s; 3s; -151s; 23s; 557s; 33s; 42s; 5s; 43s; 6s; 81s; 9s; -83s; 6s; 674s; 33s; -159s; 24s; 232s; 26s; 567s; 47s; 272s; 28s; 349s; 33s; 388s; 42s; 685s; 54s; 686s; 50s; 687s; 51s; 284s; 33s; 620s; 49s; 621s; 50s; -142s; 21s; -364s; 39s; 622s; 51s; 440s; 33s; -294s; 34s; 330s; 37s; -110s; 12s; 331s; 13s; 110s; 13s |]
 let reductions =    [| 
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.Spec)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -100,7 +100,7 @@ let reductions =    [|
                       failwith "unreachable"
                    )
                  : '_startspec));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'codeopt)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'Macros)) in
             let _4 = (let data = parseState.GetInput(4) in (Microsoft.FSharp.Core.Operators.unbox data : 'Rules)) in
@@ -111,7 +111,7 @@ let reductions =    [|
                                                                     { TopCode=_1;Macros=_2;Rules=_4;BottomCode=_5 } 
                    )
                  : Syntax.Spec));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.Code)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -119,21 +119,21 @@ let reductions =    [|
                                      _1 
                    )
                  : 'codeopt));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
                                               "", (parseState.ResultRange |> fst) 
                    )
                  : 'codeopt));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
                                 [] 
                    )
                  : 'Macros));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'macro)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'Macros)) in
             Microsoft.FSharp.Core.Operators.box
@@ -142,7 +142,7 @@ let reductions =    [|
                                                       _1 :: _2 
                    )
                  : 'Macros));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             let _4 = (let data = parseState.GetInput(4) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
@@ -151,7 +151,7 @@ let reductions =    [|
                                                       (_2, _4) 
                    )
                  : 'macro));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'rule)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'Rules)) in
             Microsoft.FSharp.Core.Operators.box
@@ -160,7 +160,7 @@ let reductions =    [|
                                              _1 :: _3 
                    )
                  : 'Rules));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'rule)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -168,7 +168,7 @@ let reductions =    [|
                                                                  [_1] 
                    )
                  : 'Rules));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'args)) in
             let _5 = (let data = parseState.GetInput(5) in (Microsoft.FSharp.Core.Operators.unbox data : 'optbar)) in
@@ -179,14 +179,14 @@ let reductions =    [|
                                                                     (_1,_2,_6) 
                    )
                  : 'rule));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
                              [] 
                    )
                  : 'args));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'args)) in
             Microsoft.FSharp.Core.Operators.box
@@ -195,21 +195,21 @@ let reductions =    [|
                                                  _1 :: _2 
                    )
                  : 'args));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
                                
                    )
                  : 'optbar));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
                                          
                    )
                  : 'optbar));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'clause)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'clauses)) in
             Microsoft.FSharp.Core.Operators.box
@@ -218,7 +218,7 @@ let reductions =    [|
                                                   _1 :: _3 
                    )
                  : 'clauses));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'clause)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -226,7 +226,7 @@ let reductions =    [|
                                                                         [_1] 
                    )
                  : 'clauses));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : Syntax.Code)) in
             Microsoft.FSharp.Core.Operators.box
@@ -235,7 +235,7 @@ let reductions =    [|
                                            _1, _2 
                    )
                  : 'clause));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : char)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -243,21 +243,21 @@ let reductions =    [|
                                                             Inp (CharSet (Set.singleton (_1, _1))) 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
                                                             Inp Eof 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
                                                             Inp Any 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -265,7 +265,7 @@ let reductions =    [|
                                                             Seq (List.init _1.Length (fun i -> Inp (CharSet (Set.singleton(_1.[i], _1.[i]))))) 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -273,7 +273,7 @@ let reductions =    [|
                                                             Macro _1 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
@@ -282,7 +282,7 @@ let reductions =    [|
                                                             Seq [_1; _2] 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -290,7 +290,7 @@ let reductions =    [|
                                                             Seq [_1; Star _1] 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -298,7 +298,7 @@ let reductions =    [|
                                                             Star _1 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -306,7 +306,7 @@ let reductions =    [|
                                                             Alt [Seq []; _1] 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
@@ -315,7 +315,7 @@ let reductions =    [|
                                                             Alt [_1; _3] 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'regexp)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -323,7 +323,7 @@ let reductions =    [|
                                                             _2 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : 'CharSet)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -331,7 +331,7 @@ let reductions =    [|
                                                             Inp (CharSet _2) 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'CharSet)) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -339,7 +339,7 @@ let reductions =    [|
                                                             Inp (NotCharSet _3) 
                    )
                  : 'regexp));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'CharSet)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : char)) in
             Microsoft.FSharp.Core.Operators.box
@@ -348,7 +348,7 @@ let reductions =    [|
                                                     Set.add (_2, _2) _1 
                    )
                  : 'CharSet));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'CharSet)) in
             let _2 = (let data = parseState.GetInput(2) in (Microsoft.FSharp.Core.Operators.unbox data : char)) in
             let _4 = (let data = parseState.GetInput(4) in (Microsoft.FSharp.Core.Operators.unbox data : char)) in
@@ -358,7 +358,7 @@ let reductions =    [|
                                                     Set.add (_2, _4) _1 
                    )
                  : 'CharSet));
-        (fun (parseState : FsLexYaccLite.Parsing.IParseState) ->
+        (fun (parseState : FsLexYaccLiteRuntime.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
@@ -368,5 +368,5 @@ let reductions =    [|
 |]
 let terminalsCount = 26
 let nonTerminalsCount = 13
-let tables = FsLexYaccLite.Parsing.ParseTables(reductions, endOfInputTag, tagOfToken, dataOfToken, reductionSymbolCounts, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)
+let tables = FsLexYaccLiteRuntime.ParseTables(reductions, endOfInputTag, tagOfToken, dataOfToken, reductionSymbolCounts, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)
 let spec lexer lexbuf : Syntax.Spec = unbox (tables.Interpret(lexer, lexbuf, 0))

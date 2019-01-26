@@ -1,6 +1,6 @@
 ﻿module Syntax
 
-open FsLexYaccLite.Lexing
+open FsLexYaccLiteRuntime
 
 type Ident = string
 type Code = string * Position

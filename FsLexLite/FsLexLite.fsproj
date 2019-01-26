@@ -6,8 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Lexing.fs" />
-    <Compile Include="Parsing.fs" />
+    <Compile Include="FsLexYaccLiteRuntime.fs" />
     <Compile Include="Syntax.fs" />
     <Compile Include="Compile.fs" />
     <Compile Include="Parser.fs" />

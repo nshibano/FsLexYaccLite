@@ -2,7 +2,7 @@ open System
 open System.IO 
 open System.Collections.Generic
 open Printf
-open FsLexYaccLite.Lexing
+open FsLexYaccLiteRuntime
 open FsLexYaccLite.Common.Arg
 open Syntax
 open Preprocess

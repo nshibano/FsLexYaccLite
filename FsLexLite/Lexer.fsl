@@ -1,6 +1,6 @@
 {
 open Parser
-open FsLexYaccLite.Lexing
+open FsLexYaccLiteRuntime
 
 open System.Text
 

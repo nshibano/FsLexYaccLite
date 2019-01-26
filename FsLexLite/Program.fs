@@ -3,7 +3,7 @@ open System.Collections.Generic
 open System.IO
 open Printf
 open FsLexYaccLite.Common.Arg
-open FsLexYaccLite.Lexing
+open FsLexYaccLiteRuntime
 open Compile
 
 let mutable input = None
