@@ -5,19 +5,6 @@ open Parser
 open System.Text
 open FsLexYaccLiteRuntime
 
-let newline (lexbuf:LexBuffer) = lexbuf.EndPos <- lexbuf.EndPos.NextLine
-
-
-let unexpected_char (lexbuf : LexBuffer) =
-  failwith ("Unexpected character '"+(lexbuf.Lexeme)+"'")
-
-let typeDepth = ref 0
-let startPos = ref Position_Empty
-let mutable str_buf = new System.Text.StringBuilder()
-
-let appendBuf (str:string) = str_buf.Append str |> ignore
-let clearBuf () = str_buf <- new System.Text.StringBuilder()
-
 let append (lexbuf : LexBuffer) (sb : StringBuilder) = sb.Append(lexbuf.Lexeme) |> ignore
 
 let private token_asciiAlphabetTable = [| 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 0us; 1us; 31us; 31us; 2us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 31us; 0us; 31us; 31us; 31us; 31us; 3us; 31us; 4us; 31us; 31us; 5us; 31us; 31us; 31us; 31us; 6us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 7us; 8us; 9us; 10us; 31us; 31us; 31us; 31us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 11us; 31us; 31us; 31us; 31us; 4us; 31us; 12us; 13us; 14us; 13us; 15us; 16us; 17us; 18us; 19us; 13us; 20us; 21us; 13us; 22us; 23us; 24us; 13us; 25us; 26us; 27us; 13us; 13us; 13us; 13us; 28us; 13us; 29us; 30us; 31us; 31us; 31us |]
@@ -158,7 +145,7 @@ let rec token lexbuf =
     | 1 ->
         PERCENT_PERCENT 
     | 2 ->
-        typeDepth := 1; startPos := lexbuf.StartPos; clearBuf(); TOKEN (fs_type 1 (StringBuilder()) lexbuf) 
+        TOKEN (fs_type 1 (StringBuilder()) lexbuf) 
     | 3 ->
         TOKEN (None) 
     | 4 ->
@@ -166,7 +153,7 @@ let rec token lexbuf =
     | 5 ->
         PREC 
     | 6 ->
-        typeDepth := 1; startPos := lexbuf.StartPos; clearBuf(); TYPE (match fs_type 1 (StringBuilder()) lexbuf with Some x -> x | None -> failwith "gettype") 
+        TYPE (match fs_type 1 (StringBuilder()) lexbuf with Some x -> x | None -> failwith "gettype") 
     | 7 ->
         LEFT 
     | 8 ->
@@ -182,7 +169,7 @@ let rec token lexbuf =
     | 12 ->
         token lexbuf 
     | 13 ->
-        newline lexbuf; token lexbuf 
+        lexbuf.NewLine(); token lexbuf 
     | 14 ->
         IDENT lexbuf.Lexeme 
     | 15 ->
@@ -190,13 +177,13 @@ let rec token lexbuf =
     | 16 ->
         ignore(comment lexbuf); token lexbuf 
     | 17 ->
-        token lexbuf  
+        token lexbuf 
     | 18 ->
         COLON 
     | 19 ->
-        unexpected_char lexbuf 
+        failwith "Unexpected char %c" lexbuf.Lexeme.[0] 
     | 20 ->
-        EOF  
+        EOF 
     | _ -> failwith "token"
 and fs_type level buf lexbuf =
     match fs_type_tables.Interpret(lexbuf) with
