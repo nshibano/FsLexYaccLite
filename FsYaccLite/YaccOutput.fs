@@ -147,9 +147,6 @@ let outputUInt16Array (os : TextWriter) (name : string) (ary : int array) =
         fprintf os "%dus" ary.[i]
     fprintfn os "|]"
 
-let outputCodedUInt16 (os: TextWriter) (n:int) = 
-  os.Write n;
-  os.Write "us; "
 let shiftFlag = 0x0000
 let reduceFlag = 0x4000
 let errorFlag = 0x8000
