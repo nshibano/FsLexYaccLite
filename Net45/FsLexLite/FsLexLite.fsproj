@@ -48,8 +48,7 @@
     <None Include="App.config" />
     <Content Include="packages.config" />
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Lexing.fs" />
-    <Compile Include="Parsing.fs" />
+    <Compile Include="FsLexYaccLiteRuntime.fs" />
     <Compile Include="Syntax.fs" />
     <Compile Include="Parser.fs" />
     <Compile Include="Lexer.fs" />
