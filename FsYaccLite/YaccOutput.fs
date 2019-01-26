@@ -234,11 +234,13 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
               | Some ty -> fprintfn os "        let _%d = unbox<%s> (parseState.GetInput(%d))" (i+1) ty (i+1)
               | None -> ()) prod.Body
           fprintfn os "        let res ="
-          match prod.Code with 
-          | null -> 
-              fprintfn os "            failwith \"unreachable\""
-          | code ->
-              let code =
+          let code =
+                if isNull prod.Code then
+                    "failwith \"unreachable\""
+                elif String.IsNullOrWhiteSpace prod.Code then
+                    "()"
+                else
+                    let code = prod.Code
                     let sb = StringBuilder()
                     let mutable pos = 0
                     while pos < code.Length do
@@ -255,7 +257,7 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
                             sb.Append(code.[pos]) |> ignore
                             pos <- pos + 1
                     sb.ToString()
-              Output.outputCode os 12 code
+          Output.outputCode os 12 code
           fprintfn os "        box<%s> res" (getType prod.Head)
       fprintfn os "    | _ -> failwith \"unreachable\""
   end;
