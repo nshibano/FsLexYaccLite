@@ -48,7 +48,7 @@ and fs_type level buf = parse
             fs_type (level + 1) buf lexbuf }
     | _   { append lexbuf buf
             fs_type level buf lexbuf }
-    | eof { failwith "Unterminated type expression literal" }
+    | eof { failwithf "Unterminated type expression literal" }
 
 and header buf = parse
     | "%}"    { HEADER (buf.ToString()) }

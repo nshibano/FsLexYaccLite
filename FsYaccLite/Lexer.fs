@@ -197,7 +197,7 @@ and fs_type level buf lexbuf =
         append lexbuf buf
         fs_type level buf lexbuf 
     | 3 ->
-        failwith "Unterminated type expression literal" 
+        failwithf "Unterminated type expression literal" 
     | _ -> failwith "fs_type"
 and header buf lexbuf =
     match header_tables.Interpret(lexbuf) with
