@@ -8,7 +8,7 @@ open Compile
 
 let mutable input = None
 let mutable out = None
-let mutable lexlib = "FsLexYaccLite.Lexing"
+let mutable lexlib = "FsLexYaccLiteRuntime"
 let mutable modname = None
 
 let usage =

@@ -1,4 +1,4 @@
-﻿open FsLexYaccLite.Lexing
+﻿open FsLexYaccLiteRuntime
 open System
 open System.Collections.Generic
 open Test

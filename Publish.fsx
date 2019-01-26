@@ -18,8 +18,7 @@ try
 
     cmd "dotnet" @"publish -c Release FsLexLite\FsLexLite.fsproj -o ..\Publish\core21\FsLexLite"
     cmd "dotnet" @"publish -c Release FsYaccLite\FsYaccLite.fsproj -o ..\Publish\core21\FsYaccLite"
-    cp @"Runtime\Lexing.fs"   @"Publish\core21\Runtime"
-    cp @"Runtime\Parsing.fs"  @"Publish\core21\Runtime"
+    cp @"Runtime\FsLexYaccLiteRuntime.fs"   @"Publish\core21\Runtime"
     let core21ZipFileName = sprintf "FsLexYaccLite-core21-%s.zip" buildVersion
     if File.Exists(core21ZipFileName) then
         File.Delete(core21ZipFileName)
@@ -40,8 +39,7 @@ try
     Directory.CreateDirectory(@"Publish\net45\Bin") |> ignore
     cpAllFiles @"Net45\FsLexLite\bin\Release" @"Publish\net45\Bin" true
     cpAllFiles @"Net45\FsYaccLite\bin\Release" @"Publish\net45\Bin" true
-    cp @"Runtime\Lexing.fs"   @"Publish\net45\Runtime"
-    cp @"Runtime\Parsing.fs"  @"Publish\net45\Runtime"
+    cp @"Runtime\FsLexYaccLiteRuntime.fs"   @"Publish\net45\Runtime"
     let net45ZipFileName = sprintf "FsLexYaccLite-net45-%s.zip" buildVersion
     if File.Exists(net45ZipFileName) then
         File.Delete(net45ZipFileName)

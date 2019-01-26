@@ -12,7 +12,7 @@ let mutable input = None
 let mutable modname= None
 let mutable output = None
 let mutable verbose = false
-let mutable parslib = "FsLexYaccLite.Parsing"
+let mutable parslib = "FsLexYaccLiteRuntime"
 
 let usage =
     [("-o", StringArg (fun s -> output <- Some s), "Name the output file.")
