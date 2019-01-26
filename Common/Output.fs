@@ -5,7 +5,7 @@ open System.IO
 
 let outputCode (os : TextWriter) (indent : int) (code : string) =
     
-    let lines = code.Split([| "\r"; "\n" |], StringSplitOptions.None)
+    let lines = code.Split([| "\r\n"; "\n" |], StringSplitOptions.None)
     
     let getIndentLevel (s : string) =
         let mutable level = 0

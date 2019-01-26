@@ -57,6 +57,7 @@ try
 
     use os = System.IO.File.CreateText output
 
+    fprintfn os "// GENERATED FILE"
     let moduleName =
         match modname with
         | None ->
@@ -129,8 +130,12 @@ try
         fprintfn os "%s %s%s lexbuf =" (if i = 0 then "let rec" else "and") name (String.concat "" (List.map (fun s -> " " + s) args))
         fprintfn os "    match %s_tables.Interpret(lexbuf) with" name
         Seq.iteri (fun i (code : string, _) ->
-            fprintfn os "    | %d ->" i
-            Output.outputCode os 8 code) actions
+            if code.Split([| "\r\n"; "\n" |], StringSplitOptions.None).Length > 1 then
+                fprintfn os "    | %d ->" i
+                Output.outputCode os 8 code
+            else
+                fprintfn os "    | %d -> %s" i (code.Trim(' '))) actions
+
         fprintfn os "    | _ -> failwith \"%s\"" name
 
     fprintfn os ""
