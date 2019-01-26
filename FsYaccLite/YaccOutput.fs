@@ -233,7 +233,6 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
               match tyopt with 
               | Some ty -> fprintfn os "        let _%d = unbox<%s> (parseState.GetInput(%d))" (i+1) ty (i+1)
               | None -> ()) prod.Body
-          fprintfn os "        let res ="
           let code =
                 if isNull prod.Code then
                     "failwith \"unreachable\""
@@ -257,7 +256,12 @@ let outputParser (output : string) (modname : string) (parslib : string) (code :
                             sb.Append(code.[pos]) |> ignore
                             pos <- pos + 1
                     sb.ToString()
-          Output.outputCode os 12 code
+          let linesCount = code.Split([| "\r"; "\n" |], StringSplitOptions.None).Length
+          if linesCount > 1 then
+              fprintfn os "        let res ="
+              Output.outputCode os 12 code
+          else
+              fprintfn os "        let res = %s" (code.Trim(' ', '\t'))
           fprintfn os "        box<%s> res" (getType prod.Head)
       fprintfn os "    | _ -> failwith \"unreachable\""
   end;
