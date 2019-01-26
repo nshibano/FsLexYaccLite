@@ -3,12 +3,12 @@ open Syntax
 %} 
 
 %type <Syntax.ParserSpec> spec
-%token <string>  IDENT 
-%token <Syntax.Code> HEADER CODE 
-%token BAR PERCENT_PERCENT  START LEFT RIGHT NONASSOC COLON PREC SEMI EOF
-%token <string> TYPE
-%token <string option> TOKEN
 %start spec
+
+%token <string> IDENT TYPE_LITERAL
+%token <Syntax.Code> HEADER CODE 
+%token BAR PERCENT_PERCENT START KW_TYPE TOKEN LEFT RIGHT NONASSOC COLON PREC SEMI EOF
+
 %left BAR
 
 %%      
@@ -25,12 +25,13 @@ decls:
     |            { [] }
 
 decl:
-    | TOKEN idents    { Token ($1, List.rev $2) }
-    | TYPE idents     { Type ($1, List.rev $2) }
-    | START idents    { Start (List.rev $2) }
-    | LEFT idents     { Prec (LeftAssoc, List.rev $2) }
-    | RIGHT idents    { Prec (RightAssoc, List.rev $2) }
-    | NONASSOC idents { Prec (NonAssoc, List.rev $2) }
+    | TOKEN TYPE_LITERAL idents   { Token (Some $2, List.rev $3) }
+    | TOKEN idents                { Token (None, List.rev $2) }
+    | KW_TYPE TYPE_LITERAL idents { Type ($2, List.rev $3) }
+    | START idents                { Start (List.rev $2) }
+    | LEFT idents                 { Prec (LeftAssoc, List.rev $2) }
+    | RIGHT idents                { Prec (RightAssoc, List.rev $2) }
+    | NONASSOC idents             { Prec (NonAssoc, List.rev $2) }
 
 idents:
     | idents IDENT { $2 :: $1 }

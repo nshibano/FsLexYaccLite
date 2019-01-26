@@ -16,11 +16,11 @@ let ident = letter (letter|digit|['\'' '_'])*
 rule token = parse
     | "%{"                         { header (StringBuilder()) lexbuf }
     | "%%"                         { PERCENT_PERCENT }
-    | "%token" (whitespace* '<')   { TOKEN (fs_type 1 (StringBuilder()) lexbuf) }
-    | "%token"                     { TOKEN (None) }
+	| "<"                          { TYPE_LITERAL (fs_type 1 (StringBuilder()) lexbuf) }
+    | "%token"                     { TOKEN }
     | "%start"                     { START }
     | "%prec"                      { PREC }
-    | "%type" (whitespace* '<')    { TYPE (match fs_type 1 (StringBuilder()) lexbuf with Some x -> x | None -> failwith "gettype") }
+    | "%type"                      { KW_TYPE }
     | "%left"                      { LEFT }
     | "%right"                     { RIGHT }
     | "%nonassoc"                  { NONASSOC }
@@ -40,7 +40,7 @@ rule token = parse
 
 and fs_type level buf = parse
     | '>' { if level = 1 then
-                Some (buf.ToString()) 
+                buf.ToString() 
             else
                 append lexbuf buf
                 fs_type (level - 1) buf lexbuf }
