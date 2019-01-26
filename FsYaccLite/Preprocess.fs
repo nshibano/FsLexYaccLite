@@ -57,7 +57,7 @@ let processParserSpecAst (spec : ParserSpec) =
     let terminalsSet = HashSet(terminals)
        
     let productions =  
-        spec.Rules |> List.mapi (fun i (nonterm,rules) -> 
+        spec.Rules |> List.mapi (fun i (nonterm, _, rules) -> 
             rules |> List.mapi (fun j rule -> 
                 let precInfo = 
                     let precsym = List.foldBack (fun x acc -> match acc with Some _ -> acc | None -> match x with z when terminalsSet.Contains z -> Some z | _ -> acc) rule.Symbols rule.PrecSymbol
@@ -72,7 +72,7 @@ let processParserSpecAst (spec : ParserSpec) =
          |> List.concat
          |> Array.ofList
 
-    let nonTerminals = Array.map fst (Array.ofList spec.Rules)
+    let nonTerminals = Array.map (fun (name, _, _) -> name) (Array.ofList spec.Rules)
     let nonTerminalSet = HashSet(nonTerminals)
 
     let checkNonTerminal nt =  

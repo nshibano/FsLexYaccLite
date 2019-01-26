@@ -24,9 +24,12 @@ decls:
     | decls decl { $2 :: $1 }
     |            { [] }
 
+optTypeLiteral:
+    | TYPE_LITERAL { Some $1 }
+    |              { None }
+
 decl:
-    | TOKEN TYPE_LITERAL idents   { Token (Some $2, List.rev $3) }
-    | TOKEN idents                { Token (None, List.rev $2) }
+    | TOKEN optTypeLiteral idents   { Token ($2, List.rev $3) }
     | KW_TYPE TYPE_LITERAL idents { Type ($2, List.rev $3) }
     | START idents                { Start (List.rev $2) }
     | LEFT idents                 { Prec (LeftAssoc, List.rev $2) }
@@ -42,7 +45,7 @@ rules:
     | rule       { [$1] }
 
 rule:
-    | IDENT COLON optbar clauses optsemi { ($1, List.rev $4) }
+    | IDENT optTypeLiteral COLON optbar clauses optsemi { ($1, $2, List.rev $5) }
 
 optbar:
     | BAR { }

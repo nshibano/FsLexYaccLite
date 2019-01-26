@@ -178,7 +178,7 @@ let rec token lexbuf =
     | 18 ->
         COLON 
     | 19 ->
-        failwith "Unexpected char %c" lexbuf.Lexeme.[0] 
+        failwithf "Unexpected char %c" lexbuf.Lexeme.[0] 
     | 20 ->
         EOF 
     | _ -> failwith "token"
@@ -197,7 +197,7 @@ and fs_type level buf lexbuf =
         append lexbuf buf
         fs_type level buf lexbuf 
     | 3 ->
-        failwithf "Unterminated type expression literal" 
+        failwith "Unterminated type expression literal" 
     | _ -> failwith "fs_type"
 and header buf lexbuf =
     match header_tables.Interpret(lexbuf) with

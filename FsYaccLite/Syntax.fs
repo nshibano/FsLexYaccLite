@@ -23,7 +23,7 @@ type ParserSpec =
       //Types : (Identifier * string) list
       //Associativities : (Identifier * Associativity) list list
       //StartSymbols : Identifier list
-      Rules : (Identifier * Rule list) list }
+      Rules : (Identifier * string option * Rule list) list }
       
 let stringOfAssoc (assoc : Associativity) =
     match assoc with

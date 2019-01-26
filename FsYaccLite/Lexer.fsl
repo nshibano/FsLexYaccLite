@@ -35,7 +35,7 @@ rule token = parse
     | "/*"                         { ignore(comment lexbuf); token lexbuf }
     | "//" [^'\n''\r']*            { token lexbuf }
     | ':'                          { COLON }
-    | _                            { failwith "Unexpected char %c" lexbuf.Lexeme.[0] }
+    | _                            { failwithf "Unexpected char %c" lexbuf.Lexeme.[0] }
     | eof                          { EOF }
 
 and fs_type level buf = parse
@@ -48,7 +48,7 @@ and fs_type level buf = parse
             fs_type (level + 1) buf lexbuf }
     | _   { append lexbuf buf
             fs_type level buf lexbuf }
-    | eof { failwithf "Unterminated type expression literal" }
+    | eof { failwith "Unterminated type expression literal" }
 
 and header buf = parse
     | "%}"    { HEADER (buf.ToString()) }
