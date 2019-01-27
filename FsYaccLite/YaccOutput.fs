@@ -140,14 +140,6 @@ let outputTableImages (path : string) (p : Preprocessed) (c : Compiled)  =
     use scaled = Hashtable.scaleImage 4 gotoTableBmp
     scaled.Save(path + "-gotoTable.png", ImageFormat.Png)
 
-let outputUInt16Array (os : TextWriter) (name : string) (ary : int array) =
-    fprintf os "let %s = [|" name
-    for i = 0 to ary.Length - 1 do  
-        if i <> 0 then
-            fprintf os "; "
-        fprintf os "%dus" ary.[i]
-    fprintfn os "|]"
-
 let shiftFlag = 0x0000
 let reduceFlag = 0x4000
 let errorFlag = 0x8000
@@ -155,13 +147,6 @@ let acceptFlag = 0xc000
 let actionMask = 0xc000
 
 let anyMarker = 0xffff
-
-let actionCoding action =
-  match action with 
-  | Accept -> acceptFlag
-  | Shift n -> shiftFlag ||| n
-  | Reduce n -> reduceFlag ||| n
-  | Error -> errorFlag
 
 let actionCoding2 action =
   match action with 
@@ -182,17 +167,13 @@ let outputParser (output : string) (modname : string) (parslib : string) (header
     match typ with
     | None -> fprintfn os "  | %s" id
     | Some ty -> fprintfn os "  | %s of %s" id ty; 
-
-  fprintfn os "";
-  fprintfn os "let tagOfToken (t : token) = ";
-  fprintfn os "  match t with";
-  preprocessed.Tokens |> Array.iteri (fun i (id,typ) -> 
-      fprintfn os "  | %s %s -> %d " id (match typ with Some _ -> "_" | None -> "") i);
-  fprintfn os "";
+  fprintfn os "let tagOfToken (t : token) =";
+  fprintfn os "  match t with"
+  Array.iteri (fun i (id,typ) -> 
+      fprintfn os "  | %s %s -> %d " id (match typ with Some _ -> "_" | None -> "") i) preprocessed.Tokens
   fprintfn os "let endOfInputTag = %d " compiled.EndOfInputTerminalIndex;
-  fprintfn os "";
-  fprintfn os "let dataOfToken (t : token) : obj = ";
-  fprintfn os "  match t with ";
+  fprintfn os "let dataOfToken (t : token) : obj ="
+  fprintfn os "  match t with"
 
   for (id,typ) in preprocessed.Tokens do
       fprintfn os "  | %s %s -> %s " 
@@ -202,15 +183,14 @@ let outputParser (output : string) (modname : string) (parslib : string) (header
     
   for (key,_) in preprocessed.Tokens |> Seq.countBy fst |> Seq.filter (fun (_,n) -> n > 1)  do
         failwithf "%s is given %%token declarations" key
-  fprintfn os ""
   
-  outputUInt16Array os "reductionSymbolCounts" (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions)
-  outputUInt16Array os "productionToNonTerminalTable" (Array.map (fun (prod : CompiledProduction) -> prod.HeadNonTerminalIndex) compiled.Productions)
+  Output.outputUInt16Array os "reductionSymbolCounts" (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions)
+  Output.outputUInt16Array os "productionToNonTerminalTable" (Array.map (fun (prod : CompiledProduction) -> prod.HeadNonTerminalIndex) compiled.Productions)
   
   fprintfn os "let maxProductionBodyLength = %d" (Array.max (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions))
 
   outputHashtable os "actionTable" actionHashtable
-  outputInt16Array os "actionTable_defaultActions" (Array.map (fun (row : ActionTableRow) -> int (actionCoding2 row.DefaultAction)) compiled.ActionTable)
+  Output.outputInt16Array os "actionTable_defaultActions" (Array.map (fun (row : ActionTableRow) -> int (actionCoding2 row.DefaultAction)) compiled.ActionTable)
   outputHashtable os "gotoTable" gotoHashtable
 
   let typeOfNonTerminal = preprocessed.Types 

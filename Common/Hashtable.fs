@@ -64,23 +64,15 @@ let scaleImage (n : int) (img : Bitmap) =
             g.FillRectangle(brush, n * x, n * y, n, n)
     newImg
 
-let outputInt16Array (os : TextWriter) (name : string) (ary : int array) =
-    fprintf os "let %s = [| " name
-    for i = 0 to ary.Length - 1 do  
-        if i <> 0 then
-            fprintf os "; "
-        fprintf os "%ds" ary.[i]
-    fprintfn os " |]"
-
 let outputHashtable (f : TextWriter) (name : string) (table : Hashtable) =
-    outputInt16Array f (name + "_buckets") (Array.map (function Some n -> n | None -> -1) table.BucketPointers)
+    Output.outputInt16Array f (name + "_buckets") (Array.map (function Some n -> n | None -> -1) table.BucketPointers)
     let entries =
         let accu = ResizeArray()
         for (hasNext, key, value) in table.Entries do
             accu.Add(if hasNext then ~~~ key else key)
             accu.Add(value)
         accu.ToArray()
-    outputInt16Array f (name + "_entries") entries
+    Output.outputInt16Array f (name + "_entries") entries
 
 let outputHashtableImage (path : string) (table : Hashtable) =
     let buckets = table.BucketEntriesCounts

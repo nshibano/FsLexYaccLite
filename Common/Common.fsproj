@@ -7,8 +7,8 @@
 
   <ItemGroup>
     <Compile Include="Arg.fs" />
-    <Compile Include="Hashtable.fs" />
     <Compile Include="Output.fs" />
+    <Compile Include="Hashtable.fs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -31,3 +31,37 @@ let outputCode (os : TextWriter) (indent : int) (code : string) =
 
     for line in setIndent indent lines do
         fprintfn os "%s" line
+
+let outputUInt16Array (os : TextWriter) (name : string) (ary : int array) =
+    fprintf os "let %s = [|" name
+    for i = 0 to ary.Length - 1 do  
+        if i <> 0 then
+            fprintf os "; "
+        fprintf os "%dus" ary.[i]
+    fprintfn os "|]"
+
+let outputInt16Array (os : TextWriter) (name : string) (ary : int array) =
+    if ary.Length <= 16 then
+        fprintf os "let %s = [| " name
+        for i = 0 to ary.Length - 1 do  
+            if i <> 0 then
+                fprintf os "; "
+            fprintf os "%ds" ary.[i]
+        fprintfn os " |]"
+    else
+        fprintfn os "let %s =" name
+        let n = ary.Length / 16
+        for i = 0 to n do
+            if i = 0 then
+                fprintf os "    [| "
+            else
+                fprintf os "       "
+        
+            for j = 0 to (if i = n then ary.Length % 16 else 16) - 1 do
+                if j <> 0 then
+                    fprintf os "; "
+                fprintf os "%ds" ary.[16 * i + j]
+            if i < n then
+                fprintfn os ""
+            else
+                fprintfn os "|]"
