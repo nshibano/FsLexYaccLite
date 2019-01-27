@@ -9,7 +9,7 @@ let ident = letter (letter|digit)*
 
 rule token =
   parse
-  | '\n'             { lexbuf.EndPos <- lexbuf.EndPos.NextLine
+  | '\n'             { lexbuf.NewLine()
                        token lexbuf }
   | [' ' '\r' '\t']+ { token lexbuf }
   | "if"             { IF }

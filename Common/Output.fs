@@ -3,10 +3,10 @@
 open System
 open System.IO
 
+let getLines (s : string) = s.Split([| "\r\n"; "\n" |], StringSplitOptions.None)
+
 let outputCode (os : TextWriter) (indent : int) (code : string) =
-    
-    let lines = code.Split([| "\r\n"; "\n" |], StringSplitOptions.None)
-    
+        
     let getIndentLevel (s : string) =
         let mutable level = 0
         let mutable pos = 0
@@ -29,7 +29,7 @@ let outputCode (os : TextWriter) (indent : int) (code : string) =
         let min = Array.min (Array.map getIndentLevel lines)
         Array.map (shiftIndentLevel (level - min)) lines
 
-    for line in setIndent indent lines do
+    for line in setIndent indent (getLines code) do
         fprintfn os "%s" line
 
 let outputUInt16Array (os : TextWriter) (name : string) (ary : int array) =

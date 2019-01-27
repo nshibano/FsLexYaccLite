@@ -19,15 +19,6 @@ type Position =
 
     /// Return the column number marked by the position, i.e. the difference between the AbsoluteOffset and the StartOfLineAbsoluteOffset
     member x.Column = x.AbsoluteOffset - x.StartOfLine
-    /// Given a position just beyond the end of a line, return a position at the start of the next line
-    member pos.NextLine =
-        { pos with
-                Line = pos.Line + 1
-                StartOfLine = pos.AbsoluteOffset }
-    /// Given a position at the start of a token of length n, return a position just beyond the end of the token
-    member pos.EndOfToken(n) = { pos with AbsoluteOffset = pos.AbsoluteOffset + n }
-    /// Gives a position shifted by specified number of characters
-    member pos.ShiftColumnBy(by) = {pos with AbsoluteOffset = pos.AbsoluteOffset + by }
     member pos.IsEmpty = pos.AbsoluteOffset = System.Int32.MinValue
 
 /// Dummy position value which represents an absence of position information.
@@ -55,6 +46,10 @@ type LexBuffer =
 
     member lexbuf.Lexeme = lexbuf.String.Substring(lexbuf.ScanStart, lexbuf.LexemeLength)
 
+    member lexbuf.LexemeChar(i) =
+        if i < 0 || i >= lexbuf.LexemeLength then raise (IndexOutOfRangeException())
+        lexbuf.String.[lexbuf.ScanStart + i]
+
     member lexbuf.NewLine() =
         let pos = lexbuf.EndPos
         lexbuf.EndPos <- { pos with Line = pos.Line + 1; StartOfLine = pos.AbsoluteOffset }
@@ -74,14 +69,14 @@ type LexTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[],
 
     let [<Literal>] sentinel = -1
 
-    let endOfScan lexBuffer =
+    let endScan lexBuffer =
         if lexBuffer.AcceptAction < 0 then
             failwith "unrecognized input"
         lexBuffer.StartPos <- lexBuffer.EndPos
-        lexBuffer.EndPos <- lexBuffer.EndPos.EndOfToken(lexBuffer.LexemeLength)
+        lexBuffer.EndPos <- { lexBuffer.EndPos with AbsoluteOffset = lexBuffer.EndPos.AbsoluteOffset + lexBuffer.LexemeLength }
         lexBuffer.AcceptAction
 
-    let rec scanUntilSentinel lexBuffer state =
+    let rec scan lexBuffer state =
         let a = int acceptTable.[state]
         if a <> sentinel then
             lexBuffer.LexemeLength <- lexBuffer.ScanLength
@@ -90,13 +85,12 @@ type LexTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[],
         if lexBuffer.ScanLength = lexBuffer.String.Length - lexBuffer.ScanStart then
             let snew = int transitionTable.[state].[transitionTable.[state].Length - 1] // get eof entry
             if snew = sentinel then
-                endOfScan lexBuffer
+                endScan lexBuffer
             elif not lexBuffer.IsPastEndOfStream then
                 lexBuffer.IsPastEndOfStream <- true
-                scanUntilSentinel lexBuffer snew
+                scan lexBuffer snew
             else
                 failwith "End of file on lexing stream"
-
         else
             let inp = lexBuffer.String.[lexBuffer.ScanStart + lexBuffer.ScanLength]
 
@@ -118,17 +112,17 @@ type LexTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[],
             let snew = int transitionTable.[state].[alphabet]
 
             if snew = sentinel then
-                endOfScan lexBuffer
+                endScan lexBuffer
             else
                 lexBuffer.ScanLength <- lexBuffer.ScanLength + 1
-                scanUntilSentinel lexBuffer snew
+                scan lexBuffer snew
 
     member this.Interpret(lexBuffer : LexBuffer) =
         lexBuffer.ScanStart <- lexBuffer.ScanStart + lexBuffer.LexemeLength
         lexBuffer.ScanLength <- 0
         lexBuffer.LexemeLength <- 0
         lexBuffer.AcceptAction <- -1
-        scanUntilSentinel lexBuffer 0
+        scan lexBuffer 0
 
 /// The information accessible via the parseState value within parser actions.
 type IParseState =
@@ -152,9 +146,9 @@ type ValueInfo =
 type ParseTables<'tok>(reductions : int -> IParseState -> obj, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, reductionSymbolCounts : uint16[], productionToNonTerminalTable : uint16[], maxProductionBodyLength : int, gotoTableBuckets : int16 [], gotoTableEntries : int16 [], nonTerminalsCount : int, actionTable_buckets : int16 [], actionTable_entries : int16 [], actionTable_defaultActions : int16 [], terminalsCount : int) =
 
     let lookup (buckets : int16 []) (entries : int16 []) (key : int) =
-        let bucketIndex = int buckets.[key % buckets.Length]
-        if bucketIndex >= 0 then
-            let mutable pointer = 2 * bucketIndex
+        let entryIndex = int buckets.[key % buckets.Length]
+        if entryIndex >= 0 then
+            let mutable pointer = 2 * entryIndex
             let mutable cont = true
             let mutable result = Int32.MinValue
             while cont do

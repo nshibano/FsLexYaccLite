@@ -21,7 +21,6 @@ type Preprocessed =
 
 let endOfInputTerminal = "$"
 let dummyLookahead = "#"
-let errorTerminal = "error"
 
 let processParserSpecAst (spec : ParserSpec) =
 
@@ -62,7 +61,7 @@ let processParserSpecAst (spec : ParserSpec) =
                 accu.Add(ident, (assoc, i))
         accu
     
-    let terminals = Array.append (Array.map fst (tokens)) [| errorTerminal |]
+    let terminals = Array.map fst tokens
     let terminalsSet = HashSet(terminals)
        
     let productions =
@@ -93,7 +92,7 @@ let processParserSpecAst (spec : ParserSpec) =
     let nonTerminalSet = HashSet(nonTerminals)
 
     let checkNonTerminalHasProduction nt =  
-        if nt <> errorTerminal && not (nonTerminalSet.Contains(nt)) then 
+        if not (nonTerminalSet.Contains(nt)) then 
             failwith (sprintf "NonTerminal '%s' has no productions" nt)
 
     for prod in productions do
@@ -118,7 +117,7 @@ let processParserSpecAst (spec : ParserSpec) =
     let fakeStartSymbols = Array.map (fun nt -> "_start" + nt) startSymbols
     Array.iter2 (fun fake orig -> match types.TryGetValue orig with true, ty -> types.Add(fake, ty) | false, _ -> ()) fakeStartSymbols startSymbols
 
-    let terminals = Array.append terminals [| (dummyLookahead, None); (endOfInputTerminal, None) |]
+    let terminals = Array.append terminals [| (endOfInputTerminal, None); (dummyLookahead, None) |]
     let productions =
         Array.append
             (Array.map2
