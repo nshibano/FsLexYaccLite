@@ -15,7 +15,7 @@ let getTokens (s : string) =
 
 let parse (s : string) =
     let lexbuf = LexBuffer.FromString(s)
-    Parser.Start Lexer.token FsLexYaccLiteRuntime.skipWhitespace lexbuf
+    Parser.Start Lexer.token lexbuf
 
 // Use this function to print parse result and then
 // turn it into test case by copying the result displayed in the console to this script.

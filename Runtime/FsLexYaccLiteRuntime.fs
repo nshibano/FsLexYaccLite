@@ -65,26 +65,6 @@ type LexBuffer =
           EndPos = Position_Zero
           LocalStore = Dictionary() }
 
-let skipWhitespace (lexbuf : LexBuffer) = 
-    let mutable pos = lexbuf.EndPos.AbsoluteOffset
-    let mutable cont = true
-    while cont do
-        if pos < lexbuf.String.Length then
-            let c = lexbuf.String.[pos]
-            if c = ' ' || c = '\t' || c = '\r' then
-                pos <- pos + 1
-            elif c = '\n' then
-                pos <- pos + 1
-                lexbuf.NewLine()
-            else cont <- false
-        else cont <- false
-    lexbuf.ScanStart <- pos
-    lexbuf.LexemeLength <- 0
-    lexbuf.EndPos <- { lexbuf.EndPos with AbsoluteOffset = pos }
-    lexbuf.StartPos <- lexbuf.EndPos
-    if pos = lexbuf.String.Length then
-        lexbuf.IsPastEndOfStream <- true
-
 type LexTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[], nonAsciiAlphabetTable : uint16[], transitionTable: int16[][], acceptTable: int16[]) =
 
     let [<Literal>] sentinel = -1
@@ -183,7 +163,7 @@ type ParseTables<'tok>(reductions : int -> IParseState -> obj, endOfInputTag : i
             result
         else Int32.MinValue
 
-    member this.Interpret(lexer : LexBuffer -> 'tok, skipWhitespace : LexBuffer -> unit, lexbuf : LexBuffer, initialState : int) =
+    member this.Interpret(lexer : LexBuffer -> 'tok, lexbuf : LexBuffer, initialState : int) =
         let mutable cont = true
         let mutable haveLookahead = false
         let mutable lookahead = Unchecked.defaultof<'tok>
@@ -210,8 +190,6 @@ type ParseTables<'tok>(reductions : int -> IParseState -> obj, endOfInputTag : i
             }
         
         while cont do
-    
-            skipWhitespace lexbuf
 
             let state = stateStack.Peek()
 
