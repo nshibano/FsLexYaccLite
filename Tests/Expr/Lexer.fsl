@@ -24,6 +24,7 @@ rule token =
   | ".."             { DOTDOT }
   | '"'              { string lexbuf.StartPos lexbuf }
   | _                { failwith "lexical error" }
+  | eof              { raise (System.IO.EndOfStreamException()) }
 and string start =
   parse
   | '"' { STRING (lexbuf.String.Substring(start.AbsoluteOffset + 1, lexbuf.EndPos.AbsoluteOffset - start.AbsoluteOffset - 2)) }

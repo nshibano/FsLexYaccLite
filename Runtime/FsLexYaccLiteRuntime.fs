@@ -216,10 +216,12 @@ type ParseTables<'tok>(reductions : int -> IParseState -> obj, endOfInputTag : i
             let state = stateStack.Peek()
 
             if (not haveLookahead) && (not lexbuf.IsPastEndOfStream) then
-                haveLookahead <- true
-                lookahead <- lexer lexbuf
-                lookaheadStartPos <- lexbuf.StartPos
-                lookaheadEndPos <- lexbuf.EndPos
+                try
+                    lookahead <- lexer lexbuf // exn
+                    haveLookahead <- true
+                    lookaheadStartPos <- lexbuf.StartPos
+                    lookaheadEndPos <- lexbuf.EndPos
+                with :? System.IO.EndOfStreamException -> ()
 
             let tag =
                 if haveLookahead then
