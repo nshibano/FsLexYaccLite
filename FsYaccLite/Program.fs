@@ -73,12 +73,7 @@ let main() =
                 match row.LookaheadActions.[j] with
                 | Some action ->
                     let k = preprocessed.Terminals.Length * i + j
-                    let v =
-                        match action with
-                        | Shift x -> x
-                        | Reduce y -> ~~~ y
-                        | Accept -> int Int16.MaxValue
-                        | Error -> int Int16.MinValue
+                    let v = int (YaccOutput.actionCoding action)
                     accu.Add((k, v))
                 | None -> ()
         accu.ToArray()

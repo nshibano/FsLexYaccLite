@@ -217,9 +217,9 @@ type ParseTables<'tok>(reductions : int -> IParseState -> obj, endOfInputTag : i
                 else
                     int actionTable_defaultActions.[state]
 
-            if action = int System.Int16.MaxValue then
+            if action = -1 then
                 cont <- false
-            elif action = int System.Int16.MinValue then
+            elif action = -2 then
                 failwith "parse error"
             elif action >= 0 then
                 let nextState = action
@@ -228,7 +228,7 @@ type ParseTables<'tok>(reductions : int -> IParseState -> obj, endOfInputTag : i
                 stateStack.Push(nextState)
                 haveLookahead <- false
             else
-                let prod = ~~~action
+                let prod = - action - 3
                 let n = int reductionSymbolCounts.[prod]
                 lhsStartPos <- Position_Empty
                 lhsEndPos <- Position_Empty

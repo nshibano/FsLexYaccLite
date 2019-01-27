@@ -150,10 +150,10 @@ let anyMarker = 0xffff
 
 let actionCoding action =
   match action with 
-  | Accept -> Int16.MaxValue
+  | Accept -> -1s
   | Shift n -> int16 n
-  | Reduce n -> ~~~ (int16 n)
-  | Error -> Int16.MinValue
+  | Reduce n -> int16 (- 3 - n)
+  | Error -> -2s
 
 let outputParser (output : string) (modname : string) (parslib : string) (headerCode : string) (spec : ParserSpec) (preprocessed : Preprocessed) (compiled : Compiled) (actionHashtable : Hashtable) (gotoHashtable : Hashtable) =
   use os = (File.CreateText output :> TextWriter)
