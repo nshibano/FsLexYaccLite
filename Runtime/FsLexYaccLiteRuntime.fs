@@ -54,6 +54,23 @@ type LexBuffer =
         let pos = lexbuf.EndPos
         lexbuf.EndPos <- { pos with Line = pos.Line + 1; StartOfLine = pos.AbsoluteOffset }
 
+    member lexbuf.SkipWhitespace() =
+        let mutable pos = lexbuf.EndPos.AbsoluteOffset
+        let mutable cont = true
+        while cont do
+            if pos < lexbuf.String.Length then
+                let c = lexbuf.String.[pos]
+                if c = ' ' || c = '\t' then
+                    pos <- pos + 1
+                else cont <- false
+            else cont <- false
+        lexbuf.ScanStart <- pos
+        lexbuf.LexemeLength <- 0
+        lexbuf.EndPos <- { lexbuf.EndPos with AbsoluteOffset = pos }
+        lexbuf.StartPos <- lexbuf.EndPos
+        if pos = lexbuf.String.Length then
+            lexbuf.IsPastEndOfStream <- true
+
     static member FromString (s:string) =
         { LexBuffer.String = s
           ScanStart = 0
@@ -69,30 +86,30 @@ type LexTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[],
 
     let [<Literal>] sentinel = -1
 
-    let endScan lexBuffer =
-        if lexBuffer.AcceptAction < 0 then
+    let endScan lexbuf =
+        if lexbuf.AcceptAction < 0 then
             failwith "unrecognized input"
-        lexBuffer.StartPos <- lexBuffer.EndPos
-        lexBuffer.EndPos <- { lexBuffer.EndPos with AbsoluteOffset = lexBuffer.EndPos.AbsoluteOffset + lexBuffer.LexemeLength }
-        lexBuffer.AcceptAction
+        lexbuf.StartPos <- lexbuf.EndPos
+        lexbuf.EndPos <- { lexbuf.EndPos with AbsoluteOffset = lexbuf.EndPos.AbsoluteOffset + lexbuf.LexemeLength }
+        lexbuf.AcceptAction
 
-    let rec scan lexBuffer state =
+    let rec scan lexbuf state =
         let a = int acceptTable.[state]
         if a <> sentinel then
-            lexBuffer.LexemeLength <- lexBuffer.ScanLength
-            lexBuffer.AcceptAction <- a
+            lexbuf.LexemeLength <- lexbuf.ScanLength
+            lexbuf.AcceptAction <- a
 
-        if lexBuffer.ScanLength = lexBuffer.String.Length - lexBuffer.ScanStart then
+        if lexbuf.ScanLength = lexbuf.String.Length - lexbuf.ScanStart then
             let snew = int transitionTable.[state].[transitionTable.[state].Length - 1] // get eof entry
             if snew = sentinel then
-                endScan lexBuffer
-            elif not lexBuffer.IsPastEndOfStream then
-                lexBuffer.IsPastEndOfStream <- true
-                scan lexBuffer snew
+                endScan lexbuf
+            elif not lexbuf.IsPastEndOfStream then
+                lexbuf.IsPastEndOfStream <- true
+                scan lexbuf snew
             else
                 failwith "End of file on lexing stream"
         else
-            let inp = lexBuffer.String.[lexBuffer.ScanStart + lexBuffer.ScanLength]
+            let inp = lexbuf.String.[lexbuf.ScanStart + lexbuf.ScanLength]
 
             let alphabet =
                 if inp < '\128' then
@@ -112,10 +129,10 @@ type LexTables(asciiAlphabetTable : uint16[], nonAsciiCharRangeTable : uint16[],
             let snew = int transitionTable.[state].[alphabet]
 
             if snew = sentinel then
-                endScan lexBuffer
+                endScan lexbuf
             else
-                lexBuffer.ScanLength <- lexBuffer.ScanLength + 1
-                scan lexBuffer snew
+                lexbuf.ScanLength <- lexbuf.ScanLength + 1
+                scan lexbuf snew
 
     member this.Interpret(lexBuffer : LexBuffer) =
         lexBuffer.ScanStart <- lexBuffer.ScanStart + lexBuffer.LexemeLength
