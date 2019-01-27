@@ -148,7 +148,7 @@ let actionMask = 0xc000
 
 let anyMarker = 0xffff
 
-let actionCoding2 action =
+let actionCoding action =
   match action with 
   | Accept -> Int16.MaxValue
   | Shift n -> int16 n
@@ -190,7 +190,7 @@ let outputParser (output : string) (modname : string) (parslib : string) (header
   fprintfn os "let maxProductionBodyLength = %d" (Array.max (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions))
 
   outputHashtable os "actionTable" actionHashtable
-  Output.outputInt16Array os "actionTable_defaultActions" (Array.map (fun (row : ActionTableRow) -> int (actionCoding2 row.DefaultAction)) compiled.ActionTable)
+  Output.outputInt16Array os "actionTable_defaultActions" (Array.map (fun (row : ActionTableRow) -> int (actionCoding row.DefaultAction)) compiled.ActionTable)
   outputHashtable os "gotoTable" gotoHashtable
 
   let typeOfNonTerminal = preprocessed.Types 
