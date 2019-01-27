@@ -140,14 +140,6 @@ let outputTableImages (path : string) (p : Preprocessed) (c : Compiled)  =
     use scaled = Hashtable.scaleImage 4 gotoTableBmp
     scaled.Save(path + "-gotoTable.png", ImageFormat.Png)
 
-let shiftFlag = 0x0000
-let reduceFlag = 0x4000
-let errorFlag = 0x8000
-let acceptFlag = 0xc000
-let actionMask = 0xc000
-
-let anyMarker = 0xffff
-
 let actionCoding action =
   match action with 
   | Accept -> -1s
@@ -165,24 +157,28 @@ let outputParser (output : string) (modname : string) (parslib : string) (header
     fprintfn os "type token = "
     for id, typ in preprocessed.Tokens do 
         match typ with
-        | None -> fprintfn os "  | %s" id
-        | Some ty -> fprintfn os "  | %s of %s" id ty
+        | None -> fprintfn os "    | %s" id
+        | Some ty -> fprintfn os "    | %s of %s" id ty
     fprintfn os "let tagOfToken (t : token) =";
-    fprintfn os "  match t with"
+    fprintfn os "    match t with"
     Array.iteri (fun i (id,typ) -> 
-        fprintfn os "  | %s %s -> %d " id (match typ with Some _ -> "_" | None -> "") i) preprocessed.Tokens
-    fprintfn os "let endOfInputTag = %d " compiled.EndOfInputTerminalIndex;
-    fprintfn os "let dataOfToken (t : token) : obj ="
-    fprintfn os "  match t with"
-
-    for (id,typ) in preprocessed.Tokens do
-        fprintfn os "  | %s %s -> %s " 
-            id
-            (match typ with Some _ -> "x" | None -> "")
-            (match typ with Some _ -> "box x" | None -> "null")
+        fprintfn os "    | %s %s -> %d " id (match typ with Some _ -> "_" | None -> "") i) preprocessed.Tokens
+   
+    fprintfn os "let dataOfToken (t : token) ="
+    fprintfn os "    match t with"
+    for (id, typ) in preprocessed.Tokens do
+        match typ with
+        | Some _ -> fprintfn os "    | %s x -> box x" id
+        | None -> ()
+    if (Array.tryFind (function (_, None) -> true | _ -> false) preprocessed.Tokens).IsSome then
+        fprintfn os "    | _ -> null"
     
     for (key,_) in preprocessed.Tokens |> Seq.countBy fst |> Seq.filter (fun (_,n) -> n > 1)  do
         failwithf "%s is given %%token declarations" key
+
+    fprintfn os "let terminalsCount = %d" preprocessed.Terminals.Length  
+    fprintfn os "let nonTerminalsCount = %d" preprocessed.NonTerminals.Length
+    fprintfn os "let endOfInputTag = %d " compiled.EndOfInputTerminalIndex
   
     Output.outputUInt16Array os "reductionSymbolCounts" (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions)
     Output.outputUInt16Array os "productionToNonTerminalTable" (Array.map (fun (prod : CompiledProduction) -> prod.HeadNonTerminalIndex) compiled.Productions)
@@ -246,10 +242,6 @@ let outputParser (output : string) (modname : string) (parslib : string) (header
                 fprintfn os "        let res = %s" (code.Trim(' ', '\t'))
                 fprintfn os "        box<%s> res" (getType prod.Head)
     fprintfn os "    | _ -> failwith \"unreachable\""
-
-    fprintfn os "let terminalsCount = %d" preprocessed.Terminals.Length  
-    fprintfn os "let nonTerminalsCount = %d" preprocessed.NonTerminals.Length
-
     fprintfn os "let tables = %s.ParseTables(reductions, endOfInputTag, tagOfToken, dataOfToken, reductionSymbolCounts, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)" parslib
 
     for (id, startState) in Seq.zip preprocessed.OriginalStartSymbols compiled.StartStates do
