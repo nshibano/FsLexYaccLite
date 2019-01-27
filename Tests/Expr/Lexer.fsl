@@ -22,7 +22,6 @@ rule token =
   | '*'              { STAR }
   | "::"             { COLONCOLON }
   | ".."             { DOTDOT }
-  | eof              { EOF }
   | '"'              { string lexbuf.StartPos lexbuf }
   | _                { failwith "lexical error" }
 and string start =

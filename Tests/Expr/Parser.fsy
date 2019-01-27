@@ -13,7 +13,6 @@ open Test.Ast
 %token IF
 %token THEN
 %token ELSE
-%token EOF
 
 %nonassoc IfThen
 %nonassoc ELSE BAR
@@ -27,7 +26,7 @@ open Test.Ast
 
 %%
 
-Start <Expr> : Expr EOF { $1 }
+Start <Expr> : Expr { $1 }
 
 Expr:
     | IDENT                          { Ident $1 }

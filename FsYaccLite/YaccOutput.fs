@@ -241,4 +241,4 @@ let outputParser (output : string) (modname : string) (parslib : string) (header
     fprintfn os "let tables = %s.ParseTables(reductions, endOfInputTag, tagOfToken, dataOfToken, reductionSymbolCounts, productionToNonTerminalTable, maxReductionSymbolCount, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)" parslib
 
     for (id, startState) in Seq.zip preprocessed.OriginalStartSymbols compiled.StartStates do
-        fprintfn os "let %s lexer lexbuf = unbox<%s> (tables.Interpret(lexer, lexbuf, %d))" id typeOfNonTerminal.[id] startState
+        fprintfn os "let %s lexer skipWhitespace lexbuf = unbox<%s> (tables.Interpret(lexer, skipWhitespace, lexbuf, %d))" id typeOfNonTerminal.[id] startState
