@@ -50,7 +50,7 @@ let main argv =
     //for i = 1 to 3 do
     //    printfn "%A" (Lexer.token lexbuf)
 
-    case "1" (Number 1)
+    case " 1 " (Number 1)
     case "x" (Ident "x")
 
     case "x + y" (Add (Ident "x", Ident "y"))
