@@ -156,57 +156,56 @@ let actionCoding action =
   | Error -> -2s
 
 let outputParser (output : string) (modname : string) (parslib : string) (headerCode : string) (spec : ParserSpec) (preprocessed : Preprocessed) (compiled : Compiled) (actionHashtable : Hashtable) (gotoHashtable : Hashtable) =
-  use os = (File.CreateText output :> TextWriter)
+    use os = (File.CreateText output :> TextWriter)
 
-  fprintfn os "// GENERATED FILE"
-  fprintfn os "module %s" modname
-  fprintfn os "#nowarn \"64\""
-  fprintfn os "%s" headerCode
-  fprintfn os "type token = "
-  for id, typ in preprocessed.Tokens do 
-    match typ with
-    | None -> fprintfn os "  | %s" id
-    | Some ty -> fprintfn os "  | %s of %s" id ty; 
-  fprintfn os "let tagOfToken (t : token) =";
-  fprintfn os "  match t with"
-  Array.iteri (fun i (id,typ) -> 
-      fprintfn os "  | %s %s -> %d " id (match typ with Some _ -> "_" | None -> "") i) preprocessed.Tokens
-  fprintfn os "let endOfInputTag = %d " compiled.EndOfInputTerminalIndex;
-  fprintfn os "let dataOfToken (t : token) : obj ="
-  fprintfn os "  match t with"
+    fprintfn os "// GENERATED FILE"
+    fprintfn os "module %s" modname
+    fprintfn os "#nowarn \"64\""
+    fprintfn os "%s" headerCode
+    fprintfn os "type token = "
+    for id, typ in preprocessed.Tokens do 
+        match typ with
+        | None -> fprintfn os "  | %s" id
+        | Some ty -> fprintfn os "  | %s of %s" id ty
+    fprintfn os "let tagOfToken (t : token) =";
+    fprintfn os "  match t with"
+    Array.iteri (fun i (id,typ) -> 
+        fprintfn os "  | %s %s -> %d " id (match typ with Some _ -> "_" | None -> "") i) preprocessed.Tokens
+    fprintfn os "let endOfInputTag = %d " compiled.EndOfInputTerminalIndex;
+    fprintfn os "let dataOfToken (t : token) : obj ="
+    fprintfn os "  match t with"
 
-  for (id,typ) in preprocessed.Tokens do
-      fprintfn os "  | %s %s -> %s " 
-        id
-        (match typ with Some _ -> "x" | None -> "")
-        (match typ with Some _ -> "box x" | None -> "null")
+    for (id,typ) in preprocessed.Tokens do
+        fprintfn os "  | %s %s -> %s " 
+            id
+            (match typ with Some _ -> "x" | None -> "")
+            (match typ with Some _ -> "box x" | None -> "null")
     
-  for (key,_) in preprocessed.Tokens |> Seq.countBy fst |> Seq.filter (fun (_,n) -> n > 1)  do
+    for (key,_) in preprocessed.Tokens |> Seq.countBy fst |> Seq.filter (fun (_,n) -> n > 1)  do
         failwithf "%s is given %%token declarations" key
   
-  Output.outputUInt16Array os "reductionSymbolCounts" (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions)
-  Output.outputUInt16Array os "productionToNonTerminalTable" (Array.map (fun (prod : CompiledProduction) -> prod.HeadNonTerminalIndex) compiled.Productions)
+    Output.outputUInt16Array os "reductionSymbolCounts" (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions)
+    Output.outputUInt16Array os "productionToNonTerminalTable" (Array.map (fun (prod : CompiledProduction) -> prod.HeadNonTerminalIndex) compiled.Productions)
   
-  fprintfn os "let maxProductionBodyLength = %d" (Array.max (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions))
+    fprintfn os "let maxProductionBodyLength = %d" (Array.max (Array.map (fun (prod : CompiledProduction) -> prod.BodySymbolIndexes.Length) compiled.Productions))
 
-  outputHashtable os "actionTable" actionHashtable
-  Output.outputInt16Array os "actionTable_defaultActions" (Array.map (fun (row : ActionTableRow) -> int (actionCoding row.DefaultAction)) compiled.ActionTable)
-  outputHashtable os "gotoTable" gotoHashtable
+    outputHashtable os "actionTable" actionHashtable
+    Output.outputInt16Array os "actionTable_defaultActions" (Array.map (fun (row : ActionTableRow) -> int (actionCoding row.DefaultAction)) compiled.ActionTable)
+    outputHashtable os "gotoTable" gotoHashtable
 
-  let typeOfNonTerminal = preprocessed.Types 
-  let typeOfToken = Map.ofArray preprocessed.Tokens 
-  let getType nt = if typeOfNonTerminal.ContainsKey nt then typeOfNonTerminal.[nt] else "'" + nt 
+    let typeOfNonTerminal = preprocessed.Types 
+    let typeOfToken = Map.ofArray preprocessed.Tokens 
+    let getType nt = if typeOfNonTerminal.ContainsKey nt then typeOfNonTerminal.[nt] else "'" + nt 
   
-  begin 
-      fprintfn os "let reductions (_productionIndex : int) (parseState : FsLexYaccLiteRuntime.IParseState) ="
-      fprintfn os "    match _productionIndex with"
-      for i = 0 to preprocessed.Productions.Length - 1 do
-          let prod = preprocessed.Productions.[i]
-          if isNull prod.Code then
-              fprintfn os "    | %d -> failwith \"unreachable\"" i
-          else
-             fprintfn os "    | %d ->" i
-             let code, dollars =
+    fprintfn os "let reductions (_productionIndex : int) (parseState : FsLexYaccLiteRuntime.IParseState) ="
+    fprintfn os "    match _productionIndex with"
+    for i = 0 to preprocessed.Productions.Length - 1 do
+        let prod = preprocessed.Productions.[i]
+        if isNull prod.Code then
+            fprintfn os "    | %d -> failwith \"unreachable\"" i
+        else
+            fprintfn os "    | %d ->" i
+            let code, dollars =
                 if String.IsNullOrWhiteSpace prod.Code then
                     "()", HashSet()
                 else
@@ -229,30 +228,29 @@ let outputParser (output : string) (modname : string) (parslib : string) (header
                             sb.Append(code.[pos]) |> ignore
                             pos <- pos + 1
                     sb.ToString(), dollars
-             Array.iteri (fun j sym -> 
-               let tyopt =
-                  if Array.contains sym preprocessed.NonTerminals then
+            Array.iteri (fun j sym -> 
+                let tyopt =
+                    if Array.contains sym preprocessed.NonTerminals then
                         Some (getType sym)
-                  elif typeOfToken.ContainsKey sym then 
+                    elif typeOfToken.ContainsKey sym then 
                         typeOfToken.[sym]
-                  else None
-               match tyopt with 
-               | Some ty when dollars.Contains(j+1) -> fprintfn os "        let _%d = unbox<%s> (parseState.GetInput(%d))" (j+1) ty (j+1)
-               | _ -> ()) prod.Body
-             let linesCount = code.Split([| "\r"; "\n" |], StringSplitOptions.None).Length
-             if linesCount > 1 then
-              fprintfn os "        let res ="
-              Output.outputCode os 12 code
-             else
-              fprintfn os "        let res = %s" (code.Trim(' ', '\t'))
-             fprintfn os "        box<%s> res" (getType prod.Head)
-      fprintfn os "    | _ -> failwith \"unreachable\""
-  end;
+                    else None
+                match tyopt with 
+                | Some ty when dollars.Contains(j+1) -> fprintfn os "        let _%d = unbox<%s> (parseState.GetInput(%d))" (j+1) ty (j+1)
+                | _ -> ()) prod.Body
+            let linesCount = code.Split([| "\r"; "\n" |], StringSplitOptions.None).Length
+            if linesCount > 1 then
+                fprintfn os "        let res ="
+                Output.outputCode os 12 code
+            else
+                fprintfn os "        let res = %s" (code.Trim(' ', '\t'))
+                fprintfn os "        box<%s> res" (getType prod.Head)
+    fprintfn os "    | _ -> failwith \"unreachable\""
 
-  fprintfn os "let terminalsCount = %d" preprocessed.Terminals.Length  
-  fprintfn os "let nonTerminalsCount = %d" preprocessed.NonTerminals.Length
+    fprintfn os "let terminalsCount = %d" preprocessed.Terminals.Length  
+    fprintfn os "let nonTerminalsCount = %d" preprocessed.NonTerminals.Length
 
-  fprintfn os "let tables = %s.ParseTables(reductions, endOfInputTag, tagOfToken, dataOfToken, reductionSymbolCounts, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)" parslib
+    fprintfn os "let tables = %s.ParseTables(reductions, endOfInputTag, tagOfToken, dataOfToken, reductionSymbolCounts, productionToNonTerminalTable, maxProductionBodyLength, gotoTable_buckets, gotoTable_entries, nonTerminalsCount, actionTable_buckets, actionTable_entries, actionTable_defaultActions, terminalsCount)" parslib
 
-  for (id, startState) in Seq.zip preprocessed.OriginalStartSymbols compiled.StartStates do
+    for (id, startState) in Seq.zip preprocessed.OriginalStartSymbols compiled.StartStates do
         fprintfn os "let %s lexer lexbuf = unbox<%s> (tables.Interpret(lexer, lexbuf, %d))" id typeOfNonTerminal.[id] startState
