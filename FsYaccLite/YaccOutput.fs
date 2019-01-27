@@ -202,11 +202,10 @@ let outputParser (output : string) (modname : string) (parslib : string) (header
       fprintfn os "    match _productionIndex with"
       for i = 0 to preprocessed.Productions.Length - 1 do
           let prod = preprocessed.Productions.[i]
-          fprintfn os "    | %d ->" i
-
           if isNull prod.Code then
-             fprintfn os "        failwith \"unreachable\""
+              fprintfn os "    | %d -> failwith \"unreachable\"" i
           else
+             fprintfn os "    | %d ->" i
              let code, dollars =
                 if String.IsNullOrWhiteSpace prod.Code then
                     "()", HashSet()
