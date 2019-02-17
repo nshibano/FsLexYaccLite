@@ -143,6 +143,8 @@ type ValueInfo =
         new (value, startPos, endPos) = { value = value; startPos = startPos; endPos = endPos }
     end
 
+exception EndOfTokenStream
+
 type ParseTables<'tok>(reductions : int -> IParseState -> obj, endOfInputTag : int, tagOfToken : 'tok -> int, dataOfToken : 'tok -> obj, reductionSymbolCounts : uint16[], productionToNonTerminalTable : uint16[], maxProductionBodyLength : int, gotoTableBuckets : int16 [], gotoTableEntries : int16 [], nonTerminalsCount : int, actionTable_buckets : int16 [], actionTable_entries : int16 [], actionTable_defaultActions : int16 [], terminalsCount : int) =
 
     let lookup (buckets : int16 []) (entries : int16 []) (key : int) =
@@ -199,7 +201,7 @@ type ParseTables<'tok>(reductions : int -> IParseState -> obj, endOfInputTag : i
                     haveLookahead <- true
                     lookaheadStartPos <- lexbuf.StartPos
                     lookaheadEndPos <- lexbuf.EndPos
-                with :? System.IO.EndOfStreamException -> ()
+                with EndOfTokenStream -> ()
 
             let tag =
                 if haveLookahead then
