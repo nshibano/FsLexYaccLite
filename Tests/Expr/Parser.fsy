@@ -28,7 +28,7 @@ open Test.Ast
 
 Start <Expr> : Expr { $1 }
 
-Expr:
+Expr <Expr> :
     | IDENT                          { Ident $1 }
     | NUMBER                         { Number $1 }
     | STRING                         { String $1 }
