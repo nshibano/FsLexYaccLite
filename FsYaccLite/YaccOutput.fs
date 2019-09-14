@@ -87,7 +87,7 @@ let outputCompilationReport (path : string) (spec : Preprocessed) (comp : Compil
                 (s, s.Length - 4)
             | Error -> ("error", 5)
             | Accept -> ("accept", 6)
-        fprintfn f "    %s (for %d lookaheads)" (fst actionText) (spec.Terminals.Length - comp.ActionTable.[i].LookaheadActions.Length)
+        fprintfn f "    %s (for %d lookaheads)" (fst actionText) (spec.Terminals.Length - (Array.filter Option.isSome comp.ActionTable.[i].LookaheadActions).Length)
         fprintfn f ""
 
         fprintfn f "  gotos:"
