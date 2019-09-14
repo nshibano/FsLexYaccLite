@@ -60,7 +60,7 @@ let outputCompilationReport (path : string) (spec : Preprocessed) (comp : Compil
         let rows = ResizeArray()
         for j = 0 to row.LookaheadActions.Length - 1 do
             let action = row.LookaheadActions.[j]
-            if action <> None then
+            if action <> None && (fst spec.Terminals.[j] <> dummyLookahead) then
                 let term, prec = spec.Terminals.[j]
                 let precText = stringOfPrecInfo prec
                 let termText = (if precText.Length = 0 then term else term + " " + precText) + ":"
