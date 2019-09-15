@@ -87,7 +87,20 @@ let outputCompilationReport (path : string) (spec : Preprocessed) (comp : Compil
                 (s, s.Length - 4)
             | Error -> ("error", 5)
             | Accept -> ("accept", 6)
-        fprintfn f "    %s (for %d lookaheads)" (fst actionText) (spec.Terminals.Length - (Array.filter Option.isSome comp.ActionTable.[i].LookaheadActions).Length)
+        let defaultActionLookaheads =
+            let accu = ResizeArray()
+            for j = 0 to  spec.Terminals.Length - 1 do
+                let a = comp.ActionTable.[i].LookaheadActions.[j]
+                let t = fst spec.Terminals.[j]
+                if a.IsNone && t <> "#" then
+                    accu.Add(t)
+            accu.ToArray()
+        let defaultActionLookaheadText =
+            if defaultActionLookaheads.Length = 0 then
+                "unreachable"
+            else
+                "for " + String.Join(", ", (Array.sub defaultActionLookaheads 0 (defaultActionLookaheads.Length - 1))) + " and " + defaultActionLookaheads.[defaultActionLookaheads.Length - 1]
+        fprintfn f "    %s (%s)" (fst actionText) defaultActionLookaheadText
         fprintfn f ""
 
         fprintfn f "  gotos:"
