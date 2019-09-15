@@ -96,10 +96,10 @@ let outputCompilationReport (path : string) (spec : Preprocessed) (comp : Compil
                     accu.Add(t)
             accu.ToArray()
         let defaultActionLookaheadText =
-            if defaultActionLookaheads.Length = 0 then
-                "unreachable"
-            else
-                "for " + String.Join(", ", (Array.sub defaultActionLookaheads 0 (defaultActionLookaheads.Length - 1))) + " and " + defaultActionLookaheads.[defaultActionLookaheads.Length - 1]
+            match defaultActionLookaheads.Length with
+            | 0 -> "unreachable"
+            | 1 -> "for " + defaultActionLookaheads.[0]
+            | _ -> "for " + String.Join(", ", (Array.sub defaultActionLookaheads 0 (defaultActionLookaheads.Length - 1))) + " and " + defaultActionLookaheads.[defaultActionLookaheads.Length - 1]
         fprintfn f "    %s (%s)" (fst actionText) defaultActionLookaheadText
         fprintfn f ""
 
